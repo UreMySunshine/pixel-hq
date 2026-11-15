@@ -32,15 +32,16 @@ const WORLD = [
 ];
 function ledWall(x, w, base) {
   // Two LED code screens on the right wall, set at an angle: 4px strips that step down a little further each time.
-  // By day the cabinets are pale enclosures with pastel code, matching the sunlit wall; by night they stay dark and emissive.
+  // The screens stay dark so the code reads as glowing LEDs; by day the cabinet frame is a pale mauve and the
+  // panel a softer slate than night, so the rack sits in the sunlit wall without becoming a black slab.
   const day = isDay();
-  const bezel = day ? "#8f88b8" : "#0a0c1a";
-  const screen = day ? "#e6e2f2" : "#10132a";
+  const bezel = day ? "#9c94c2" : "#0a0c1a";
+  const screen = day ? "#313244" : "#10132a";
   const lip = day ? "#b3add0" : "#2a2f55";
   const lights = day ? LIGHTS_DAY : LIGHTS;
   const o = [], top = 12, n = Math.floor(w / U), nA = Math.max(2, Math.round(n * 0.45));
   const ph = base - top - Math.round(n * 0.7) - 4;
-  if (!day) o.push(div().absolute().left(0).top(0).w(1).h(1).children([
+  if (day) o.push(div().absolute().left(0).top(0).w(1).h(1).children([
     r(x - 12, top - 10, w + 24, ph + 24, "#89dceb26"), r(x - 8, top - 8, w + 16, ph + 18, "#cba6f730"),
     r(x - 4, top - 4, w + 8, ph + 10, "#89dceb40"),
   ]).loop("opacity", { from: 0.55, to: 1, period: 2600, easing: "ease-in-out" }));
