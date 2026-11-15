@@ -392,7 +392,7 @@ export default class Agents extends View {
     cx.notify();
     try {
       const { path, branch } = await hire(exec, { ticket: this.ticketInput.value(), repo: this.repoInput.value() });
-      const argv = { claude: ["claude"], codex: ["codex"], opencode: ["opencode"], agy: ["agy"] }[h.program] ?? [h.program];
+      const argv = { claude: ["claude"], codex: ["codex"], opencode: ["opencode"], agy: ["agy"], "dsh-tui": ["dsh-tui"], pi: ["pi"] }[h.program] ?? [h.program];
       run("tab.new", { name: branch, folder: path, argv, space: spaces().find((x) => x.active)?.id });
       h.open = false;
       this.ticketInput.set_value("");
@@ -942,7 +942,7 @@ export default class Agents extends View {
             .child(div().font_family(mono).font_bold().text_size(10).text_color(P.accent).child("HIRE STAFF · NEW WORKTREE"))
             .child(box(this.ticketInput))
             .child(box(this.repoInput))
-            .child(h_flex().gap(4).children(["claude", "codex", "opencode", "agy"].map((pg) => div().id(`hire-${pg}`).px(8).h(22).flex().items_center().cursor_pointer().border_1()
+            .child(h_flex().gap(4).children(["claude", "codex", "opencode", "agy", "dsh-tui", "pi"].map((pg) => div().id(`hire-${pg}`).px(8).h(22).flex().items_center().cursor_pointer().border_1()
               .border_color(h.program === pg ? P.accent : P.frame).bg(h.program === pg ? P.accent + "22" : P.fill).text_size(10.5).font_family(mono).text_color(h.program === pg ? P.accent : P.mutedText)
               .on_click((_e, cx) => { h.program = pg; cx.notify(); }).child(pg))))
             .when(Boolean(h.error), (e2) => e2.child(div().text_size(10.5).text_color("#ff5370").child(h.error)))

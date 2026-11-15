@@ -12,7 +12,7 @@
 //   idle     ("content") – coffee break, eyes closed, steam rising
 // Everyone wears a company badge.
 
-import { div } from "gpui-kit";
+import { div, image } from "gpui-kit";
 
 const BODY = "#D97757";   // Claude orange
 const SHADE = "#B5593B";  // claws and legs
@@ -26,12 +26,14 @@ const STEAM = "#FFFFFF";
 const BADGE = "#F4E9DC";
 const BADGE_TOP = "#8C4A33";
 
-// One species per agent program: Claude is the orange crab, Codex a blue terminal robot, OpenCode a penguin, Antigravity the rainbow arch, the rest sheep.
+// One species per agent program: Claude is the orange crab, Codex a blue terminal robot, OpenCode a penguin, Antigravity the rainbow arch, DeepSeek the whale girl, Pi the block with the π mark, the rest sheep.
 const SPECIES = {
   crab: { body: "#D97757", shade: "#B5593B", eye: "#2A1A14", badge: "#F4E9DC" },
   bot: { body: "#5B6CF0", shade: "#4553C9", eye: "#DDE4FF", badge: "#F4E9DC", bot: true, screen: "#1B2140", glyph: "#DDE4FF", legs: [88, 152], legW: 30 },
   penguin: { body: "#35425E", shade: "#2E3A52", eye: "#1B2130", badge: "#F2A33A", round: true },
   arch: { body: "#3186FF", shade: "#E8743B", eye: "#14131f", badge: "#F4E9DC", arch: true, legs: [70, 126], legW: 54 },
+  whale: { body: "#4d60ae", shade: "#29367b", eye: "#0d0a37", badge: "#fefefe", whale: true },
+  pi: { body: "#4D9ABF", shade: "#3B7A99", eye: "#1B2130", badge: "#F1BE58", pi: true, legs: [86, 140], legW: 28 },
   sheep: { body: "#F1E7D3", shade: "#4A3B33", eye: "#FFFFFF", badge: "#E8744F", face: "#4A3B33" },
 };
 
@@ -40,6 +42,8 @@ const AGENTS = [
   { match: (k) => k.includes("codex"), species: "bot", role: "Code Reviewer" },
   { match: (k) => k.includes("opencode"), species: "penguin", role: "Platform Engineer" },
   { match: (k) => k.includes("antigravity") || k === "agy", species: "arch", role: "Systems Architect" },
+  { match: (k) => k.includes("deepseek") || k.includes("dsh"), species: "whale", role: "Research Engineer" },
+  { match: (k) => k === "pi" || k.startsWith("pi-"), species: "pi", role: "Tooling Engineer" },
 ];
 export function agentOf(key) {
   const k = String(key ?? "").toLowerCase();
@@ -107,6 +111,25 @@ const PENGUIN = [
 ];
 const PENGUIN_FEET = [[66, 206, 48, 12, "#F5A623"], [136, 206, 48, 12, "#F5A623"]];
 
+// DeepSeek's whale girl uses the animated pixel sprites from PC2005-cloud/dsh-pet,
+// cropped to the figure and enlarged. The GIFs play their own motion.
+const WHALE_FRAME = { stab: "typing", angry: "error", scowl: "error", happy: "happy", content: "idle" };
+
+// Pi: a blue block fellow carrying the official π mark on its chest. The mark is the
+// logo's own three colours, laid out on the 117.36-unit grid the logo SVG uses.
+const PI_CORAL = "#F09082", PI_BLUE = "#4D9ABF", PI_YELLOW = "#F1BE58";
+const PI = [
+  // Head, corners stepped like the rest of the office.
+  [62, 6, 126, 12, PI_BLUE], [50, 18, 150, 106, PI_BLUE], [62, 124, 126, 10, "#3B7A99"],
+  [58, 24, 30, 8, "#7FC0DC"],
+  // Torso.
+  [66, 138, 118, 66, PI_BLUE], [66, 138, 118, 5, "#7FC0DC"],
+  // The π mark: top bar and upper stem in coral, the stepped left leg in blue, the right leg in yellow.
+  [99, 146, 39, 13, PI_CORAL], [99, 159, 26, 13, PI_CORAL],
+  [99, 159, 13, 13, "#2F6E8C"], [99, 172, 26, 13, "#2F6E8C"], [99, 185, 13, 13, "#2F6E8C"],
+  [138, 172, 13, 26, PI_YELLOW],
+];
+
 const ROOM = 118; // desk props reach left of the body group
 const WIDTH = ROOM + 250;
 const HEIGHT = 240;
@@ -141,6 +164,12 @@ export function duck(status, height, waited = 0) {
 // One mood; `still` draws it without any motion.
 export function duckMood(m, height, { still = false, species = "crab" } = {}) {
   const sp = SPECIES[species] ?? SPECIES.crab;
+  if (sp.whale) {
+    const s = height / HEIGHT;
+    const pic = image(`mods/company-pane/whale/${WHALE_FRAME[m] ?? "idle"}.gif`)
+      .absolute().left((ROOM + 125) * s - height * 0.42).top(height * 0.02).h(height * 0.98);
+    return div().relative().flex_none().w(Math.round((WIDTH * height) / HEIGHT)).h(height).child(pic);
+  }
   const BODY = sp.body, SHADE = sp.shade, EYE = sp.eye, BADGE = sp.badge;
   const s = height / HEIGHT;
   const motion = (el, prop, policy) => (still ? el : el.loop(prop, policy));
@@ -178,14 +207,21 @@ export function duckMood(m, height, { still = false, species = "crab" } = {}) {
         : [rect(86, 68, 20, 28, EYE), rect(146, 68, 20, 28, EYE), rect(89, 71, 8, 8, WH), rect(149, 71, 8, 8, WH), rect(99, 87, 4, 4, "#ffffffaa"), rect(159, 87, 4, 4, "#ffffffaa")]),
     rect(114, 100, 22, 7, "#F5A623"), rect(118, 107, 14, 6, "#E0861C"), rect(62, 102, 18, 8, "#F49AA8"), rect(170, 102, 18, 8, "#F49AA8"),
   ];
+  const piFace = cheer
+    ? [rect(80, 74, 26, 7, EYE), rect(85, 67, 16, 7, EYE), rect(144, 74, 26, 7, EYE), rect(149, 67, 16, 7, EYE)]
+    : rest
+      ? [rect(80, 80, 28, 7, EYE), rect(142, 80, 28, 7, EYE)]
+      : [rect(82, 60, 22, 32, EYE), rect(146, 60, 22, 32, EYE), rect(85, 63, 9, 9, WH), rect(149, 63, 9, 9, WH)];
   const eyes2 = sp.arch
     ? [...archFace, rect(116, 104, 22, 8, "#ef6a7e"), rect(170, 104, 22, 8, "#ef6a7e")]
     : sp.round
       ? roundFace
-      : eyes;
+      : sp.pi
+          ? piFace
+          : eyes;
 
   // Claws. Typing: they alternate. Waving: the right one waves up. Cheering: both flap high.
-  const [LX, RX, CW] = sp.arch ? [26, 194, 30] : sp.round ? [16, 208, 26] : [0, 225, 25];
+  const [LX, RX, CW] = sp.arch ? [26, 194, 30] : sp.round ? [16, 208, 26] : sp.pi ? [30, 194, 26] : [0, 225, 25];
   let leftClaw = rect(LX, 122, CW, 40, SHADE);
   let rightClaw = rect(RX, 122, CW, 40, SHADE);
   if (typing) {
@@ -241,9 +277,10 @@ export function duckMood(m, height, { still = false, species = "crab" } = {}) {
   let group = div().absolute().left(px(ROOM)).top(0).w(px(250)).h(px(207))
     .child(leftClaw)
     .child(rightClaw)
-    .when(!sp.bot && !sp.arch && !sp.round, (el) => el.child(rect(25, 0, 200, 200, BODY)))
+    .when(!sp.bot && !sp.arch && !sp.round && !sp.pi, (el) => el.child(rect(25, 0, 200, 200, BODY)))
     .when(Boolean(sp.arch), (el) => el.children(ARCH.map(([x, y, w, h, c]) => rect(x, y, w, h, c))))
     .when(Boolean(sp.round), (el) => el.children(PENGUIN.map(([x, y, w, h, c]) => rect(x, y, w, h, c))))
+    .when(Boolean(sp.pi), (el) => el.children(PI.map(([x, y, w, h, c]) => rect(x, y, w, h, c))))
     .when(Boolean(sp.bot), (el) => el
       .child(rect(25, 24, 200, 104, BODY)).child(rect(55, 2, 56, 30, BODY)).child(rect(122, 0, 64, 34, BODY)).child(rect(176, 12, 40, 24, BODY))
       .child(rect(25, 128, 200, 72, BODY)).child(rect(40, 30, 34, 10, "#8E9CFF"))
@@ -255,7 +292,7 @@ export function duckMood(m, height, { still = false, species = "crab" } = {}) {
     .when(Boolean(sp.face), (el) => el.child(rect(64, 22, 112, 88, sp.face)).child(rect(14, 40, 26, 18, sp.face)).child(rect(200, 40, 26, 18, sp.face)))
     .children(eyes2)
     // company badge on a lanyard, hanging at the right side of the chest
-    .when(!sp.bot && !sp.arch && !sp.round, (el) => el.child(rect(181, 82, 6, 38, BADGE_TOP)).child(rect(163, 120, 42, 56, BADGE)).child(rect(163, 120, 42, 12, BADGE_TOP)).child(rect(174, 140, 20, 16, SHADE)).child(rect(170, 162, 28, 6, SHADE)))
+    .when(!sp.bot && !sp.arch && !sp.round && !sp.pi, (el) => el.child(rect(181, 82, 6, 38, BADGE_TOP)).child(rect(163, 120, 42, 56, BADGE)).child(rect(163, 120, 42, 12, BADGE_TOP)).child(rect(174, 140, 20, 16, SHADE)).child(rect(170, 162, 28, 6, SHADE)))
     .when(Boolean(props), (el) => el.child(props));
   group = cheer
     ? motion(group, "top", { from: 0, to: px(-18), period: 300, easing: "ease-in-out" })

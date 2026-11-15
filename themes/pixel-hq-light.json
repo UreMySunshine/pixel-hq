@@ -32,10 +32,10 @@
     "border": "#3a2f661f",
     "hover": "#3a2f6612",
     "selected": "#7c5fe024",
-    "working": "#4f74e3",
-    "blocked": "#e0457b",
-    "done": "#3f9e4d",
-    "idle": "#179299",
+    "working": "#2748c4",
+    "blocked": "#a81b48",
+    "done": "#20642a",
+    "idle": "#565b66",
     "muted": "#5c5875",
     "dim": "#6f6a8c"
   }
