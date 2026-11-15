@@ -55,10 +55,10 @@ const soften = (c, k = 0.3) => {
 const HEADBAR = () => (day() ? "#d6dcea" : "#181825");
 // One floor of the building, cut away: the room's wall, windows, moon or sun, LED screen and floor, by time of day.
 const ROOMC = () => (day() ? {
-  wallOn: "#dfe5f7", wallOff: "#cfd6ec", trim: "#ffffff88", frame: "#5b6485",
-  skyLit: "#cfe3fb", skyDark: "#aecdf5", bldg: "#8fa3cc", pane: "#5f6f9e", glint: "#ffffff",
-  moon: "#f2c94c", screen: "#5b6485", screenOn: "#223055",
-  floor: "#ccd4ec", skirt: "#b4bedd", grout: "#a9b4d6", desk: "#8d96b8", deskTop: "#a8b1cf",
+  wallOn: "#e4e8f3", wallOff: "#d5dae8", trim: "#ffffff88", frame: "#7c86ad",
+  skyLit: "#cfe3fb", skyDark: "#aecdf5", bldg: "#9db1d6", pane: "#d9a441", glint: "#ffd23f",
+  moon: "#f2c94c", screen: "#4a5178", screenOn: "#141833",
+  floor: "#d9dde9", skirt: "#c0c6da", grout: "#c5cbdd", desk: "#8d96b8", deskTop: "#a8b1cf",
 } : {
   wallOn: "#2a2f52", wallOff: "#20243d", trim: "#ffffff22", frame: "#0c0e1c",
   skyLit: "#1a2350", skyDark: "#0e1226", bldg: "#121733", pane: "#e0b94a", glint: "#f5e9b0",

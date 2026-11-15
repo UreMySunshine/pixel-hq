@@ -20,6 +20,7 @@ function ellipse(cx, cy, rx, ry, c) {
 
 // A server corner on the wall: two racks full of blinking status lights, and a holographic world map floating above a projector.
 const LIGHTS = ["#f4723a", "#f9d23c", "#8fcb4f", "#37c5d6", "#c678dd", "#f38ba8"];
+const LIGHTS_DAY = ["#ff6b35", "#ffd23f", "#7ee787", "#39d0d8", "#c77dff", "#ff5d8f"];
 const WORLD = [
   "....XXXX.....XXXXXX..",
   "...XXXXXXX..XXXXXXXXX",
@@ -31,29 +32,39 @@ const WORLD = [
 ];
 function ledWall(x, w, base) {
   // Two LED code screens on the right wall, set at an angle: 4px strips that step down a little further each time.
+  // The screens are emissive: they stay dark with neon code by day too, so the cyberpunk glow survives the bright office.
+  const day = isDay();
+  const bezel = day ? "#4a5178" : "#0a0c1a";
+  const screen = day ? "#141833" : "#10132a";
+  const lip = day ? "#323a66" : "#2a2f55";
+  const lights = day ? LIGHTS_DAY : LIGHTS;
   const o = [], top = 12, n = Math.floor(w / U), nA = Math.max(2, Math.round(n * 0.45));
   const ph = base - top - Math.round(n * 0.7) - 4;
+  if (day) o.push(div().absolute().left(0).top(0).w(1).h(1).children([
+    r(x - 6, top - 6, w + 12, ph + 16, "#39d0d826"), r(x - 3, top - 3, w + 6, ph + 10, "#c77dff1f"),
+  ]).loop("opacity", { from: 0.6, to: 1, period: 2600, easing: "ease-in-out" }));
   for (let i = 0; i < n; i++) {
     const inA = i < nA, j = inA ? i : i - nA, dy = inA ? Math.round(j * 0.25) : Math.round(j * 0.75) - 2;
     const cx0 = x + i * U + (inA ? 0 : 2);
-    if (j === 0) o.push(r(cx0 - 3, top + dy - 3, 3, ph + 6, "#0a0c1a"));
-    o.push(r(cx0, top + dy - 3, U, ph + 6, "#0a0c1a"), r(cx0, top + dy, U, ph, "#10132a"), r(cx0, top + dy, U, 3, "#2a2f55"));
+    if (j === 0) o.push(r(cx0 - 3, top + dy - 3, 3, ph + 6, bezel));
+    o.push(r(cx0, top + dy - 3, U, ph + 6, bezel), r(cx0, top + dy, U, ph, screen), r(cx0, top + dy, U, 3, lip));
     for (let row = 0; row < Math.floor((ph - 8) / 6); row++) {
       const seg = i + row * 3 + (inA ? 0 : 7);
       if (seg % 3 === 2 || rnd(row * 13 + Math.floor(seg / 3) * 5 + (inA ? 0 : 99)) < 0.22) continue;
-      const bar = r(cx0, top + dy + 6 + row * 6, U, 3, LIGHTS[Math.floor(rnd(row * 3 + Math.floor(seg / 3) * 7) * LIGHTS.length)]);
+      const bar = r(cx0, top + dy + 6 + row * 6, U, 3, lights[Math.floor(rnd(row * 3 + Math.floor(seg / 3) * 7) * lights.length)]);
       o.push((row + i) % 7 === 0 ? bar.loop("opacity", { from: 0.35, to: 1, period: 900 + ((row * 130 + i * 90) % 900), easing: "ease-in-out" }) : bar);
     }
   }
   // The projector pad stands in front of the screens, a green hologram of the world above it.
   const hx = x + Math.floor((w - 40) / 2), hy = base - 14;
+  const beamC = day ? "#22d3ee55" : "#6fe0f01c", mapC = day ? "#39d353" : "#7be495";
   const beam = [];
-  for (let i = 0; i < 4; i++) beam.push(r(hx + 6 - i * 3, hy - 4 - i * 5, 28 + i * 6, 5, "#6fe0f01c"));
+  for (let i = 0; i < 4; i++) beam.push(r(hx + 6 - i * 3, hy - 4 - i * 5, 28 + i * 6, 5, beamC));
   const map = [];
-  WORLD.forEach((line, yy) => [...line].forEach((ch, xx) => { if (ch === "X") map.push(r(hx - 6 + xx * 2, hy - 30 + yy * 3, 2, 3, "#7be495")); }));
+  WORLD.forEach((line, yy) => [...line].forEach((ch, xx) => { if (ch === "X") map.push(r(hx - 6 + xx * 2, hy - 30 + yy * 3, 2, 3, mapC)); }));
   o.push(
     div().absolute().left(0).top(0).w(1).h(1).children(beam).loop("opacity", { from: 0.5, to: 1, period: 2400, easing: "ease-in-out" }),
-    r(hx, hy, 40, 14, "#aab4d6"), r(hx, hy, 40, 3, "#d3d8ea"), r(hx + 4, hy - 3, 32, 5, "#6fe0f0"), r(hx + 4, hy + 8, 6, 3, "#e8d44a"), r(hx + 28, hy + 8, 8, 3, "#37c5d6"),
+    r(hx, hy, 40, 14, "#aab4d6"), r(hx, hy, 40, 3, "#d3d8ea"), r(hx + 4, hy - 3, 32, 5, day ? "#22d3ee" : "#6fe0f0"), r(hx + 4, hy + 8, 6, 3, day ? "#ffd23f" : "#e8d44a"), r(hx + 28, hy + 8, 8, 3, day ? "#39d0d8" : "#37c5d6"),
     div().absolute().left(0).top(0).w(1).h(1).children(map).loop("opacity", { from: 0.55, to: 1, period: 2200, easing: "ease-in-out" }),
   );
   return o;
@@ -69,10 +80,10 @@ const NIGHT = {
   floor: "#242843", grout: "#1c1f36", edge: "#0d0f1a", pool: "#ffffff07",
 };
 const DAY = {
-  wall: "#e2e7f5", ceil: "#c9d0e8", band: "#d4daf0", bandTop: "#c0c8e6", skirt: "#b7bfd9",
-  frame: "#5b6485", sky: "#aecdf5", glint: "#ffffff", moon: "#f2c94c", bldg: "#8fa3cc", pane: "#5f6f9e", glass: "#ffffff59", sill: "#9aa4c8",
-  clockRim: "#a6adc9", clockFace: "#ffffff", hand: "#3c4054", signBg: "#e8eeff", sign: "#1e66f5",
-  floor: "#ccd4ec", grout: "#b4bedd", edge: "#a3adcf", pool: "#fff3b855",
+  wall: "#e9ebf3", ceil: "#d3d7e6", band: "#dfe3f0", bandTop: "#ccd2e4", skirt: "#c0c6da",
+  frame: "#7c86ad", sky: "#aecdf5", glint: "#ffd23f", moon: "#f2c94c", bldg: "#9db1d6", pane: "#d9a441", glass: "#ffffff59", sill: "#a8b1cf",
+  clockRim: "#a6adc9", clockFace: "#ffffff", hand: "#3c4054", signBg: "#e0f7fa", sign: "#06b6d4",
+  floor: "#d9dde9", grout: "#c5cbdd", edge: "#b3bad2", pool: "#fff3b855",
 };
 
 export function scene(W, H) {
@@ -115,8 +126,11 @@ export function scene(W, H) {
   const cx = two ? wx1 + wA + Math.floor(gap / 2) : snap(W * 0.5), cr = Math.min(14, Math.floor(gap / 2) - 2) || 14;
   const rr = Math.max(8, cr);
   L.push(...ellipse(cx, 26, rr, rr, p.clockRim), ...ellipse(cx, 26, rr - 4, rr - 4, p.clockFace), r(cx - 1, 26 - rr + 4, 2, rr - 3, p.hand), r(cx, 25, rr - 5, 2, p.hand), r(cx - 2, 24, 4, 4, "#c0424e"));
-  if (gap >= 44 && base - 48 >= 88) L.push(r(cx - 16, 48, 32, 32, p.signBg), r(cx - 12, 62, 24, 4, p.sign), r(cx - 2, 52, 4, 24, p.sign),
-    r(cx - 8, 54, 4, 4, p.sign), r(cx + 4, 54, 4, 4, p.sign), r(cx - 8, 70, 4, 4, p.sign), r(cx + 4, 70, 4, 4, p.sign));
+  if (gap >= 44 && base - 48 >= 88) {
+    if (isDay()) L.push(div().absolute().left(0).top(0).w(1).h(1).children([r(cx - 20, 44, 40, 40, "#22d3ee2e")]).loop("opacity", { from: 0.5, to: 1, period: 2800, easing: "ease-in-out" }));
+    L.push(r(cx - 16, 48, 32, 32, p.signBg), r(cx - 12, 62, 24, 4, p.sign), r(cx - 2, 52, 4, 24, p.sign),
+      r(cx - 8, 54, 4, 4, p.sign), r(cx + 4, 54, 4, 4, p.sign), r(cx - 8, 70, 4, 4, p.sign), r(cx + 4, 70, 4, 4, p.sign));
+  }
 
   // The water cooler stands on the baseboard, left of the screens.
   L.push(r(cw + 2, base - 54, 16, 22, "#6fa8d6"), r(cw + 4, base - 52, 4, 10, "#a9d0ee"), r(cw, base - 32, 20, 32, "#b7bfd6"), r(cw, base - 32, 20, 4, "#d3d8ea"), r(cw + 8, base - 24, 4, 4, "#e8744f"));
