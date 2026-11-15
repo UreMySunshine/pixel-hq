@@ -1,7 +1,7 @@
 {
   "id": "root",
   "type": "row",
-  "theme": "pixel-hq",
+  "theme": { "light": "pixel-hq-light", "dark": "pixel-hq" },
   "children": [
     {
       "id": "sidebar",
@@ -65,10 +65,10 @@
       },
       "min": 44,
       "max": 480,
-      "background": "#181825",
+      "background": "chrome",
       "border": {
         "width": 1,
-        "color": "#ffffff14"
+        "color": "border"
       },
       "radius": 14,
       "shadow": "md",
@@ -87,10 +87,10 @@
           "size": {
             "px": 42
           },
-          "background": "#181825",
+          "background": "chrome",
           "border": {
             "width": 1,
-            "color": "#ffffff14"
+            "color": "border"
           },
           "radius": 12,
           "window_drag": true
@@ -113,14 +113,14 @@
                     "height": 40,
                     "position": "top"
                   },
-                  "background": "#1e1e2e",
+                  "background": "background",
                   "border": {
                     "width": 1,
-                    "color": "#ffffff14"
+                    "color": "border"
                   },
                   "focus": {
                     "width": 1.5,
-                    "color": "#89b4fa"
+                    "color": "accent"
                   },
                   "radius": 14,
                   "gap": 8,
@@ -174,10 +174,10 @@
           "size": {
             "px": 28
           },
-          "background": "#181825",
+          "background": "chrome",
           "border": {
             "width": 1,
-            "color": "#ffffff14"
+            "color": "border"
           },
           "radius": 12
         }
@@ -186,19 +186,8 @@
       "resizable": false
     }
   ],
-  "background": "#11111b",
+  "background": "canvas",
   "padding": 8,
-  "colors": {
-    "accent": "#89b4fa",
-    "chrome": "#181825",
-    "canvas": "#11111b",
-    "background": "#1e1e2e",
-    "surface": "#262637",
-    "raised": "#313244",
-    "border": "#ffffff14",
-    "hover": "#ffffff10",
-    "selected": "#ffffff14"
-  },
   "terminal_padding": [
     16,
     14

@@ -7,6 +7,7 @@ import { agents, terminals, panes, focused, spaces, run, theme, shared, setShare
 import { figureFor, load } from "./figures.js";
 import { agentOf, speciesOf, duckWidth, DUCK_CENTER } from "./duck.js";
 import { scene, yHorizon } from "./scene.js";
+import { pal } from "./palette.js";
 import { Editor } from "./editor.js";
 import { snapshot, clashes, hire } from "./crew.js";
 
@@ -599,11 +600,11 @@ export default class Agents extends View {
         .h(66)
         .flex_none()
         .border_b(2)
-        .border_color("#5B8C3A66")
+        .border_color(pal().rowEdge)
         .rounded(8)
         .items_center()
         .gap(6)
-        .bg("#10121ccc")
+        .bg(pal().row)
         .when(a.focused, (el) => el.bg(t.selected))
         .cursor_pointer()
         .hover((s) => s.bg(t.hover))
@@ -674,6 +675,7 @@ export default class Agents extends View {
       : groups.flatMap((g) => [header(g), ...(this.folded.has(g.id) ? [] : g.members.flatMap(withKids))]);
 
     // Expanded: a pixel farm with one small pet per agent, scattered over the field.
+    const P = pal();
     const sz = this.size ?? { width: 268, height: 640 };
     // Every agent gets a desk. The more agents, the smaller the desks (never below 0.42x), so all of them stay visible.
     const horizon = yHorizon(sz.height);
@@ -817,13 +819,12 @@ export default class Agents extends View {
         .tooltip(`${a.program?.name ?? ""} · ${a.status} · ${text}${branch ? ` · ${branch}` : ""}${clTip ? ` · ${clTip}` : ""} · drag to move`)
         .child(seat)
         .child(div().mt(6).max_w(Math.max(petW + 22, cellW - 4)).px(5).h(15).flex().items_center().rounded(3)
-          .bg(this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : "#0f111acc")
-          .text_size(10.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : "#ffffff").truncate()
+          .bg(this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : P.plate)
+          .text_size(10.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : P.plateInk).truncate()
           .child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? ` · ${duration(now - when)}` : ""}`))
-        // The branch on the desk's nameplate, with a small git-branch glyph.
         .when(Boolean(branch), (el) => el.child(h_flex().mt(2).gap(3).items_center().max_w(Math.max(petW + 22, cellW - 4)).text_size(9.5)
-          .child(div().relative().w(8).h(10).flex_none().children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg("#89b4fa"))))
-          .child(div().min_w(0).truncate().font_family(monoF).text_color("#89b4fa").child(branch))));
+          .child(div().relative().w(8).h(10).flex_none().children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg(P.accent))))
+          .child(div().min_w(0).truncate().font_family(monoF).text_color(P.accent).child(branch))));
     });
     // A dotted line of sparks between two desks that are about to clash.
     const links = [];
@@ -853,18 +854,18 @@ export default class Agents extends View {
         if (!this.size || Math.abs(s.width - this.size.width) > 2 || Math.abs(s.height - this.size.height) > 2) { this.size = s; cx.notify(); }
       })
       .child(scene(sz.width, sz.height))
-      .when(list.length === 0, (el) => el.child(div().absolute().left(12).top(sz.height * 0.5).w(sz.width - 24).px(8).py(6).rounded(3).bg("#0f111acc").text_size(12).text_color("#ffffff").child("No staff on this floor yet. Hire one with the + above, or start an agent in this space.")))
+      .when(list.length === 0, (el) => el.child(div().absolute().left(12).top(sz.height * 0.5).w(sz.width - 24).px(8).py(6).rounded(3).bg(P.plate).text_size(12).text_color(P.plateInk).child("No staff on this floor yet. Hire one with the + above, or start an agent in this space.")))
       .when(Boolean(this.update || this.notice), (el) => {
         const btn = (id, text, fill, ink, act) => div().id(id).px(10).h(22).flex().items_center().cursor_pointer().bg(fill).text_size(10.5).font_family(monoF).font_bold().text_color(ink).on_click(act).child(text);
-        const box = v_flex().id("oc-notice").absolute().left(8).right(8).top(horizon + 6).px(8).py(6).gap(6).rounded(8).bg("#11111bee").border_1().border_color("#89b4fa").text_size(11).text_color("#cdd6f4");
+        const box = v_flex().id("oc-notice").absolute().left(8).right(8).top(horizon + 6).px(8).py(6).gap(6).rounded(8).bg(P.deepBox).border_1().border_color(P.accent).text_size(11).text_color(t.foreground);
         return el.child(this.update
           ? box.child(div().child(`Pixel HQ ${this.update.version} is out${this.update.notes ? ` · ${this.update.notes}` : ""}`))
             .child(h_flex().gap(6)
-              .child(btn("upd-go", "Update now", "#89b4fa", "#11111b", (_e, cx) => this.runUpdate(cx)))
-              .child(btn("upd-later", "Later", "#313244", "#cdd6f4", (_e, cx) => { localStorage.setItem("upd-dismissed", this.update.version); this.update = null; cx.notify(); })))
+              .child(btn("upd-go", "Update now", P.accent, P.accentInk, (_e, cx) => this.runUpdate(cx)))
+              .child(btn("upd-later", "Later", P.panel, P.panelInk, (_e, cx) => { localStorage.setItem("upd-dismissed", this.update.version); this.update = null; cx.notify(); })))
           : box.cursor_pointer().on_click((_e, cx) => { this.notice = null; cx.notify(); }).child(this.notice));
       })
-      .when(hidden > 0, (el) => el.child(div().absolute().right(8).top(horizon + 6).px(8).py(3).rounded(8).bg("#11111bdd").border_1().border_color("#45475a").text_size(11).text_color("#cdd6f4").child(`+${hidden} more · narrow the panel to list all`)))
+      .when(hidden > 0, (el) => el.child(div().absolute().right(8).top(horizon + 6).px(8).py(3).rounded(8).bg(P.deepBox).border_1().border_color(P.frame).text_size(11).text_color(t.muted).child(`+${hidden} more · narrow the panel to list all`)))
       .children(links)
       .children(this.drag?.moved ? [...pets.filter((_, i) => seated[i].address !== this.drag.addr), ...pets.filter((_, i) => seated[i].address === this.drag.addr)] : pets);
 
@@ -889,18 +890,18 @@ export default class Agents extends View {
       .text_size(13)
       .when(!collapsed, (el) =>
         el.child(div().px(10).pt(10).pb(2).flex_none().child(
-          div().relative().h(30).w_full().child(div().absolute().left(2).right(2).bottom(-2).h(2).bg("#11111b"))
-            .children(frame("#45475a", "#181825"))
+          div().relative().h(30).w_full().child(div().absolute().left(2).right(2).bottom(-2).h(2).bg(P.shadow))
+            .children(frame(P.frame, P.fill))
             .child(h_flex().size_full().px(10).gap(8).items_center().justify_between()
               .child(h_flex().min_w(0).gap(7).items_center().child(corgi)
-                .child(div().min_w(0).truncate().font_family(mono).font_bold().text_size(10).text_color("#89b4fa").child("ENGINEERING FLOOR")))
+                .child(div().min_w(0).truncate().font_family(mono).font_bold().text_size(10).text_color(P.accent).child("ENGINEERING FLOOR")))
               .child(h_flex().gap(10).items_center().flex_none()
                 .when(Boolean(this.fileError), (el) => el.child(div().id("ag-file-error").text_size(11).font_bold().text_color(t.blocked)
                   .tooltip(`${this.fileError}. Using the last good figures.`).child("!")))
                 .child(div().id("ag-hire").relative().w(14).h(14).flex_none().cursor_pointer()
                   .tooltip("Hire staff: a new agent in its own git worktree")
                   .on_click((_e, cx) => this.openHire(cx))
-                  .children([[6, 0, 2, 14], [0, 6, 14, 2]].map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg(this.hiring.open ? "#f9e2af" : "#89b4fa"))))
+                  .children([[6, 0, 2, 14], [0, 6, 14, 2]].map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg(this.hiring.open ? "#f9e2af" : P.accent))))
                 .child(div()
                   .id("ag-figures")
                   .text_color(t.dim)
@@ -922,26 +923,26 @@ export default class Agents extends View {
       )
       .when(!collapsed && this.hiring.open, (el) => {
         const h = this.hiring;
-        const box = (state) => div().w_full().h(26).px(8).flex().items_center().bg("#181825").border_1().border_color("#45475a")
+        const box = (state) => div().w_full().h(26).px(8).flex().items_center().bg(P.fill).border_1().border_color(P.frame)
           .child(Input.new(state).h_full().w_full().text_size(11.5).font_family(mono).text_color(t.foreground));
         const btn = (id, text, fill, ink, act) => div().id(id).px(10).h(24).flex().items_center().cursor_pointer().bg(fill).text_size(10.5).font_family(mono).font_bold().text_color(ink).on_click(act).child(text);
-        return el.child(div().relative().mx(10).mt(8).flex_none().children(frame("#89b4fa", "#11111b"))
+        return el.child(div().relative().mx(10).mt(8).flex_none().children(frame(P.accent, P.deep))
           .child(v_flex().px(12).py(10).gap(6)
-            .child(div().font_family(mono).font_bold().text_size(10).text_color("#89b4fa").child("HIRE STAFF · NEW WORKTREE"))
+            .child(div().font_family(mono).font_bold().text_size(10).text_color(P.accent).child("HIRE STAFF · NEW WORKTREE"))
             .child(box(this.ticketInput))
             .child(box(this.repoInput))
             .child(h_flex().gap(4).children(["claude", "codex", "opencode", "agy"].map((pg) => div().id(`hire-${pg}`).px(8).h(22).flex().items_center().cursor_pointer().border_1()
-              .border_color(h.program === pg ? "#89b4fa" : "#45475a").bg(h.program === pg ? "#89b4fa22" : "#181825").text_size(10.5).font_family(mono).text_color(h.program === pg ? "#89b4fa" : "#a6adc8")
+              .border_color(h.program === pg ? P.accent : P.frame).bg(h.program === pg ? P.accent + "22" : P.fill).text_size(10.5).font_family(mono).text_color(h.program === pg ? P.accent : P.mutedText)
               .on_click((_e, cx) => { h.program = pg; cx.notify(); }).child(pg))))
             .when(Boolean(h.error), (e2) => e2.child(div().text_size(10.5).text_color("#ff5370").child(h.error)))
-            .child(h_flex().gap(6).child(btn("hire-go", h.busy ? "Creating..." : "Hire", "#89b4fa", "#11111b", (_e, cx) => this.doHire(cx)))
-              .child(btn("hire-cancel", "Cancel", "#313244", "#cdd6f4", (_e, cx) => this.openHire(cx))))));
+            .child(h_flex().gap(6).child(btn("hire-go", h.busy ? "Creating..." : "Hire", P.accent, P.accentInk, (_e, cx) => this.doHire(cx)))
+              .child(btn("hire-cancel", "Cancel", P.panel, P.panelInk, (_e, cx) => this.openHire(cx))))));
       })
       .when(!collapsed, (el) => el.child(div().id("staff-search").relative().mx(10).mt(4).mb(8).h(32).flex_none()
-        .child(div().absolute().left(2).right(2).bottom(-2).h(2).bg("#11111b"))
-        .children(frame(this.typing ? "#89b4fa" : "#45475a", "#11111b"))
+        .child(div().absolute().left(2).right(2).bottom(-2).h(2).bg(P.shadow))
+        .children(frame(this.typing ? P.accent : P.frame, P.deep))
         .child(h_flex().size_full().px(10).gap(8).items_center()
-          .child(magnifier(this.typing ? "#89b4fa" : "#7f849c"))
+          .child(magnifier(this.typing ? P.accent : P.dim))
           .child(div().flex_1().min_w(0).h_full().flex().items_center().cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation())
             .child(Input.new(this.searchInput).h_full().text_size(12).font_family(mono).text_color(t.foreground)))
           .when(Boolean(q), (e2) => e2

@@ -20,5 +20,21 @@
     "#f5c2e7",
     "#94e2d5",
     "#a6adc8"
-  ]
+  ],
+  "colors": {
+    "accent": "#89b4fa",
+    "accent_foreground": "#11111b",
+    "chrome": "#181825",
+    "canvas": "#11111b",
+    "background": "#1e1e2e",
+    "surface": "#262637",
+    "raised": "#313244",
+    "border": "#ffffff14",
+    "hover": "#ffffff10",
+    "selected": "#ffffff14",
+    "working": "#89b4fa",
+    "blocked": "#f38ba8",
+    "done": "#a6e3a1",
+    "idle": "#9399b2"
+  }
 }

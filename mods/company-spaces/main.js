@@ -5,7 +5,7 @@
 
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
-import { spaces, machines, panes, agents, run, openOverlay, exec, hc, theme, shared, setShared, watchFolder, window, layout } from "herdr";
+import { spaces, machines, panes, agents, run, openOverlay, exec, hc, theme, shared, setShared, watchFolder, window, layout, settings } from "herdr";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -41,12 +41,30 @@ const FALLBACK = 60000;
 const MARK = { ansi6: "#22a99a", ansi3: "#e3814f", ansi4: "#5b8def", ansi5: "#8b7cf6", ansi2: "#3fae6a", ansi1: "#d9649a" };
 
 const MONO = "JetBrains Mono";
-// A strong space color toned toward the layout's pale lavender, so frames and bars sit in the same soft palette.
+// The layout runs a dark and a light theme; the drawn parts follow it.
+const day = () => settings().dark === false;
+// A strong space color toned toward the panel tone of the shown theme (pale lavender by night, pale grey-blue by day),
+// so frames and bars sit in the same soft palette.
 const soften = (c, k = 0.3) => {
+  const to = day() ? "#dce0e8" : "#cdd6f4";
   if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
-  const [a, b] = [c, "#cdd6f4"].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
   return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
 };
+// The line head's bar and underline: a dark plaque by night, a pale one by day.
+const HEADBAR = () => (day() ? "#d6dcea" : "#181825");
+// One floor of the building, cut away: the room's wall, windows, moon or sun, LED screen and floor, by time of day.
+const ROOMC = () => (day() ? {
+  wallOn: "#dfe5f7", wallOff: "#cfd6ec", trim: "#ffffff88", frame: "#5b6485",
+  skyLit: "#cfe3fb", skyDark: "#aecdf5", bldg: "#8fa3cc", pane: "#5f6f9e", glint: "#ffffff",
+  moon: "#f2c94c", screen: "#5b6485", screenOn: "#223055",
+  floor: "#ccd4ec", skirt: "#b4bedd", grout: "#a9b4d6", desk: "#8d96b8", deskTop: "#a8b1cf",
+} : {
+  wallOn: "#2a2f52", wallOff: "#20243d", trim: "#ffffff22", frame: "#0c0e1c",
+  skyLit: "#1a2350", skyDark: "#0e1226", bldg: "#121733", pane: "#e0b94a", glint: "#f5e9b0",
+  moon: "#f7efc0", screen: "#0a0c1a", screenOn: "#10132a",
+  floor: "#242843", skirt: "#171a2c", grout: "#1c1f36", desk: "#646a8c", deskTop: "#8a91b6",
+});
 const GUTTER = 22;
 // The metro lines wear soft pastels from the layout's own blue-violet tone (periwinkle first), not the strong space colors.
 const LINES = ["#8fa3f0", "#7aa7e8", "#6fc7bd", "#b394f0", "#8fcf94", "#e49ac8"];
@@ -69,7 +87,7 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
   const sleepers = [];
   for (let y = 2; y < end; y += 8) sleepers.push(div().absolute().left(5).top(y).w(10).h(2).bg("#00000038"));
   const node = div().absolute().left(3).top(c - 7).w(14).h(14).children(pix(line, 14, 14))
-    .child(div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : "#ffffff"));
+    .child(div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : day() ? "#4c4f69" : "#ffffff"));
   return div().relative().w(GUTTER).h(h).flex_none()
     .child(div().absolute().left(8).top(0).w(4).h(end).bg(line))
     .child(div().absolute().left(8).top(0).w(1).h(end).bg("#ffffff40"))
@@ -78,8 +96,8 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
       .loop("opacity", { from: 0.1, to: 0.45, period: blocked ? 800 : 1800, easing: "ease-in-out" })))
     .when(stop === "station", (el) => el.child(node))
     .when(stop === "end", (el) => el.child(div().absolute().left(4).top(c - 6).w(12).h(12).rounded(2).border_2().border_dashed().border_color(line).bg(t.chrome)))
-    .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color("#2a2c40").bg("#e8ecf8")
-      .child(div().absolute().left(1).top(2).w(6).h(3).bg("#2a2c40"))
+    .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color(day() ? "#9aa4c8" : "#2a2c40").bg(day() ? "#5b6485" : "#e8ecf8")
+      .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#dce3f5" : "#2a2c40"))
       .child(blocked ? lamp.loop("opacity", { from: 0.3, to: 1, period: 700, easing: "linear" }) : lamp)
       .loop("top", { from: c - 25, to: c - 19, period: 2400 })));
 }
@@ -381,7 +399,7 @@ export default class Spaces extends View {
       const line = connected ? LINES[n % LINES.length] : t.dim;
       const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t, line));
       const bullet = div().relative().w(20).h(20).flex_none().children(pix(line, 20, 20))
-        .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(10).text_color("#11111b")
+        .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(10).text_color(day() ? "#ffffff" : "#11111b")
           .child([...(m ?? "this computer")][0].toUpperCase()))
         .when(!folded && !rebuilt && !login && (mine.length > 0 || !loading(m)), (el) => el.child(div().absolute().left(8).top(18).w(4).h(10).bg(line)));
       const icon = svg(`mods/workspace-chrome/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
@@ -389,7 +407,7 @@ export default class Spaces extends View {
       const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 28).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
         .when(collapsed, el => el.mt(4).w(RAIL_CELL).justify_center().rounded(6).tooltip(login ? `${m} needs a login: run ${login}. Click for Copy.` : m ? `${m} · ${connected ? "connected" : (machine?.state ?? "asleep").replace(/_/g, " ")}` : "This computer"))
         .when(collapsed, el => el.cursor_pointer())
-        .when(!collapsed, el => el.bg("#181825").mb(2).h(30).child(div().absolute().left(0).right(0).bottom(0).h(2).bg(line)))
+        .when(!collapsed, el => el.bg(HEADBAR()).mb(2).h(30).child(div().absolute().left(0).right(0).bottom(0).h(2).bg(line)))
         .hover(s => s.bg(t.hover))
         .on_click((_e, cx) => {
           if (renaming) return;
@@ -539,26 +557,27 @@ export default class Spaces extends View {
     const crew = this.crew?.get(w.id) ?? [];
     const count = (k) => crew.filter((a) => a.status === k).length;
     const blocked = count("blocked"), working = count("working");
-    // One floor of the night office, cut away like a dollhouse: a glowing window and LED screen on the wall, and one desk per agent
+    // One floor of the building, cut away like a dollhouse: a window and LED screen on the wall, and one desk per agent
     // (up to three) with a tiny pet in its own colours. Lights are on while someone works; an empty floor goes dark.
     const R = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
     const lit = working > 0, any = crew.length > 0;
+    const C = ROOMC();
     const skin = (a) => { const k = String(a.program?.key ?? "").toLowerCase(); return k.includes("claude") ? ["#D97757", "#D97757"] : k.includes("codex") ? ["#5B6CF0", "#5B6CF0"] : k.includes("opencode") ? ["#4A5B80", "#F7F4EC"] : (k.includes("antigravity") || k === "agy") ? ["#F6A03A", "#3186FF"] : ["#F1E7D3", "#F1E7D3"]; };
     const room = div().relative().w(54).h(40).flex_none().overflow_hidden()
-      .child(R(0, 0, 54, 24, any ? "#2a2f52" : "#20243d")).child(R(0, 0, 54, 3, soften(fill))).child(R(0, 3, 54, 1, "#ffffff22"))
-      .child(R(4, 7, 22, 15, "#0c0e1c")).child(R(5, 8, 20, 13, lit ? "#1a2350" : "#0e1226"))
-      .child(R(6, 15, 4, 6, "#121733")).child(R(11, 12, 5, 9, "#121733")).child(R(17, 16, 6, 5, "#121733"))
-      .child(R(12, 14, 1, 1, "#f5e9b0")).child(R(14, 17, 1, 1, "#f5e9b0")).child(R(7, 17, 1, 1, "#e0b94a")).child(R(19, 18, 1, 1, "#e0b94a"))
-      .child(R(20, 10, 3, 3, lit ? "#f7efc0" : "#9a947a")).child(R(14, 8, 1, 13, "#0c0e1c"))
-      .child(R(31, 6, 19, 16, "#0a0c1a")).child(R(32, 7, 17, 14, "#10132a"))
-      .children([["#f4723a", 0, 9], ["#8fcb4f", 3, 10], ["#37c5d6", 0, 6], ["#f9d23c", 2, 11], ["#c678dd", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
-      .child(R(0, 24, 54, 16, "#242843")).child(R(0, 24, 54, 2, "#171a2c")).child(R(0, 31, 54, 1, "#1c1f36")).child(R(18, 26, 1, 14, "#1c1f36")).child(R(36, 26, 1, 14, "#1c1f36"))
+      .child(R(0, 0, 54, 24, any ? C.wallOn : C.wallOff)).child(R(0, 0, 54, 3, soften(fill))).child(R(0, 3, 54, 1, C.trim))
+      .child(R(4, 7, 22, 15, C.frame)).child(R(5, 8, 20, 13, lit ? C.skyLit : C.skyDark))
+      .child(R(6, 15, 4, 6, C.bldg)).child(R(11, 12, 5, 9, C.bldg)).child(R(17, 16, 6, 5, C.bldg))
+      .child(R(12, 14, 1, 1, C.glint)).child(R(14, 17, 1, 1, C.glint)).child(R(7, 17, 1, 1, C.pane)).child(R(19, 18, 1, 1, C.pane))
+      .child(R(20, 10, 3, 3, lit ? C.glint : C.moon)).child(R(14, 8, 1, 13, C.frame))
+      .child(R(31, 6, 19, 16, C.screen)).child(R(32, 7, 17, 14, lit ? C.screenOn : day() ? "#d5dcea" : "#0e1226"))
+      .children([["#f4723a", 0, 9], ["#8fcb4f", 3, 10], ["#37c5d6", 0, 6], ["#f9d23c", 2, 11], ["#c678dd", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, day() && !lit ? "#8d96b8" : c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
+      .child(R(0, 24, 54, 16, C.floor)).child(R(0, 24, 54, 2, C.skirt)).child(R(0, 31, 54, 1, C.grout)).child(R(18, 26, 1, 14, C.grout)).child(R(36, 26, 1, 14, C.grout))
       .children([0, 1, 2].flatMap((k) => {
         const x = 3 + k * 17, a = crew[k];
-        const pet = a ? (() => { const [c1, c2] = skin(a); return [R(x + 2, 24, 10, 8, "#3c4054"), R(x + 3, 23, 8, 4, c1), R(x + 3, 26, 8, 4, c2), R(x + 4, 25, 1, 2, "#14131f"), R(x + 8, 25, 1, 2, "#14131f")]; })() : [];
-        const glow = a ? R(x + 3, 30, 8, 3, a.status === "blocked" ? "#f38ba8" : "#d8def0") : R(x + 3, 30, 8, 3, "#323650");
+        const pet = a ? (() => { const [c1, c2] = skin(a); return [R(x + 2, 24, 10, 8, day() ? "#d7dcea" : "#3c4054"), R(x + 3, 23, 8, 4, c1), R(x + 3, 26, 8, 4, c2), R(x + 4, 25, 1, 2, "#14131f"), R(x + 8, 25, 1, 2, "#14131f")]; })() : [];
+        const glow = a ? R(x + 3, 30, 8, 3, a.status === "blocked" ? "#f38ba8" : day() ? "#7c87ad" : "#d8def0") : R(x + 3, 30, 8, 3, day() ? "#b6c0da" : "#323650");
         const mark = a && a.status === "blocked" ? [R(x + 12, 20, 2, 5, "#f9e2af").loop("opacity", { from: 0.2, to: 1, period: 700, easing: "linear" }), R(x + 12, 26, 2, 2, "#f9e2af")] : a && a.status === "done" ? [R(x + 11, 21, 2, 2, "#a6e3a1"), R(x + 2, 20, 2, 2, "#f9e2af")] : [];
-        return [...pet, R(x, 32, 14, 3, "#646a8c"), R(x, 32, 14, 1, "#8a91b6"), glow, ...mark];
+        return [...pet, R(x, 32, 14, 3, C.desk), R(x, 32, 14, 1, C.deskTop), glow, ...mark];
       }));
     // The room sits in a notched frame in the space's own color.
     const tile = div().relative().w(60).h(46).flex_none().children(pix(soften(fill), 60, 46)).child(div().absolute().left(3).top(3).child(room));
@@ -566,7 +585,7 @@ export default class Spaces extends View {
     const place = raw ?? base(w.folder ?? "");
     const done = count("done");
     const idle = crew.length - blocked - working - done;
-    const dot = blocked > 0 ? "#f38ba8" : working > 0 ? "#89b4fa" : null;
+    const dot = blocked > 0 ? t.blocked : working > 0 ? t.working : null;
     const chip = (text, color, pulse) => {
       const c = h_flex().flex_none().px(5).h(15).items_center().rounded(2).border_1().border_color(color + "77").bg(color + "26")
         .font_family(MONO).font_bold().text_size(9.5).text_color(color).child(text);
@@ -574,12 +593,12 @@ export default class Spaces extends View {
     };
     // Most urgent first, so a narrow card loses the least important chip.
     const chips = [
-      ...(blocked > 0 ? [chip(`${blocked} needs you`, "#f38ba8", true)] : []),
-      ...(working > 0 ? [chip(`${working} typing`, "#89b4fa")] : []),
-      ...(done > 0 ? [chip(`${done} shipped`, "#a6e3a1")] : []),
-      ...(idle > 0 ? [chip(`${idle} break`, "#9399b2")] : []),
+      ...(blocked > 0 ? [chip(`${blocked} needs you`, t.blocked, true)] : []),
+      ...(working > 0 ? [chip(`${working} typing`, t.working)] : []),
+      ...(done > 0 ? [chip(`${done} shipped`, t.done)] : []),
+      ...(idle > 0 ? [chip(`${idle} break`, t.idle ?? t.dim)] : []),
     ];
-    const glyph = div().relative().w(8).h(10).flex_none().children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w2, h2]) => div().absolute().left(x).top(y).w(w2).h(h2).bg(raw ? "#89b4fa" : t.dim)));
+    const glyph = div().relative().w(8).h(10).flex_none().children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w2, h2]) => div().absolute().left(x).top(y).w(w2).h(h2).bg(raw ? t.accent : t.dim)));
     return h_flex().size_full().gap(11).items_center().px(4)
       .child(tile)
       .child(v_flex().flex_1().min_w(0).gap(3)
@@ -591,7 +610,7 @@ export default class Spaces extends View {
           }))
         .child(h_flex().gap(5).items_center().text_size(10.5).font_family(MONO).text_color(t.dim)
           .child(glyph)
-          .child(div().min_w(0).truncate().text_color(raw ? "#89b4fa" : t.dim).child(place))
+          .child(div().min_w(0).truncate().text_color(raw ? t.accent : t.dim).child(place))
           .child(div().flex_none().child(`\u00b7 ${crew.length ? `${crew.length} aboard` : "no service"}`))
           .when(g?.ahead > 0, (el) => el.child(div().flex_none().text_color(t.ansi2).child(`\u2191${g.ahead}`)))
           .when(g?.behind > 0, (el) => el.child(div().flex_none().text_color(t.ansi1).child(`\u2193${g.behind}`))))
