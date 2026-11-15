@@ -22,7 +22,7 @@ export default class WorkspaceStatus extends View {
     const label = (icon, text) => h_flex().gap(6).items_center().child(svg(`mods/workspace-chrome/${icon}.svg`).size(13)).child(text);
     const n = (k) => list.filter(a => a.status === k).length;
     const pill = (color, text) => h_flex().relative().gap(6).items_center().child(div().relative().size(7).rounded(4).bg(color)
-      .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(color + "80").loop("opacity", { from: 0.7, to: 1, period: 1600, easing: "ease-in-out" }))).child(text);
+      .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(color + "44").loop("opacity", { from: 0.45, to: 1, period: 1600, easing: "ease-in-out" }))).child(text);
     return h_flex().size_full().px(14).gap(16).items_center().bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8).text_color(t.muted)
       .child(div().font_semibold().text_color(t.accent).child("Pixel HQ"))
       .child(label(space?.machine ? "server" : "monitor", space?.machine ?? "This computer"))

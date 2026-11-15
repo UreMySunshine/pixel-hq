@@ -1,7 +1,7 @@
 // A desk nameplate as the pane header: the agent's pixel pet, its job title, status and folder.
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { panes, props, run, theme, home, layout, settings } from "herdr";
+import { panes, props, run, theme, home, layout } from "herdr";
 import { agentOf, duckMood, duckWidth, mood } from "./duck.js";
 
 const ROLE = (p) => agentOf(p.program?.key)?.role ?? (p.program?.shell ? "Terminal" : (p.program?.name ?? "Contractor"));
@@ -48,8 +48,8 @@ export default class CompanyPane extends View {
       ? div().flex_none().w(duckWidth(H)).h(H).child(duckMood(mood(st ?? "idle"), H, { species }))
       : div().flex_none().size(24).rounded(6).bg(t.raised).flex().items_center().justify_center().text_size(12).text_color(t.muted).child(">_");
     const title = ((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name || "shell";
-    const chip = (text, color, spin) => h_flex().relative().flex_none().gap(5).px(8).h(20).items_center().rounded(10).bg(settings().dark === false ? "#1e1e2e" : color + "26").text_size(10.5).font_semibold().text_color(color)
-      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(12).bg(color + "80").loop("opacity", { from: 0.7, to: 1, period: st === "blocked" ? 900 : 2000, easing: "ease-in-out" }))
+    const chip = (text, color, spin) => h_flex().relative().flex_none().gap(5).px(8).h(20).items_center().rounded(10).bg(color + "26").text_size(10.5).font_semibold().text_color(color)
+      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(12).bg(color + "33").loop("opacity", { from: 0.4, to: 1, period: st === "blocked" ? 900 : 2000, easing: "ease-in-out" }))
       .when(Boolean(spin), el => el.child(svg("mods/workspace-chrome/spinner.svg").size(11).flex_none().text_color(color).spin(900)))
       .child(text);
     const status = st === "working" ? chip("typing", t.working ?? "#89b4fa", true)

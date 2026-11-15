@@ -19,11 +19,11 @@ export const pal = () => (isDay() ? {
   panel: "#c6c0dd",     // a secondary button
   panelInk: "#47445e",
   mutedText: "#6f6a8c", // unselected program chips
-  plate: "#1e1e2ee6",   // a desk's nameplate: dark, so its neon halo reads
-  plateInk: "#cdd6f4",
+  plate: "#f6f4fbe6",   // a desk's nameplate
+  plateInk: "#47445e",
   row: "#f6f4fbcc",     // a collapsed-list row
   rowEdge: "#7c5fe040",
-  neon: "#04a5e5",      // the halo around a lit nameplate or badge
+  neon: "#7c5fe0",      // the halo around a lit nameplate or badge
 } : {
   frame: "#45475a",
   fill: "#181825",

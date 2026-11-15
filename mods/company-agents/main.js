@@ -85,7 +85,7 @@ function contextBar(t, pct, model, address) {
   return h_flex().id(`ctx-${address}`).mt(2).gap(5).items_center().tooltip(`Context ${pct}% used${model ? ` · ${model}` : ""}`)
     .child(div().w(72).h(3).flex_none().rounded(2).bg(t.border)
       .child(div().relative().h_full().rounded(2).bg(color).w(Math.max(2, (72 * pct) / 100))
-        .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(3).bg(color + "80"))))
+        .child(div().absolute().left(-1).right(-1).top(-2).bottom(-2).rounded(3).bg(color + "40"))))
     .child(div().flex_none().text_size(10).text_color(t.dim).child(`${pct}%`))
     .when(Boolean(model), el => el.child(div().min_w(0).truncate().text_size(10).text_color(t.muted).child(`· ${model}`)));
 }
@@ -319,14 +319,14 @@ export default class Agents extends View {
     const color = t[a.status] ?? t.dim;
     const dot = (c, pulse) => {
       const d = div().relative().size(7).mx(3).flex_none().rounded(4).bg(c)
-        .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(c + "80"));
-      return pulse ? d.loop("opacity", { from: 0.75, to: 1, period: 1400, easing: "ease-in-out" }) : d;
+        .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(c + "40"));
+      return pulse ? d.loop("opacity", { from: 0.5, to: 1, period: 1400, easing: "ease-in-out" }) : d;
     };
     if (a.status === "working") return svg("mods/workspace-chrome/spinner.svg").size(12).mx(1).flex_none().text_color(t.working).spin(900);
-    if (a.status === "blocked" && compact) return div().relative().size(14).flex_none().rounded(4).bg(t.blocked).text_size(10.5).font_bold().text_color("#ffffff").flex().items_center().justify_center()
-      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(6).bg(t.blocked + "66").loop("opacity", { from: 0.7, to: 1, period: 900, easing: "ease-in-out" })).child("!");
-    if (a.status === "blocked") return div().relative().flex_none().px(6).h(18).rounded(5).bg(t.blocked).text_size(10.5).font_semibold().text_color("#ffffff").flex().items_center()
-      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(7).bg(t.blocked + "66").loop("opacity", { from: 0.7, to: 1, period: 900, easing: "ease-in-out" })).child("Needs you");
+    if (a.status === "blocked" && compact) return div().relative().size(14).flex_none().rounded(4).bg(t.blocked + "26").text_size(10.5).font_bold().text_color(t.blocked).flex().items_center().justify_center()
+      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(6).bg(t.blocked + "33").loop("opacity", { from: 0.4, to: 1, period: 900, easing: "ease-in-out" })).child("!");
+    if (a.status === "blocked") return div().relative().flex_none().px(6).h(18).rounded(5).bg(t.blocked + "26").text_size(10.5).font_semibold().text_color(t.blocked).flex().items_center()
+      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(7).bg(t.blocked + "33").loop("opacity", { from: 0.4, to: 1, period: 900, easing: "ease-in-out" })).child("Needs you");
     // Idle: a ring; done: a glowing dot.
     if (a.status === "idle") return div().size(7).mx(3).flex_none().rounded(4).border(1.5).border_color(t.idle ?? t.dim);
     return a.status === "done" ? dot(color, true) : div().size(7).mx(3).flex_none().rounded(4).bg(t.dim + "00");
@@ -829,8 +829,8 @@ export default class Agents extends View {
         .child(div().relative().mt(6).max_w(Math.max(petW + 22, cellW - 4)).px(5).h(15).flex().items_center().rounded(3)
           .bg(this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : P.plate)
           .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(5)
-            .bg((this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : P.neon) + "80")
-            .loop("opacity", { from: 0.7, to: 1, period: hot || cl ? 800 : 2400, easing: "ease-in-out" }))
+            .bg((this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : P.neon) + "44")
+            .loop("opacity", { from: 0.45, to: 1, period: hot || cl ? 800 : 2400, easing: "ease-in-out" }))
           .text_size(10.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : P.plateInk).truncate()
           .child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? ` · ${duration(now - when)}` : ""}`))
         .when(Boolean(branch), (el) => el.child(h_flex().mt(2).gap(3).items_center().max_w(Math.max(petW + 22, cellW - 4)).text_size(9.5)
