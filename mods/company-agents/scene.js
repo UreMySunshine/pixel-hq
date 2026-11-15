@@ -20,7 +20,7 @@ function ellipse(cx, cy, rx, ry, c) {
 
 // A server corner on the wall: two racks full of blinking status lights, and a holographic world map floating above a projector.
 const LIGHTS = ["#f4723a", "#f9d23c", "#8fcb4f", "#37c5d6", "#c678dd", "#f38ba8"];
-const LIGHTS_DAY = ["#ff6b35", "#ffd23f", "#7ee787", "#39d0d8", "#c77dff", "#ff5d8f"];
+const LIGHTS_DAY = ["#fab387", "#f9e2af", "#a6e3a1", "#89dceb", "#cba6f7", "#f38ba8"]; // Catppuccin Mocha pastels
 const WORLD = [
   "....XXXX.....XXXXXX..",
   "...XXXXXXX..XXXXXXXXX",
@@ -34,14 +34,14 @@ function ledWall(x, w, base) {
   // Two LED code screens on the right wall, set at an angle: 4px strips that step down a little further each time.
   // The screens are emissive: they stay dark with neon code by day too, so the cyberpunk glow survives the bright office.
   const day = isDay();
-  const bezel = day ? "#4a5178" : "#0a0c1a";
-  const screen = day ? "#141833" : "#10132a";
-  const lip = day ? "#323a66" : "#2a2f55";
+  const bezel = day ? "#313244" : "#0a0c1a";
+  const screen = day ? "#1e1e2e" : "#10132a";
+  const lip = day ? "#45475a" : "#2a2f55";
   const lights = day ? LIGHTS_DAY : LIGHTS;
   const o = [], top = 12, n = Math.floor(w / U), nA = Math.max(2, Math.round(n * 0.45));
   const ph = base - top - Math.round(n * 0.7) - 4;
   if (day) o.push(div().absolute().left(0).top(0).w(1).h(1).children([
-    r(x - 6, top - 6, w + 12, ph + 16, "#39d0d826"), r(x - 3, top - 3, w + 6, ph + 10, "#c77dff1f"),
+    r(x - 6, top - 6, w + 12, ph + 16, "#89dceb33"), r(x - 3, top - 3, w + 6, ph + 10, "#cba6f72e"),
   ]).loop("opacity", { from: 0.6, to: 1, period: 2600, easing: "ease-in-out" }));
   for (let i = 0; i < n; i++) {
     const inA = i < nA, j = inA ? i : i - nA, dy = inA ? Math.round(j * 0.25) : Math.round(j * 0.75) - 2;
@@ -57,14 +57,14 @@ function ledWall(x, w, base) {
   }
   // The projector pad stands in front of the screens, a green hologram of the world above it.
   const hx = x + Math.floor((w - 40) / 2), hy = base - 14;
-  const beamC = day ? "#22d3ee55" : "#6fe0f01c", mapC = day ? "#39d353" : "#7be495";
+  const beamC = day ? "#89dceb66" : "#6fe0f01c", mapC = day ? "#a6e3a1" : "#7be495";
   const beam = [];
   for (let i = 0; i < 4; i++) beam.push(r(hx + 6 - i * 3, hy - 4 - i * 5, 28 + i * 6, 5, beamC));
   const map = [];
   WORLD.forEach((line, yy) => [...line].forEach((ch, xx) => { if (ch === "X") map.push(r(hx - 6 + xx * 2, hy - 30 + yy * 3, 2, 3, mapC)); }));
   o.push(
     div().absolute().left(0).top(0).w(1).h(1).children(beam).loop("opacity", { from: 0.5, to: 1, period: 2400, easing: "ease-in-out" }),
-    r(hx, hy, 40, 14, "#aab4d6"), r(hx, hy, 40, 3, "#d3d8ea"), r(hx + 4, hy - 3, 32, 5, day ? "#22d3ee" : "#6fe0f0"), r(hx + 4, hy + 8, 6, 3, day ? "#ffd23f" : "#e8d44a"), r(hx + 28, hy + 8, 8, 3, day ? "#39d0d8" : "#37c5d6"),
+    r(hx, hy, 40, 14, "#aab4d6"), r(hx, hy, 40, 3, "#d3d8ea"), r(hx + 4, hy - 3, 32, 5, day ? "#89dceb" : "#6fe0f0"), r(hx + 4, hy + 8, 6, 3, day ? "#f9e2af" : "#e8d44a"), r(hx + 28, hy + 8, 8, 3, day ? "#94e2d5" : "#37c5d6"),
     div().absolute().left(0).top(0).w(1).h(1).children(map).loop("opacity", { from: 0.55, to: 1, period: 2200, easing: "ease-in-out" }),
   );
   return o;
@@ -81,8 +81,8 @@ const NIGHT = {
 };
 const DAY = {
   wall: "#e9ebf3", ceil: "#d3d7e6", band: "#dfe3f0", bandTop: "#ccd2e4", skirt: "#c0c6da",
-  frame: "#7c86ad", sky: "#aecdf5", glint: "#ffd23f", moon: "#f2c94c", bldg: "#9db1d6", pane: "#d9a441", glass: "#ffffff59", sill: "#a8b1cf",
-  clockRim: "#a6adc9", clockFace: "#ffffff", hand: "#3c4054", signBg: "#e0f7fa", sign: "#06b6d4",
+  frame: "#7c86ad", sky: "#aecdf5", glint: "#f9e2af", moon: "#f2c94c", bldg: "#9db1d6", pane: "#fab387", glass: "#ffffff59", sill: "#a8b1cf",
+  clockRim: "#a6adc9", clockFace: "#ffffff", hand: "#3c4054", signBg: "#e3f6f5", sign: "#94e2d5",
   floor: "#d9dde9", grout: "#c5cbdd", edge: "#b3bad2", pool: "#fff3b855",
 };
 
@@ -127,7 +127,7 @@ export function scene(W, H) {
   const rr = Math.max(8, cr);
   L.push(...ellipse(cx, 26, rr, rr, p.clockRim), ...ellipse(cx, 26, rr - 4, rr - 4, p.clockFace), r(cx - 1, 26 - rr + 4, 2, rr - 3, p.hand), r(cx, 25, rr - 5, 2, p.hand), r(cx - 2, 24, 4, 4, "#c0424e"));
   if (gap >= 44 && base - 48 >= 88) {
-    if (isDay()) L.push(div().absolute().left(0).top(0).w(1).h(1).children([r(cx - 20, 44, 40, 40, "#22d3ee2e")]).loop("opacity", { from: 0.5, to: 1, period: 2800, easing: "ease-in-out" }));
+    if (isDay()) L.push(div().absolute().left(0).top(0).w(1).h(1).children([r(cx - 20, 44, 40, 40, "#94e2d533")]).loop("opacity", { from: 0.5, to: 1, period: 2800, easing: "ease-in-out" }));
     L.push(r(cx - 16, 48, 32, 32, p.signBg), r(cx - 12, 62, 24, 4, p.sign), r(cx - 2, 52, 4, 24, p.sign),
       r(cx - 8, 54, 4, 4, p.sign), r(cx + 4, 54, 4, 4, p.sign), r(cx - 8, 70, 4, 4, p.sign), r(cx + 4, 70, 4, 4, p.sign));
   }

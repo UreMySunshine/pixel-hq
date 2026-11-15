@@ -56,8 +56,8 @@ const HEADBAR = () => (day() ? "#d6dcea" : "#181825");
 // One floor of the building, cut away: the room's wall, windows, moon or sun, LED screen and floor, by time of day.
 const ROOMC = () => (day() ? {
   wallOn: "#e4e8f3", wallOff: "#d5dae8", trim: "#ffffff88", frame: "#7c86ad",
-  skyLit: "#cfe3fb", skyDark: "#aecdf5", bldg: "#9db1d6", pane: "#d9a441", glint: "#ffd23f",
-  moon: "#f2c94c", screen: "#4a5178", screenOn: "#141833",
+  skyLit: "#cfe3fb", skyDark: "#aecdf5", bldg: "#9db1d6", pane: "#fab387", glint: "#f9e2af",
+  moon: "#f2c94c", screen: "#313244", screenOn: "#1e1e2e",
   floor: "#d9dde9", skirt: "#c0c6da", grout: "#c5cbdd", desk: "#8d96b8", deskTop: "#a8b1cf",
 } : {
   wallOn: "#2a2f52", wallOff: "#20243d", trim: "#ffffff22", frame: "#0c0e1c",
@@ -570,7 +570,7 @@ export default class Spaces extends View {
       .child(R(12, 14, 1, 1, C.glint)).child(R(14, 17, 1, 1, C.glint)).child(R(7, 17, 1, 1, C.pane)).child(R(19, 18, 1, 1, C.pane))
       .child(R(20, 10, 3, 3, lit ? C.glint : C.moon)).child(R(14, 8, 1, 13, C.frame))
       .child(R(31, 6, 19, 16, C.screen)).child(R(32, 7, 17, 14, lit ? C.screenOn : day() ? "#d5dcea" : "#0e1226"))
-      .children([["#f4723a", 0, 9], ["#8fcb4f", 3, 10], ["#37c5d6", 0, 6], ["#f9d23c", 2, 11], ["#c678dd", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, day() && !lit ? "#8d96b8" : c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
+      .children([["#fab387", 0, 9], ["#a6e3a1", 3, 10], ["#89dceb", 0, 6], ["#f9e2af", 2, 11], ["#cba6f7", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, day() && !lit ? "#8d96b8" : c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
       .child(R(0, 24, 54, 16, C.floor)).child(R(0, 24, 54, 2, C.skirt)).child(R(0, 31, 54, 1, C.grout)).child(R(18, 26, 1, 14, C.grout)).child(R(36, 26, 1, 14, C.grout))
       .children([0, 1, 2].flatMap((k) => {
         const x = 3 + k * 17, a = crew[k];

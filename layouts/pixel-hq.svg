@@ -13,7 +13,7 @@
   <!-- sidebar: spaces list -->
   <rect x="4" y="19" width="46" height="3" fill="#8c8fa1"/>
   <rect x="2" y="25" width="88" height="13" fill="#dce4fb"/>
-  <rect x="4" y="27" width="14" height="9" fill="#ccd0da"/><rect x="6" y="28" width="6" height="4" fill="#141833"/>
+  <rect x="4" y="27" width="14" height="9" fill="#ccd0da"/><rect x="6" y="28" width="6" height="4" fill="#1e1e2e"/>
   <rect x="22" y="27" width="40" height="3" fill="#4c4f69"/><rect x="22" y="32" width="28" height="2" fill="#1e66f5"/>
   <rect x="4" y="41" width="14" height="9" fill="#f0d9c8"/><rect x="22" y="42" width="36" height="3" fill="#4c4f69"/><rect x="22" y="47" width="24" height="2" fill="#8c8fa1"/>
   <rect x="4" y="55" width="14" height="9" fill="#d8e0f0"/><rect x="22" y="56" width="42" height="3" fill="#4c4f69"/><rect x="22" y="61" width="24" height="2" fill="#8c8fa1"/>
@@ -23,14 +23,14 @@
   <rect x="2" y="100" width="88" height="48" fill="#d9dde9"/>
   <g fill="#c5cbdd"><rect x="24" y="100" width="1" height="48"/><rect x="46" y="100" width="1" height="48"/><rect x="68" y="100" width="1" height="48"/><rect x="2" y="116" width="88" height="1"/><rect x="2" y="132" width="88" height="1"/></g>
   <!-- windows -->
-  <rect x="6" y="74" width="20" height="18" fill="#7c86ad"/><rect x="8" y="76" width="16" height="14" fill="#aecdf5"/><rect x="18" y="78" width="4" height="4" fill="#f2c94c"/><rect x="9" y="84" width="3" height="6" fill="#9db1d6"/><rect x="14" y="82" width="3" height="8" fill="#9db1d6"/><rect x="10" y="86" width="1" height="1" fill="#d9a441"/><rect x="15" y="85" width="1" height="1" fill="#d9a441"/>
-  <rect x="30" y="74" width="20" height="18" fill="#7c86ad"/><rect x="32" y="76" width="16" height="14" fill="#aecdf5"/><rect x="33" y="84" width="3" height="6" fill="#9db1d6"/><rect x="40" y="82" width="3" height="8" fill="#9db1d6"/><rect x="34" y="86" width="1" height="1" fill="#d9a441"/><rect x="41" y="85" width="1" height="1" fill="#d9a441"/>
+  <rect x="6" y="74" width="20" height="18" fill="#7c86ad"/><rect x="8" y="76" width="16" height="14" fill="#aecdf5"/><rect x="18" y="78" width="4" height="4" fill="#f2c94c"/><rect x="9" y="84" width="3" height="6" fill="#9db1d6"/><rect x="14" y="82" width="3" height="8" fill="#9db1d6"/><rect x="10" y="86" width="1" height="1" fill="#fab387"/><rect x="15" y="85" width="1" height="1" fill="#fab387"/>
+  <rect x="30" y="74" width="20" height="18" fill="#7c86ad"/><rect x="32" y="76" width="16" height="14" fill="#aecdf5"/><rect x="33" y="84" width="3" height="6" fill="#9db1d6"/><rect x="40" y="82" width="3" height="8" fill="#9db1d6"/><rect x="34" y="86" width="1" height="1" fill="#fab387"/><rect x="41" y="85" width="1" height="1" fill="#fab387"/>
   <!-- LED wall: dark emissive screen + neon bars + hologram -->
-  <rect x="60" y="71" width="28" height="28" fill="#cdeef2"/>
-  <rect x="62" y="72" width="24" height="26" fill="#4a5178"/>
-  <rect x="64" y="74" width="20" height="22" fill="#141833"/>
-  <rect x="65" y="76" width="6" height="2" fill="#ff6b35"/><rect x="73" y="76" width="8" height="2" fill="#7ee787"/><rect x="65" y="80" width="9" height="2" fill="#39d0d8"/><rect x="76" y="80" width="5" height="2" fill="#ffd23f"/><rect x="65" y="84" width="5" height="2" fill="#c77dff"/><rect x="72" y="84" width="9" height="2" fill="#ff5d8f"/><rect x="65" y="88" width="8" height="2" fill="#7ee787"/><rect x="75" y="88" width="6" height="2" fill="#39d0d8"/>
-  <g fill="#39d353"><rect x="68" y="92" width="3" height="2"/><rect x="73" y="92" width="4" height="2"/><rect x="70" y="94" width="6" height="2"/></g>
+  <rect x="60" y="71" width="28" height="28" fill="#dff3f1"/>
+  <rect x="62" y="72" width="24" height="26" fill="#45475a"/>
+  <rect x="64" y="74" width="20" height="22" fill="#1e1e2e"/>
+  <rect x="65" y="76" width="6" height="2" fill="#fab387"/><rect x="73" y="76" width="8" height="2" fill="#a6e3a1"/><rect x="65" y="80" width="9" height="2" fill="#89dceb"/><rect x="76" y="80" width="5" height="2" fill="#f9e2af"/><rect x="65" y="84" width="5" height="2" fill="#cba6f7"/><rect x="72" y="84" width="9" height="2" fill="#f38ba8"/><rect x="65" y="88" width="8" height="2" fill="#a6e3a1"/><rect x="75" y="88" width="6" height="2" fill="#89dceb"/>
+  <g fill="#a6e3a1"><rect x="68" y="92" width="3" height="2"/><rect x="73" y="92" width="4" height="2"/><rect x="70" y="94" width="6" height="2"/></g>
   <!-- desks + pets -->
   <rect x="10" y="112" width="26" height="12" fill="#646a8c"/><rect x="12" y="108" width="22" height="4" fill="#7a81a6"/>
   <rect x="18" y="100" width="10" height="9" fill="#3c4054"/><rect x="20" y="102" width="6" height="5" fill="#f0e0c8"/>
