@@ -3,7 +3,7 @@
 // its first terminal is in now, only where unusual: branch, ahead/behind. Agent state lives in the agents list, not here. Click to
 // switch, right-click for its menu, drag to reorder.
 
-import { View, div, svg } from "gpui-kit";
+import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { spaces, machines, panes, agents, run, openOverlay, exec, hc, theme, shared, setShared, watchFolder, window, layout, settings } from "herdr";
 
@@ -581,7 +581,16 @@ export default class Spaces extends View {
       .child(R(0, 24, 54, 16, C.floor)).child(R(0, 24, 54, 2, C.skirt)).child(R(0, 31, 54, 1, C.grout)).child(R(18, 26, 1, 14, C.grout)).child(R(36, 26, 1, 14, C.grout))
       .children([0, 1, 2].flatMap((k) => {
         const x = 3 + k * 17, a = crew[k];
-        const pet = a ? (() => { const [c1, c2] = skin(a); return [R(x + 2, 24, 10, 8, day() ? "#cfc9e4" : "#3c4054"), R(x + 3, 23, 8, 4, c1), R(x + 3, 26, 8, 4, c2), R(x + 4, 25, 1, 2, "#14131f"), R(x + 8, 25, 1, 2, "#14131f")]; })() : [];
+        const pet = a ? (() => {
+          const chair = R(x + 2, 24, 10, 8, day() ? "#cfc9e4" : "#3c4054");
+          const k = String(a.program?.key ?? "").toLowerCase();
+          if (k.includes("deepseek") || k.includes("dsh")) {
+            const f = a.status === "working" ? "typing" : a.status === "blocked" ? "error" : a.status === "done" ? "happy" : "idle";
+            return [chair, image(`mods/company-agents/whale/${f}.gif`).absolute().left(x + 1).top(18).h(14)];
+          }
+          const [c1, c2] = skin(a);
+          return [chair, R(x + 3, 23, 8, 4, c1), R(x + 3, 26, 8, 4, c2), R(x + 4, 25, 1, 2, "#14131f"), R(x + 8, 25, 1, 2, "#14131f")];
+        })() : [];
         const glow = a ? R(x + 3, 30, 8, 3, a.status === "blocked" ? "#f38ba8" : day() ? "#8d86b4" : "#d8def0") : R(x + 3, 30, 8, 3, day() ? "#b0a8d2" : "#323650");
         const mark = a && a.status === "blocked" ? [R(x + 12, 20, 2, 5, "#f9e2af").loop("opacity", { from: 0.2, to: 1, period: 700, easing: "linear" }), R(x + 12, 26, 2, 2, "#f9e2af")] : a && a.status === "done" ? [R(x + 11, 21, 2, 2, "#a6e3a1"), R(x + 2, 20, 2, 2, "#f9e2af")] : [];
         return [...pet, R(x, 32, 14, 3, C.desk), R(x, 32, 14, 1, C.deskTop), glow, ...mark];

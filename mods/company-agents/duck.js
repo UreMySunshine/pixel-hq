@@ -114,6 +114,8 @@ const PENGUIN_FEET = [[66, 206, 48, 12, "#F5A623"], [136, 206, 48, 12, "#F5A623"
 // DeepSeek's whale girl uses the animated pixel sprites from PC2005-cloud/dsh-pet,
 // cropped to the figure and enlarged. The GIFs play their own motion.
 const WHALE_FRAME = { stab: "typing", angry: "error", scowl: "error", happy: "happy", content: "idle" };
+// Crop aspect (w/h) per mood, to centre the enlarged figure on the body axis.
+const WHALE_ASPECT = { typing: 84 / 101, error: 100 / 105, happy: 106 / 116, idle: 91 / 101 };
 
 // Pi: a blue block fellow carrying the official π mark on its chest. The mark is the
 // logo's own three colours, laid out on the 117.36-unit grid the logo SVG uses.
@@ -166,8 +168,11 @@ export function duckMood(m, height, { still = false, species = "crab" } = {}) {
   const sp = SPECIES[species] ?? SPECIES.crab;
   if (sp.whale) {
     const s = height / HEIGHT;
-    const pic = image(`mods/company-agents/whale/${WHALE_FRAME[m] ?? "idle"}.gif`)
-      .absolute().left((ROOM + 125) * s - height * 0.42).top(height * 0.02).h(height * 0.98);
+    const f = WHALE_FRAME[m] ?? "idle";
+    const h = height * 1.5;
+    const w = h * (WHALE_ASPECT[f] ?? 0.9);
+    const pic = image(`mods/company-agents/whale/${f}.gif`)
+      .absolute().left((ROOM + 125) * s - w / 2).top(-height * 0.1).h(h);
     return div().relative().flex_none().w(Math.round((WIDTH * height) / HEIGHT)).h(height).child(pic);
   }
   const BODY = sp.body, SHADE = sp.shade, EYE = sp.eye, BADGE = sp.badge;
