@@ -38,7 +38,7 @@ const FALLBACK = 60000;
 
 // What a stored color name looks like on an avatar (the same in every mod
 // that draws space avatars): one strong color per hue, light and dark alike.
-const MARK = { ansi6: "#22a99a", ansi3: "#e3814f", ansi4: "#5b8def", ansi5: "#8b7cf6", ansi2: "#3fae6a", ansi1: "#d9649a" };
+const MARK = { ansi6: "#179299", ansi3: "#df8e1d", ansi4: "#04a5e5", ansi5: "#8839ef", ansi2: "#40a02b", ansi1: "#e0457b" };
 
 const MONO = "JetBrains Mono";
 // The layout runs a dark and a light theme; the drawn parts follow it.
@@ -51,14 +51,14 @@ const soften = (c, k = 0.3) => {
   const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
   return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
 };
-// The line head's bar and underline: a dark plaque by night, a pale one by day.
-const HEADBAR = () => (day() ? "#d6d1ea" : "#181825");
+// The line head's bar and underline: a dark neon plaque in both appearances.
+const HEADBAR = () => (day() ? "#1e1e2e" : "#181825");
 // One floor of the building, cut away: the room's wall, windows, moon or sun, LED screen and floor, by time of day.
 const ROOMC = () => (day() ? {
-  wallOn: "#e2dff0", wallOff: "#d3cde6", trim: "#ffffff88", frame: "#5b5480",
-  skyLit: "#cfe0fb", skyDark: "#b7cdf5", bldg: "#8f92c4", pane: "#fab387", glint: "#f9e2af",
-  moon: "#f2c94c", screen: "#313244", screenOn: "#1e1e2e",
-  floor: "#d5d1e8", skirt: "#b0a8d2", grout: "#bdb7d8", desk: "#8d86b4", deskTop: "#a49cc8",
+  wallOn: "#2a2f52", wallOff: "#20243d", trim: "#ffffff33", frame: "#0c0e1c",
+  skyLit: "#1a2350", skyDark: "#0e1226", bldg: "#121733", pane: "#fab387", glint: "#f9e2af",
+  moon: "#f2c94c", screen: "#313244", screenOn: "#11111b",
+  floor: "#242843", skirt: "#171a2c", grout: "#1c1f36", desk: "#646a8c", deskTop: "#8a91b6",
 } : {
   wallOn: "#2a2f52", wallOff: "#20243d", trim: "#ffffff22", frame: "#0c0e1c",
   skyLit: "#1a2350", skyDark: "#0e1226", bldg: "#121733", pane: "#e0b94a", glint: "#f5e9b0",
@@ -67,7 +67,7 @@ const ROOMC = () => (day() ? {
 });
 const GUTTER = 22;
 // The metro lines wear soft pastels from the layout's own blue-violet tone (periwinkle first), not the strong space colors.
-const LINES = ["#8fa3f0", "#7aa7e8", "#6fc7bd", "#b394f0", "#8fcf94", "#e49ac8"];
+const LINES = ["#7c5fe0", "#04a5e5", "#179299", "#ea76cb", "#40a02b", "#df8e1d"];
 
 function grip(color) {
   return div().absolute().left(1).top(9).w(5).h(10).children([0, 4, 8].flatMap((y) => [0, 3].map((x) => div().absolute().left(x).top(y).size(2).bg(color))));
@@ -89,17 +89,17 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
   const node = div().absolute().left(3).top(c - 7).w(14).h(14).children(pix(line, 14, 14))
     .child(div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : day() ? "#47445e" : "#ffffff"));
   return div().relative().w(GUTTER).h(h).flex_none()
-    .child(div().absolute().left(6).top(0).w(8).h(end).bg(line + "33"))
+    .child(div().absolute().left(6).top(0).w(8).h(end).bg(line + "66"))
     .child(div().absolute().left(8).top(0).w(4).h(end).bg(line))
     .child(div().absolute().left(8).top(0).w(1).h(end).bg("#ffffff40"))
     .children(sleepers)
     .when(stop === "station" && (here || blocked), (el) => el.child(div().absolute().left(0).top(c - 10).w(20).h(20).children(pix(blocked ? "#f38ba8" : "#f9e2af", 20, 20)).opacity(0.28)
       .loop("opacity", { from: 0.1, to: 0.45, period: blocked ? 800 : 1800, easing: "ease-in-out" })))
     .when(stop === "station", (el) => el.child(node
-      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).bg(line + "3d").loop("opacity", { from: 0.4, to: 1, period: here ? 1600 : 3000, easing: "ease-in-out" }))))
+      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).bg(line + "80").loop("opacity", { from: 0.7, to: 1, period: here ? 1600 : 3000, easing: "ease-in-out" }))))
     .when(stop === "end", (el) => el.child(div().absolute().left(4).top(c - 6).w(12).h(12).rounded(2).border_2().border_dashed().border_color(line).bg(t.chrome)))
-    .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color(day() ? "#a49cc8" : "#2a2c40").bg(day() ? "#5b5480" : "#e8ecf8")
-      .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#d7d2e9" : "#2a2c40"))
+    .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color(day() ? "#04a5e5" : "#2a2c40").bg(day() ? "#1e1e2e" : "#e8ecf8")
+      .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#89dceb" : "#2a2c40"))
       .child(blocked ? lamp.loop("opacity", { from: 0.3, to: 1, period: 700, easing: "linear" }) : lamp)
       .loop("top", { from: c - 25, to: c - 19, period: 2400 })));
 }
@@ -408,7 +408,7 @@ export default class Spaces extends View {
         .when(!folded && !rebuilt && !login && (mine.length > 0 || !loading(m)), (el) => el.child(div().absolute().left(8).top(18).w(4).h(10).bg(line)));
       const icon = svg(`mods/workspace-chrome/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
       const badge = div().absolute().right(-3).bottom(-2).size(6).rounded(3).border_1().border_color(t.chrome).bg(connected ? t.ansi2 : t.dim);
-      const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 28).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
+      const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 28).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(day() ? "#9d97bd" : t.dim)
         .when(collapsed, el => el.mt(4).w(RAIL_CELL).justify_center().rounded(6).tooltip(login ? `${m} needs a login: run ${login}. Click for Copy.` : m ? `${m} · ${connected ? "connected" : (machine?.state ?? "asleep").replace(/_/g, " ")}` : "This computer"))
         .when(collapsed, el => el.cursor_pointer())
         .when(!collapsed, el => el.bg(HEADBAR()).mb(2).h(30).child(div().absolute().left(0).right(0).bottom(0).h(2).bg(line)))
@@ -437,20 +437,20 @@ export default class Spaces extends View {
           .when(this.dragLine?.m === m && this.overLine && this.overLine.m !== m, el => el.opacity(0.5))
           .when(target, el => el.bg(t.hover))
           .when(target && from > at, el => dropBar(el, false))
-          .when(hovered, el => el.child(grip(t.dim))))
+          .when(hovered, el => el.child(grip(day() ? "#9d97bd" : t.dim))))
         .when(!collapsed, el => el.child(bullet))
         .when(collapsed, el => el.child(div().relative().flex_none().child(icon).when(Boolean(m), el => el.child(badge))))
-        .when(!collapsed, el => el.child(div().flex_1().truncate().font_family(MONO).font_bold().text_size(10).text_color(connected ? t.foreground : t.dim).when(!renaming, el => el.child(`${(m ?? "this computer").toUpperCase()} LINE`))
-          .when(renaming, el => el.child(Input.new(this.renaming.input).h(22).text_size(11).font_family(MONO).text_color(t.foreground))))
+        .when(!collapsed, el => el.child(div().flex_1().truncate().font_family(MONO).font_bold().text_size(10).text_color(day() ? (connected ? "#e6e2f5" : "#9d97bd") : (connected ? t.foreground : t.dim)).when(!renaming, el => el.child(`${(m ?? "this computer").toUpperCase()} LINE`))
+          .when(renaming, el => el.child(Input.new(this.renaming.input).h(22).text_size(11).font_family(MONO).text_color(day() ? "#e6e2f5" : t.foreground))))
           .when(!connected && !rebuilt && !login, el => el.child(div().flex_none().child((machine?.state ?? "asleep").replace(/_/g, " "))))
           .when(rebuilt, el => el.child(h_flex().flex_none().gap(3).items_center()
             .child(div().max_w(140).truncate().child(repair?.error || "rebuilt ·"))
-            .child(div().id(`machine-connect-${m}`).text_color(repair?.error ? t.blocked : t.muted)
-              .hover(s => s.text_color(t.foreground))
+            .child(div().id(`machine-connect-${m}`).text_color(repair?.error ? t.blocked : (day() ? "#9d97bd" : t.muted))
+              .hover(s => s.text_color(day() ? "#ffffff" : t.foreground))
               .tooltip(repair?.error || "This machine was rebuilt or replaced. Click to connect to the new one.")
               .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(machine, cx); })
               .child(repair?.busy ? "Connecting…" : "Connect"))))
-          .when(hovered && connected, el => el.child(div().id(`machine-add-${lineKey}`).flex_none().px(4).rounded(4).hover(s => s.bg(t.hover).text_color(t.foreground))
+          .when(hovered && connected, el => el.child(div().id(`machine-add-${lineKey}`).flex_none().px(4).rounded(4).hover(s => s.bg(t.hover).text_color(day() ? "#ffffff" : t.foreground))
             .tooltip(`New station on ${m ?? "this computer"}`)
             .on_click((_e, cx) => { cx.stop_propagation(); run("space.new", { machine: m ?? "" }); }).child("+")))
           .child(div().flex_none().child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
@@ -569,27 +569,27 @@ export default class Spaces extends View {
     const skin = (a) => { const k = String(a.program?.key ?? "").toLowerCase(); return k.includes("claude") ? ["#D97757", "#D97757"] : k.includes("codex") ? ["#5B6CF0", "#5B6CF0"] : k.includes("opencode") ? ["#4A5B80", "#F7F4EC"] : (k.includes("antigravity") || k === "agy") ? ["#F6A03A", "#3186FF"] : ["#F1E7D3", "#F1E7D3"]; };
     const room = div().relative().w(54).h(40).flex_none().overflow_hidden()
       .child(R(0, 0, 54, 24, any ? C.wallOn : C.wallOff)).child(R(0, 0, 54, 3, soften(fill))).child(R(0, 3, 54, 1, C.trim))
-      .child(R(0, 0, 54, 5, "#89dceb2e").loop("opacity", { from: lit ? 0.5 : 0.2, to: lit ? 1 : 0.4, period: 2600, easing: "ease-in-out" }))
-      .child(R(0, 0, 54, 1, "#89dceb").loop("opacity", { from: lit ? 0.6 : 0.25, to: 1, period: 2600, easing: "ease-in-out" }))
+      .child(R(0, 0, 54, 5, "#89dceb4d").loop("opacity", { from: lit ? 0.7 : 0.3, to: 1, period: 2600, easing: "ease-in-out" }))
+      .child(R(0, 0, 54, 1, "#89dceb").loop("opacity", { from: lit ? 0.8 : 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
       .child(R(4, 7, 22, 15, C.frame)).child(R(5, 8, 20, 13, lit ? C.skyLit : C.skyDark))
       .child(R(6, 15, 4, 6, C.bldg)).child(R(11, 12, 5, 9, C.bldg)).child(R(17, 16, 6, 5, C.bldg))
       .child(R(12, 14, 1, 1, C.glint)).child(R(14, 17, 1, 1, C.glint)).child(R(7, 17, 1, 1, C.pane)).child(R(19, 18, 1, 1, C.pane))
       .child(R(20, 10, 3, 3, lit ? C.glint : C.moon)).child(R(14, 8, 1, 13, C.frame))
-      .child(R(29, 4, 23, 20, "#89dceb26").loop("opacity", { from: lit ? 0.4 : 0.1, to: lit ? 1 : 0.25, period: 2200, easing: "ease-in-out" }))
-      .child(R(31, 6, 19, 16, C.screen)).child(R(32, 7, 17, 14, lit ? C.screenOn : day() ? "#d3cde6" : "#0e1226"))
-      .children([["#fab387", 0, 9], ["#a6e3a1", 3, 10], ["#89dceb", 0, 6], ["#f9e2af", 2, 11], ["#cba6f7", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, day() && !lit ? "#8d86b4" : c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
+      .child(R(29, 4, 23, 20, "#89dceb4d").loop("opacity", { from: lit ? 0.7 : 0.2, to: 1, period: 2200, easing: "ease-in-out" }))
+      .child(R(31, 6, 19, 16, C.screen)).child(R(32, 7, 17, 14, lit ? C.screenOn : "#0e1226"))
+      .children([["#fab387", 0, 9], ["#a6e3a1", 3, 10], ["#89dceb", 0, 6], ["#f9e2af", 2, 11], ["#cba6f7", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
       .child(R(0, 24, 54, 16, C.floor)).child(R(0, 24, 54, 2, C.skirt)).child(R(0, 31, 54, 1, C.grout)).child(R(18, 26, 1, 14, C.grout)).child(R(36, 26, 1, 14, C.grout))
       .children([0, 1, 2].flatMap((k) => {
         const x = 3 + k * 17, a = crew[k];
-        const pet = a ? (() => { const [c1, c2] = skin(a); return [R(x + 2, 24, 10, 8, day() ? "#cfc9e4" : "#3c4054"), R(x + 3, 23, 8, 4, c1), R(x + 3, 26, 8, 4, c2), R(x + 4, 25, 1, 2, "#14131f"), R(x + 8, 25, 1, 2, "#14131f")]; })() : [];
-        const glow = a ? R(x + 3, 30, 8, 3, a.status === "blocked" ? "#f38ba8" : day() ? "#8d86b4" : "#d8def0") : R(x + 3, 30, 8, 3, day() ? "#b0a8d2" : "#323650");
+        const pet = a ? (() => { const [c1, c2] = skin(a); return [R(x + 2, 24, 10, 8, "#3c4054"), R(x + 3, 23, 8, 4, c1), R(x + 3, 26, 8, 4, c2), R(x + 4, 25, 1, 2, "#14131f"), R(x + 8, 25, 1, 2, "#14131f")]; })() : [];
+        const glow = a ? R(x + 3, 30, 8, 3, a.status === "blocked" ? "#f38ba8" : "#89dceb").loop("opacity", { from: 0.5, to: 1, period: 1800, easing: "ease-in-out" }) : R(x + 3, 30, 8, 3, "#323650");
         const mark = a && a.status === "blocked" ? [R(x + 12, 20, 2, 5, "#f9e2af").loop("opacity", { from: 0.2, to: 1, period: 700, easing: "linear" }), R(x + 12, 26, 2, 2, "#f9e2af")] : a && a.status === "done" ? [R(x + 11, 21, 2, 2, "#a6e3a1"), R(x + 2, 20, 2, 2, "#f9e2af")] : [];
         return [...pet, R(x, 32, 14, 3, C.desk), R(x, 32, 14, 1, C.deskTop), glow, ...mark];
       }));
     // The room sits in a notched frame in the space's own color, its rim lit like a neon sign.
     const tile = div().relative().w(60).h(46).flex_none()
       .children(pix(soften(fill), 60, 46))
-      .child(div().absolute().left(-2).top(-2).children(pix(fill + "3a", 64, 50)).loop("opacity", { from: lit ? 0.45 : 0.15, to: lit ? 1 : 0.35, period: 2400, easing: "ease-in-out" }))
+      .child(div().absolute().left(-2).top(-2).children(pix(fill + "80", 64, 50)).loop("opacity", { from: lit ? 0.7 : 0.35, to: 1, period: 2400, easing: "ease-in-out" }))
       .child(div().absolute().left(3).top(3).child(room));
     const raw = g?.branch ?? null;
     const place = raw ?? base(w.folder ?? "");
@@ -597,11 +597,11 @@ export default class Spaces extends View {
     const idle = crew.length - blocked - working - done;
     const dot = blocked > 0 ? t.blocked : working > 0 ? t.working : null;
     const chip = (text, color, pulse) => {
-      const c = h_flex().relative().flex_none().px(5).h(15).items_center().rounded(2).border_1().border_color(color + "77").bg(color + "26")
+      const c = h_flex().relative().flex_none().px(5).h(15).items_center().rounded(2).border_1().border_color(color + "aa").bg(day() ? "#1e1e2e" : color + "26")
         .font_family(MONO).font_bold().text_size(9.5).text_color(color)
-        .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(4).bg(color + "33"))
+        .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(4).bg(color + "66").loop("opacity", { from: 0.7, to: 1, period: pulse ? 900 : 2200, easing: "ease-in-out" }))
         .child(text);
-      return pulse ? c.loop("opacity", { from: 0.55, to: 1, period: 900, easing: "ease-in-out" }) : c;
+      return pulse ? c.loop("opacity", { from: 0.75, to: 1, period: 900, easing: "ease-in-out" }) : c;
     };
     // Most urgent first, so a narrow card loses the least important chip.
     const chips = [
@@ -618,8 +618,8 @@ export default class Spaces extends View {
           .child(div().min_w(0).truncate().font_semibold().text_size(13.5).text_color(t.foreground).child(w.name))
           .when(Boolean(dot), (el) => {
             const d = div().relative().flex_none().size(7).bg(dot)
-              .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(dot + "44"));
-            return el.child(blocked > 0 ? d.loop("opacity", { from: 0.3, to: 1, period: 800, easing: "ease-in-out" }) : d.loop("opacity", { from: 0.6, to: 1, period: 1600, easing: "ease-in-out" }));
+              .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(dot + "80"));
+            return el.child(blocked > 0 ? d.loop("opacity", { from: 0.6, to: 1, period: 800, easing: "ease-in-out" }) : d.loop("opacity", { from: 0.75, to: 1, period: 1600, easing: "ease-in-out" }));
           }))
         .child(h_flex().gap(5).items_center().text_size(10.5).font_family(MONO).text_color(t.dim)
           .child(glyph)

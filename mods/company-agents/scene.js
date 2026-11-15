@@ -34,16 +34,16 @@ function ledWall(x, w, base) {
   // Two LED code screens on the right wall, set at an angle: 4px strips that step down a little further each time.
   // The screens are emissive: they stay dark with neon code by day too, so the cyberpunk glow survives the bright office.
   const day = isDay();
-  const bezel = day ? "#313244" : "#0a0c1a";
-  const screen = day ? "#1e1e2e" : "#10132a";
-  const lip = day ? "#45475a" : "#2a2f55";
+  const bezel = day ? "#45475a" : "#0a0c1a";
+  const screen = day ? "#11111b" : "#10132a";
+  const lip = day ? "#585b70" : "#2a2f55";
   const lights = day ? LIGHTS_DAY : LIGHTS;
   const o = [], top = 12, n = Math.floor(w / U), nA = Math.max(2, Math.round(n * 0.45));
   const ph = base - top - Math.round(n * 0.7) - 4;
   if (day) o.push(div().absolute().left(0).top(0).w(1).h(1).children([
-    r(x - 12, top - 10, w + 24, ph + 24, "#89dceb26"), r(x - 8, top - 8, w + 16, ph + 18, "#cba6f730"),
-    r(x - 4, top - 4, w + 8, ph + 10, "#89dceb40"),
-  ]).loop("opacity", { from: 0.55, to: 1, period: 2600, easing: "ease-in-out" }));
+    r(x - 12, top - 10, w + 24, ph + 24, "#04a5e544"), r(x - 8, top - 8, w + 16, ph + 18, "#ea76cb66"),
+    r(x - 4, top - 4, w + 8, ph + 10, "#04a5e599"),
+  ]).loop("opacity", { from: 0.75, to: 1, period: 2600, easing: "ease-in-out" }));
   for (let i = 0; i < n; i++) {
     const inA = i < nA, j = inA ? i : i - nA, dy = inA ? Math.round(j * 0.25) : Math.round(j * 0.75) - 2;
     const cx0 = x + i * U + (inA ? 0 : 2);
@@ -58,14 +58,14 @@ function ledWall(x, w, base) {
   }
   // The projector pad stands in front of the screens, a green hologram of the world above it.
   const hx = x + Math.floor((w - 40) / 2), hy = base - 14;
-  const beamC = day ? "#89dceb80" : "#6fe0f01c", mapC = day ? "#a6e3a1" : "#7be495";
+  const beamC = day ? "#04a5e599" : "#6fe0f01c", mapC = day ? "#40a02b" : "#7be495";
   const beam = [];
   for (let i = 0; i < 4; i++) beam.push(r(hx + 6 - i * 3, hy - 4 - i * 5, 28 + i * 6, 5, beamC));
   const map = [];
   WORLD.forEach((line, yy) => [...line].forEach((ch, xx) => { if (ch === "X") map.push(r(hx - 6 + xx * 2, hy - 30 + yy * 3, 2, 3, mapC)); }));
   o.push(
     div().absolute().left(0).top(0).w(1).h(1).children(beam).loop("opacity", { from: 0.5, to: 1, period: 2400, easing: "ease-in-out" }),
-    r(hx, hy, 40, 14, "#aab4d6"), r(hx, hy, 40, 3, "#d3d8ea"), r(hx + 4, hy - 3, 32, 5, day ? "#89dceb" : "#6fe0f0"), r(hx + 4, hy + 8, 6, 3, day ? "#f9e2af" : "#e8d44a"), r(hx + 28, hy + 8, 8, 3, day ? "#94e2d5" : "#37c5d6"),
+    r(hx, hy, 40, 14, "#aab4d6"), r(hx, hy, 40, 3, "#d3d8ea"), r(hx + 4, hy - 3, 32, 5, day ? "#04a5e5" : "#6fe0f0"), r(hx + 4, hy + 8, 6, 3, day ? "#df8e1d" : "#e8d44a"), r(hx + 28, hy + 8, 8, 3, day ? "#179299" : "#37c5d6"),
     div().absolute().left(0).top(0).w(1).h(1).children(map).loop("opacity", { from: 0.55, to: 1, period: 2200, easing: "ease-in-out" }),
   );
   return o;
@@ -98,18 +98,18 @@ export function scene(W, H) {
   // Back wall, a lighter band, a dark skirting and a dark line under the ceiling.
   L.push(r(0, 0, W, yH, p.wall), r(0, 0, W, 4, p.ceil), r(0, yH - 32, W, 24, p.band), r(0, yH - 32, W, 4, p.bandTop), r(0, base, W, 8, p.skirt));
   // Neon trim: a glowing tube under the ceiling and along the baseboard, pulsing like the screens.
-  const tubeA = isDay() ? "#89dceb" : "#89b4fa", tubeB = isDay() ? "#cba6f7" : "#f5c2e7";
+  const tubeA = isDay() ? "#04a5e5" : "#89b4fa", tubeB = isDay() ? "#ea76cb" : "#f5c2e7";
   L.push(
-    div().absolute().left(0).top(0).w(1).h(1).children([r(0, 2, W, 7, tubeA + "33"), r(0, 4, W, 2, tubeA)]).loop("opacity", { from: 0.55, to: 1, period: 3000, easing: "ease-in-out" }),
-    div().absolute().left(0).top(0).w(1).h(1).children([r(0, base - 2, W, 6, tubeB + "33"), r(0, base, W, 2, tubeB)]).loop("opacity", { from: 0.55, to: 1, period: 3400, easing: "ease-in-out" }),
+    div().absolute().left(0).top(0).w(1).h(1).children([r(0, 2, W, 7, tubeA + "77"), r(0, 4, W, 3, tubeA)]).loop("opacity", { from: 0.75, to: 1, period: 3000, easing: "ease-in-out" }),
+    div().absolute().left(0).top(0).w(1).h(1).children([r(0, base - 2, W, 6, tubeB + "77"), r(0, base, W, 3, tubeB)]).loop("opacity", { from: 0.75, to: 1, period: 3400, easing: "ease-in-out" }),
   );
 
   // Two windows onto the city (a moon in the first by night, a sun by day), in dark frames with a pale sill and glints on the glass.
   const win = (x, seed, withMoon, ww) => {
     const w = snap(ww), h = snap(yH * 0.58), y = snap(yH * 0.1);
-    const rim = isDay() ? "#89dceb" : "#89b4fa";
+    const rim = isDay() ? "#04a5e5" : "#89b4fa";
     const o = [
-      div().absolute().left(0).top(0).w(1).h(1).children([r(x - 8, y - 8, w + 16, h + 16, rim + "2e"), r(x - 5, y - 5, w + 10, h + 10, rim + "44")]).loop("opacity", { from: 0.5, to: 1, period: 3600, easing: "ease-in-out" }),
+      div().absolute().left(0).top(0).w(1).h(1).children([r(x - 8, y - 8, w + 16, h + 16, rim + "55"), r(x - 5, y - 5, w + 10, h + 10, rim + "99")]).loop("opacity", { from: 0.7, to: 1, period: 3600, easing: "ease-in-out" }),
       r(x - 4, y - 4, w + 8, h + 8, p.frame), r(x, y, w, h, p.sky),
     ];
     for (let i = 0; i < 6; i++) o.push(r(x + 6 + (i % 4) * snap(w / 4), y + 6 + snap(rnd(i + seed) * h * 0.3), U, U, p.glint).loop("opacity", { from: 0.2, to: 0.9, period: 1500 + i * 400, easing: "ease-in-out" }));
@@ -139,16 +139,16 @@ export function scene(W, H) {
   const rr = Math.max(8, cr);
   L.push(...ellipse(cx, 26, rr, rr, p.clockRim), ...ellipse(cx, 26, rr - 4, rr - 4, p.clockFace), r(cx - 1, 26 - rr + 4, 2, rr - 3, p.hand), r(cx, 25, rr - 5, 2, p.hand), r(cx - 2, 24, 4, 4, "#c0424e"));
   if (gap >= 44 && base - 48 >= 88) {
-    if (isDay()) L.push(div().absolute().left(0).top(0).w(1).h(1).children([r(cx - 24, 40, 48, 48, "#89dceb26"), r(cx - 20, 44, 40, 40, "#89dceb40")]).loop("opacity", { from: 0.5, to: 1, period: 2800, easing: "ease-in-out" }));
+    if (isDay()) L.push(div().absolute().left(0).top(0).w(1).h(1).children([r(cx - 24, 40, 48, 48, "#04a5e555"), r(cx - 20, 44, 40, 40, "#04a5e599")]).loop("opacity", { from: 0.7, to: 1, period: 2800, easing: "ease-in-out" }));
     L.push(r(cx - 16, 48, 32, 32, p.signBg), r(cx - 12, 62, 24, 4, p.sign), r(cx - 2, 52, 4, 24, p.sign),
       r(cx - 8, 54, 4, 4, p.sign), r(cx + 4, 54, 4, 4, p.sign), r(cx - 8, 70, 4, 4, p.sign), r(cx + 4, 70, 4, 4, p.sign));
   }
 
   // The water cooler stands on the baseboard, left of the screens; its tank and tap glow.
   L.push(
-    div().absolute().left(0).top(0).w(1).h(1).children([r(cw - 2, base - 58, 24, 30, "#89dceb2e")]).loop("opacity", { from: 0.5, to: 1, period: 2600, easing: "ease-in-out" }),
+    div().absolute().left(0).top(0).w(1).h(1).children([r(cw - 2, base - 58, 24, 30, "#04a5e566")]).loop("opacity", { from: 0.7, to: 1, period: 2600, easing: "ease-in-out" }),
     r(cw + 2, base - 54, 16, 22, "#6fa8d6"), r(cw + 4, base - 52, 4, 10, "#a9d0ee"), r(cw, base - 32, 20, 32, "#b7bfd6"), r(cw, base - 32, 20, 4, "#d3d8ea"),
-    r(cw + 6, base - 26, 8, 8, "#e8744f40"), r(cw + 8, base - 24, 4, 4, "#e8744f"),
+    r(cw + 6, base - 26, 8, 8, "#e8744f99"), r(cw + 8, base - 24, 4, 4, "#e8744f"),
   );
 
   // A potted plant in the left corner and the LED wall in the right one.
@@ -165,11 +165,11 @@ export function scene(W, H) {
   for (const [wx, wl] of two ? [[wx1, wA], [wx2, wB]] : [[wx1, wA]]) for (let i = 0; i < 9; i++) L.push(r(wx + i * 6, yH + 8 + i * 8, Math.round(wl * 0.85), 8, p.pool));
   L.push(r(0, yH, 4, H - yH, p.edge), r(W - 4, yH, 4, H - yH, p.edge), r(0, H - 4, W, 4, p.edge));
   // Neon floor edges: the same tubes trace the room's footprint.
-  const floorTube = isDay() ? "#cba6f7" : "#89b4fa";
+  const floorTube = isDay() ? "#8839ef" : "#89b4fa";
   L.push(div().absolute().left(0).top(0).w(1).h(1).children([
     r(0, yH, 2, H - yH, floorTube), r(W - 2, yH, 2, H - yH, floorTube), r(0, H - 2, W, 2, floorTube),
-    r(0, yH, 6, H - yH, floorTube + "26"), r(W - 6, yH, 6, H - yH, floorTube + "26"), r(0, H - 6, W, 6, floorTube + "26"),
-  ]).loop("opacity", { from: 0.5, to: 1, period: 3800, easing: "ease-in-out" }));
+    r(0, yH, 6, H - yH, floorTube + "66"), r(W - 6, yH, 6, H - yH, floorTube + "66"), r(0, H - 6, W, 6, floorTube + "66"),
+  ]).loop("opacity", { from: 0.7, to: 1, period: 3800, easing: "ease-in-out" }));
 
   return div().absolute().left(0).top(0).w(W).h(H).overflow_hidden().children(L);
 }

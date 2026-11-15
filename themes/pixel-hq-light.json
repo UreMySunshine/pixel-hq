@@ -32,9 +32,9 @@
     "border": "#3a2f661f",
     "hover": "#3a2f6612",
     "selected": "#7c5fe024",
-    "working": "#4f74e3",
+    "working": "#04a5e5",
     "blocked": "#e0457b",
-    "done": "#3f9e4d",
+    "done": "#40a02b",
     "idle": "#7d7899"
   }
 }
