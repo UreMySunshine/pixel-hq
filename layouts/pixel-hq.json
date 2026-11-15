@@ -2,6 +2,7 @@
   "id": "root",
   "type": "row",
   "theme": { "light": "pixel-hq-light", "dark": "pixel-hq" },
+  "preview": "layouts/pixel-hq.svg",
   "children": [
     {
       "id": "sidebar",
