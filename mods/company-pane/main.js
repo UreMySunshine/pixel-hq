@@ -55,7 +55,7 @@ export default class CompanyPane extends View {
     const status = st === "working" ? chip("typing", t.working ?? "#89b4fa", true)
       : st === "blocked" ? chip("needs you", t.blocked ?? "#e8744f")
       : st === "done" ? chip("shipped", t.done ?? "#8ec07c")
-      : species ? chip("on break", t.dim ?? "#9a8f86") : null;
+      : species ? chip("on break", t.idle ?? t.dim) : null;
     return h_flex()
       .id(`pane-head-${pane}`)
       .size_full()

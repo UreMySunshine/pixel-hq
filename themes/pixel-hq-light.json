@@ -35,6 +35,8 @@
     "working": "#4f74e3",
     "blocked": "#e0457b",
     "done": "#3f9e4d",
-    "idle": "#7d7899"
+    "idle": "#179299",
+    "muted": "#5c5875",
+    "dim": "#6f6a8c"
   }
 }

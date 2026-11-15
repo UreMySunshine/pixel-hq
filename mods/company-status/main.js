@@ -31,7 +31,7 @@ export default class WorkspaceStatus extends View {
       .when(n("working") > 0, el => el.child(pill(t.working ?? "#89b4fa", `${n("working")} typing`)))
       .when(n("blocked") > 0, el => el.child(pill(t.blocked ?? "#e8744f", `${n("blocked")} ${n("blocked") === 1 ? "needs" : "need"} you`)))
       .when(n("done") > 0, el => el.child(pill(t.done ?? "#8ec07c", `${n("done")} shipped`)))
-      .when(list.length - n("working") - n("blocked") - n("done") > 0, el => el.child(pill(t.dim ?? "#9a8f86", `${list.length - n("working") - n("blocked") - n("done")} on break`)))
+      .when(list.length - n("working") - n("blocked") - n("done") > 0, el => el.child(pill(t.idle ?? t.dim, `${list.length - n("working") - n("blocked") - n("done")} on break`)))
       .child(div().flex_1())
       .child(div().id("palette").text_color(t.dim).on_click(() => run("app.palette")).child(this.hint(t)));
   }
