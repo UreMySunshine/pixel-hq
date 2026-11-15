@@ -46,19 +46,19 @@ const day = () => settings().dark === false;
 // A strong space color toned toward the panel tone of the shown theme (pale lavender by night, pale grey-blue by day),
 // so frames and bars sit in the same soft palette.
 const soften = (c, k = 0.3) => {
-  const to = day() ? "#dce0e8" : "#cdd6f4";
+  const to = day() ? "#d7d2e9" : "#cdd6f4";
   if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
   const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
   return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
 };
 // The line head's bar and underline: a dark plaque by night, a pale one by day.
-const HEADBAR = () => (day() ? "#d6dcea" : "#181825");
+const HEADBAR = () => (day() ? "#d6d1ea" : "#181825");
 // One floor of the building, cut away: the room's wall, windows, moon or sun, LED screen and floor, by time of day.
 const ROOMC = () => (day() ? {
-  wallOn: "#e4e8f3", wallOff: "#d5dae8", trim: "#ffffff88", frame: "#7c86ad",
-  skyLit: "#cfe3fb", skyDark: "#aecdf5", bldg: "#9db1d6", pane: "#fab387", glint: "#f9e2af",
+  wallOn: "#e2dff0", wallOff: "#d3cde6", trim: "#ffffff88", frame: "#5b5480",
+  skyLit: "#cfe0fb", skyDark: "#b7cdf5", bldg: "#8f92c4", pane: "#fab387", glint: "#f9e2af",
   moon: "#f2c94c", screen: "#313244", screenOn: "#1e1e2e",
-  floor: "#d9dde9", skirt: "#c0c6da", grout: "#c5cbdd", desk: "#8d96b8", deskTop: "#a8b1cf",
+  floor: "#d5d1e8", skirt: "#b0a8d2", grout: "#bdb7d8", desk: "#8d86b4", deskTop: "#a49cc8",
 } : {
   wallOn: "#2a2f52", wallOff: "#20243d", trim: "#ffffff22", frame: "#0c0e1c",
   skyLit: "#1a2350", skyDark: "#0e1226", bldg: "#121733", pane: "#e0b94a", glint: "#f5e9b0",
@@ -87,7 +87,7 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
   const sleepers = [];
   for (let y = 2; y < end; y += 8) sleepers.push(div().absolute().left(5).top(y).w(10).h(2).bg("#00000038"));
   const node = div().absolute().left(3).top(c - 7).w(14).h(14).children(pix(line, 14, 14))
-    .child(div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : day() ? "#4c4f69" : "#ffffff"));
+    .child(div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : day() ? "#47445e" : "#ffffff"));
   return div().relative().w(GUTTER).h(h).flex_none()
     .child(div().absolute().left(8).top(0).w(4).h(end).bg(line))
     .child(div().absolute().left(8).top(0).w(1).h(end).bg("#ffffff40"))
@@ -96,8 +96,8 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
       .loop("opacity", { from: 0.1, to: 0.45, period: blocked ? 800 : 1800, easing: "ease-in-out" })))
     .when(stop === "station", (el) => el.child(node))
     .when(stop === "end", (el) => el.child(div().absolute().left(4).top(c - 6).w(12).h(12).rounded(2).border_2().border_dashed().border_color(line).bg(t.chrome)))
-    .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color(day() ? "#9aa4c8" : "#2a2c40").bg(day() ? "#5b6485" : "#e8ecf8")
-      .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#dce3f5" : "#2a2c40"))
+    .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color(day() ? "#a49cc8" : "#2a2c40").bg(day() ? "#5b5480" : "#e8ecf8")
+      .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#d7d2e9" : "#2a2c40"))
       .child(blocked ? lamp.loop("opacity", { from: 0.3, to: 1, period: 700, easing: "linear" }) : lamp)
       .loop("top", { from: c - 25, to: c - 19, period: 2400 })));
 }
@@ -569,13 +569,13 @@ export default class Spaces extends View {
       .child(R(6, 15, 4, 6, C.bldg)).child(R(11, 12, 5, 9, C.bldg)).child(R(17, 16, 6, 5, C.bldg))
       .child(R(12, 14, 1, 1, C.glint)).child(R(14, 17, 1, 1, C.glint)).child(R(7, 17, 1, 1, C.pane)).child(R(19, 18, 1, 1, C.pane))
       .child(R(20, 10, 3, 3, lit ? C.glint : C.moon)).child(R(14, 8, 1, 13, C.frame))
-      .child(R(31, 6, 19, 16, C.screen)).child(R(32, 7, 17, 14, lit ? C.screenOn : day() ? "#d5dcea" : "#0e1226"))
-      .children([["#fab387", 0, 9], ["#a6e3a1", 3, 10], ["#89dceb", 0, 6], ["#f9e2af", 2, 11], ["#cba6f7", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, day() && !lit ? "#8d96b8" : c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
+      .child(R(31, 6, 19, 16, C.screen)).child(R(32, 7, 17, 14, lit ? C.screenOn : day() ? "#d3cde6" : "#0e1226"))
+      .children([["#fab387", 0, 9], ["#a6e3a1", 3, 10], ["#89dceb", 0, 6], ["#f9e2af", 2, 11], ["#cba6f7", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, day() && !lit ? "#8d86b4" : c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
       .child(R(0, 24, 54, 16, C.floor)).child(R(0, 24, 54, 2, C.skirt)).child(R(0, 31, 54, 1, C.grout)).child(R(18, 26, 1, 14, C.grout)).child(R(36, 26, 1, 14, C.grout))
       .children([0, 1, 2].flatMap((k) => {
         const x = 3 + k * 17, a = crew[k];
-        const pet = a ? (() => { const [c1, c2] = skin(a); return [R(x + 2, 24, 10, 8, day() ? "#d7dcea" : "#3c4054"), R(x + 3, 23, 8, 4, c1), R(x + 3, 26, 8, 4, c2), R(x + 4, 25, 1, 2, "#14131f"), R(x + 8, 25, 1, 2, "#14131f")]; })() : [];
-        const glow = a ? R(x + 3, 30, 8, 3, a.status === "blocked" ? "#f38ba8" : day() ? "#7c87ad" : "#d8def0") : R(x + 3, 30, 8, 3, day() ? "#b6c0da" : "#323650");
+        const pet = a ? (() => { const [c1, c2] = skin(a); return [R(x + 2, 24, 10, 8, day() ? "#cfc9e4" : "#3c4054"), R(x + 3, 23, 8, 4, c1), R(x + 3, 26, 8, 4, c2), R(x + 4, 25, 1, 2, "#14131f"), R(x + 8, 25, 1, 2, "#14131f")]; })() : [];
+        const glow = a ? R(x + 3, 30, 8, 3, a.status === "blocked" ? "#f38ba8" : day() ? "#8d86b4" : "#d8def0") : R(x + 3, 30, 8, 3, day() ? "#b0a8d2" : "#323650");
         const mark = a && a.status === "blocked" ? [R(x + 12, 20, 2, 5, "#f9e2af").loop("opacity", { from: 0.2, to: 1, period: 700, easing: "linear" }), R(x + 12, 26, 2, 2, "#f9e2af")] : a && a.status === "done" ? [R(x + 11, 21, 2, 2, "#a6e3a1"), R(x + 2, 20, 2, 2, "#f9e2af")] : [];
         return [...pet, R(x, 32, 14, 3, C.desk), R(x, 32, 14, 1, C.deskTop), glow, ...mark];
       }));

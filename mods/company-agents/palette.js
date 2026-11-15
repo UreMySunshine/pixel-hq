@@ -8,21 +8,21 @@ export const isDay = () => settings().dark === false;
 
 // Notched frames, plaque fills, buttons, nameplates and the like.
 export const pal = () => (isDay() ? {
-  frame: "#bcc0cc",     // a plaque's 2px frame
-  fill: "#ffffff",      // plaque fill
-  deep: "#e6e9ef",      // deepest fill: the search box, the hire form
-  deepBox: "#ffffffee", // floating boxes (the update notice, "+N more")
-  shadow: "#c9cede",    // the hard 2px shadow under a plaque
-  dim: "#8c8fa1",       // the idle magnifier
-  accent: "#1e66f5",
+  frame: "#b3add0",     // a plaque's 2px frame
+  fill: "#f6f4fb",      // plaque fill
+  deep: "#e4e0f2",      // deepest fill: the search box, the hire form
+  deepBox: "#f6f4fbee", // floating boxes (the update notice, "+N more")
+  shadow: "#c6c0dd",    // the hard 2px shadow under a plaque
+  dim: "#7d7899",       // the idle magnifier
+  accent: "#7c5fe0",
   accentInk: "#ffffff",
-  panel: "#ccd0da",     // a secondary button
-  panelInk: "#4c4f69",
-  mutedText: "#6c6f85", // unselected program chips
-  plate: "#ffffffe6",   // a desk's nameplate
-  plateInk: "#4c4f69",
-  row: "#ffffffcc",     // a collapsed-list row
-  rowEdge: "#5B8C3A33",
+  panel: "#c6c0dd",     // a secondary button
+  panelInk: "#47445e",
+  mutedText: "#6f6a8c", // unselected program chips
+  plate: "#f6f4fbe6",   // a desk's nameplate
+  plateInk: "#47445e",
+  row: "#f6f4fbcc",     // a collapsed-list row
+  rowEdge: "#7c5fe040",
 } : {
   frame: "#45475a",
   fill: "#181825",

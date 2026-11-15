@@ -41,8 +41,9 @@ function ledWall(x, w, base) {
   const o = [], top = 12, n = Math.floor(w / U), nA = Math.max(2, Math.round(n * 0.45));
   const ph = base - top - Math.round(n * 0.7) - 4;
   if (day) o.push(div().absolute().left(0).top(0).w(1).h(1).children([
-    r(x - 6, top - 6, w + 12, ph + 16, "#89dceb33"), r(x - 3, top - 3, w + 6, ph + 10, "#cba6f72e"),
-  ]).loop("opacity", { from: 0.6, to: 1, period: 2600, easing: "ease-in-out" }));
+    r(x - 12, top - 10, w + 24, ph + 24, "#89dceb26"), r(x - 8, top - 8, w + 16, ph + 18, "#cba6f730"),
+    r(x - 4, top - 4, w + 8, ph + 10, "#89dceb40"),
+  ]).loop("opacity", { from: 0.55, to: 1, period: 2600, easing: "ease-in-out" }));
   for (let i = 0; i < n; i++) {
     const inA = i < nA, j = inA ? i : i - nA, dy = inA ? Math.round(j * 0.25) : Math.round(j * 0.75) - 2;
     const cx0 = x + i * U + (inA ? 0 : 2);
@@ -57,7 +58,7 @@ function ledWall(x, w, base) {
   }
   // The projector pad stands in front of the screens, a green hologram of the world above it.
   const hx = x + Math.floor((w - 40) / 2), hy = base - 14;
-  const beamC = day ? "#89dceb66" : "#6fe0f01c", mapC = day ? "#a6e3a1" : "#7be495";
+  const beamC = day ? "#89dceb80" : "#6fe0f01c", mapC = day ? "#a6e3a1" : "#7be495";
   const beam = [];
   for (let i = 0; i < 4; i++) beam.push(r(hx + 6 - i * 3, hy - 4 - i * 5, 28 + i * 6, 5, beamC));
   const map = [];
@@ -72,7 +73,8 @@ function ledWall(x, w, base) {
 
 export const yHorizon = (H) => snap(snap(H) * 0.3); // where the wall ends and the floor begins
 
-// The wall, windows and floor by time of day. Night: a dark city under a moon. Day: a pale sky, a sun, sunlit floor.
+// The wall, windows and floor by time of day. Night: a dark city under a moon. Day: a pale sky, a sun, sunlit floor —
+// walls and tiles carry the same mauve tint as the night walls, so the neon reads on both.
 const NIGHT = {
   wall: "#262a42", ceil: "#161827", band: "#2c3150", bandTop: "#363c5f", skirt: "#171a2c",
   frame: "#0c0e1c", sky: "#0e1226", glint: "#f5e9b0", moon: "#d9cf9a", bldg: "#161b36", pane: "#e0b94a", glass: "#ffffff0d", sill: "#7e86ad",
@@ -80,10 +82,10 @@ const NIGHT = {
   floor: "#242843", grout: "#1c1f36", edge: "#0d0f1a", pool: "#ffffff07",
 };
 const DAY = {
-  wall: "#e9ebf3", ceil: "#d3d7e6", band: "#dfe3f0", bandTop: "#ccd2e4", skirt: "#c0c6da",
-  frame: "#7c86ad", sky: "#aecdf5", glint: "#f9e2af", moon: "#f2c94c", bldg: "#9db1d6", pane: "#fab387", glass: "#ffffff59", sill: "#a8b1cf",
-  clockRim: "#a6adc9", clockFace: "#ffffff", hand: "#3c4054", signBg: "#e3f6f5", sign: "#94e2d5",
-  floor: "#d9dde9", grout: "#c5cbdd", edge: "#b3bad2", pool: "#fff3b855",
+  wall: "#e2dff0", ceil: "#cbc6e0", band: "#d6d1ea", bandTop: "#bfb8dc", skirt: "#b0a8d2",
+  frame: "#5b5480", sky: "#b7cdf5", glint: "#f9e2af", moon: "#f2c94c", bldg: "#8f92c4", pane: "#fab387", glass: "#ffffff59", sill: "#a49cc8",
+  clockRim: "#9c94c2", clockFace: "#ffffff", hand: "#3c3a54", signBg: "#1e1e2e", sign: "#89dceb",
+  floor: "#d5d1e8", grout: "#bdb7d8", edge: "#a49cc8", pool: "#fff3b866",
 };
 
 export function scene(W, H) {
@@ -127,7 +129,7 @@ export function scene(W, H) {
   const rr = Math.max(8, cr);
   L.push(...ellipse(cx, 26, rr, rr, p.clockRim), ...ellipse(cx, 26, rr - 4, rr - 4, p.clockFace), r(cx - 1, 26 - rr + 4, 2, rr - 3, p.hand), r(cx, 25, rr - 5, 2, p.hand), r(cx - 2, 24, 4, 4, "#c0424e"));
   if (gap >= 44 && base - 48 >= 88) {
-    if (isDay()) L.push(div().absolute().left(0).top(0).w(1).h(1).children([r(cx - 20, 44, 40, 40, "#94e2d533")]).loop("opacity", { from: 0.5, to: 1, period: 2800, easing: "ease-in-out" }));
+    if (isDay()) L.push(div().absolute().left(0).top(0).w(1).h(1).children([r(cx - 24, 40, 48, 48, "#89dceb26"), r(cx - 20, 44, 40, 40, "#89dceb40")]).loop("opacity", { from: 0.5, to: 1, period: 2800, easing: "ease-in-out" }));
     L.push(r(cx - 16, 48, 32, 32, p.signBg), r(cx - 12, 62, 24, 4, p.sign), r(cx - 2, 52, 4, 24, p.sign),
       r(cx - 8, 54, 4, 4, p.sign), r(cx + 4, 54, 4, 4, p.sign), r(cx - 8, 70, 4, 4, p.sign), r(cx + 4, 70, 4, 4, p.sign));
   }
