@@ -123,6 +123,7 @@
                     "width": 1.5,
                     "color": "accent"
                   },
+                  "shadow": "lg",
                   "radius": 14,
                   "gap": 8,
                   "lone": true

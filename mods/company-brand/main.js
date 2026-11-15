@@ -38,7 +38,8 @@ export default class WorkspaceChrome extends View {
         .text_color(dim ? t.dim : t.muted).hover(s => s.bg(t.hover).text_color(t.foreground)).cursor_pointer()
         .on_click(action).child(svg(`mods/company-brand/${icon}.svg`).size(14))
         .when(!collapsed, el => el.child(label));
-      const ready = div().size(6).rounded_full().bg(t.accent);
+      const ready = div().relative().size(6).rounded_full().bg(t.accent)
+        .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded_full().bg(t.accent + "44").loop("opacity", { from: 0.4, to: 1, period: 1500, easing: "ease-in-out" }));
       return v_flex().size_full().bg(t.chrome).border_t(1).border_color(t.border).px(8).pt(4).pb(8).text_size(13)
         .when(collapsed, el => el.px(0).items_center())
         .child(row("settings", "settings", "Settings", false, () => run("app.settings"))

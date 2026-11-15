@@ -23,6 +23,7 @@ export const pal = () => (isDay() ? {
   plateInk: "#47445e",
   row: "#f6f4fbcc",     // a collapsed-list row
   rowEdge: "#7c5fe040",
+  neon: "#7c5fe0",      // the halo around a lit nameplate or badge
 } : {
   frame: "#45475a",
   fill: "#181825",
@@ -39,4 +40,5 @@ export const pal = () => (isDay() ? {
   plateInk: "#ffffff",
   row: "#10121ccc",
   rowEdge: "#5B8C3A66",
+  neon: "#89b4fa",
 });

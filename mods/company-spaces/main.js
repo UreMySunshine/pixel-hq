@@ -89,12 +89,14 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
   const node = div().absolute().left(3).top(c - 7).w(14).h(14).children(pix(line, 14, 14))
     .child(div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : day() ? "#47445e" : "#ffffff"));
   return div().relative().w(GUTTER).h(h).flex_none()
+    .child(div().absolute().left(6).top(0).w(8).h(end).bg(line + "33"))
     .child(div().absolute().left(8).top(0).w(4).h(end).bg(line))
     .child(div().absolute().left(8).top(0).w(1).h(end).bg("#ffffff40"))
     .children(sleepers)
     .when(stop === "station" && (here || blocked), (el) => el.child(div().absolute().left(0).top(c - 10).w(20).h(20).children(pix(blocked ? "#f38ba8" : "#f9e2af", 20, 20)).opacity(0.28)
       .loop("opacity", { from: 0.1, to: 0.45, period: blocked ? 800 : 1800, easing: "ease-in-out" })))
-    .when(stop === "station", (el) => el.child(node))
+    .when(stop === "station", (el) => el.child(node
+      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).bg(line + "3d").loop("opacity", { from: 0.4, to: 1, period: here ? 1600 : 3000, easing: "ease-in-out" }))))
     .when(stop === "end", (el) => el.child(div().absolute().left(4).top(c - 6).w(12).h(12).rounded(2).border_2().border_dashed().border_color(line).bg(t.chrome)))
     .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color(day() ? "#a49cc8" : "#2a2c40").bg(day() ? "#5b5480" : "#e8ecf8")
       .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#d7d2e9" : "#2a2c40"))
@@ -398,7 +400,9 @@ export default class Spaces extends View {
       const folded = this.folded.has(m);
       const line = connected ? LINES[n % LINES.length] : t.dim;
       const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t, line));
-      const bullet = div().relative().w(20).h(20).flex_none().children(pix(line, 20, 20))
+      const bullet = div().relative().w(20).h(20).flex_none()
+        .child(div().absolute().left(-2).top(-2).children(pix(line + "3d", 24, 24)).loop("opacity", { from: 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
+        .children(pix(line, 20, 20))
         .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(10).text_color(day() ? "#ffffff" : "#11111b")
           .child([...(m ?? "this computer")][0].toUpperCase()))
         .when(!folded && !rebuilt && !login && (mine.length > 0 || !loading(m)), (el) => el.child(div().absolute().left(8).top(18).w(4).h(10).bg(line)));
@@ -565,10 +569,13 @@ export default class Spaces extends View {
     const skin = (a) => { const k = String(a.program?.key ?? "").toLowerCase(); return k.includes("claude") ? ["#D97757", "#D97757"] : k.includes("codex") ? ["#5B6CF0", "#5B6CF0"] : k.includes("opencode") ? ["#4A5B80", "#F7F4EC"] : (k.includes("antigravity") || k === "agy") ? ["#F6A03A", "#3186FF"] : ["#F1E7D3", "#F1E7D3"]; };
     const room = div().relative().w(54).h(40).flex_none().overflow_hidden()
       .child(R(0, 0, 54, 24, any ? C.wallOn : C.wallOff)).child(R(0, 0, 54, 3, soften(fill))).child(R(0, 3, 54, 1, C.trim))
+      .child(R(0, 0, 54, 5, "#89dceb2e").loop("opacity", { from: lit ? 0.5 : 0.2, to: lit ? 1 : 0.4, period: 2600, easing: "ease-in-out" }))
+      .child(R(0, 0, 54, 1, "#89dceb").loop("opacity", { from: lit ? 0.6 : 0.25, to: 1, period: 2600, easing: "ease-in-out" }))
       .child(R(4, 7, 22, 15, C.frame)).child(R(5, 8, 20, 13, lit ? C.skyLit : C.skyDark))
       .child(R(6, 15, 4, 6, C.bldg)).child(R(11, 12, 5, 9, C.bldg)).child(R(17, 16, 6, 5, C.bldg))
       .child(R(12, 14, 1, 1, C.glint)).child(R(14, 17, 1, 1, C.glint)).child(R(7, 17, 1, 1, C.pane)).child(R(19, 18, 1, 1, C.pane))
       .child(R(20, 10, 3, 3, lit ? C.glint : C.moon)).child(R(14, 8, 1, 13, C.frame))
+      .child(R(29, 4, 23, 20, "#89dceb26").loop("opacity", { from: lit ? 0.4 : 0.1, to: lit ? 1 : 0.25, period: 2200, easing: "ease-in-out" }))
       .child(R(31, 6, 19, 16, C.screen)).child(R(32, 7, 17, 14, lit ? C.screenOn : day() ? "#d3cde6" : "#0e1226"))
       .children([["#fab387", 0, 9], ["#a6e3a1", 3, 10], ["#89dceb", 0, 6], ["#f9e2af", 2, 11], ["#cba6f7", 0, 8], ["#f38ba8", 4, 9]].map(([c, x, w], k) => { const bar = R(34 + x, 9 + k * 2, Math.min(w, 13 - x), 1, day() && !lit ? "#8d86b4" : c); return lit && k % 2 === 0 ? bar.loop("opacity", { from: 0.4, to: 1, period: 800 + k * 200, easing: "ease-in-out" }) : bar; }))
       .child(R(0, 24, 54, 16, C.floor)).child(R(0, 24, 54, 2, C.skirt)).child(R(0, 31, 54, 1, C.grout)).child(R(18, 26, 1, 14, C.grout)).child(R(36, 26, 1, 14, C.grout))
@@ -579,16 +586,21 @@ export default class Spaces extends View {
         const mark = a && a.status === "blocked" ? [R(x + 12, 20, 2, 5, "#f9e2af").loop("opacity", { from: 0.2, to: 1, period: 700, easing: "linear" }), R(x + 12, 26, 2, 2, "#f9e2af")] : a && a.status === "done" ? [R(x + 11, 21, 2, 2, "#a6e3a1"), R(x + 2, 20, 2, 2, "#f9e2af")] : [];
         return [...pet, R(x, 32, 14, 3, C.desk), R(x, 32, 14, 1, C.deskTop), glow, ...mark];
       }));
-    // The room sits in a notched frame in the space's own color.
-    const tile = div().relative().w(60).h(46).flex_none().children(pix(soften(fill), 60, 46)).child(div().absolute().left(3).top(3).child(room));
+    // The room sits in a notched frame in the space's own color, its rim lit like a neon sign.
+    const tile = div().relative().w(60).h(46).flex_none()
+      .children(pix(soften(fill), 60, 46))
+      .child(div().absolute().left(-2).top(-2).children(pix(fill + "3a", 64, 50)).loop("opacity", { from: lit ? 0.45 : 0.15, to: lit ? 1 : 0.35, period: 2400, easing: "ease-in-out" }))
+      .child(div().absolute().left(3).top(3).child(room));
     const raw = g?.branch ?? null;
     const place = raw ?? base(w.folder ?? "");
     const done = count("done");
     const idle = crew.length - blocked - working - done;
     const dot = blocked > 0 ? t.blocked : working > 0 ? t.working : null;
     const chip = (text, color, pulse) => {
-      const c = h_flex().flex_none().px(5).h(15).items_center().rounded(2).border_1().border_color(color + "77").bg(color + "26")
-        .font_family(MONO).font_bold().text_size(9.5).text_color(color).child(text);
+      const c = h_flex().relative().flex_none().px(5).h(15).items_center().rounded(2).border_1().border_color(color + "77").bg(color + "26")
+        .font_family(MONO).font_bold().text_size(9.5).text_color(color)
+        .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(4).bg(color + "33"))
+        .child(text);
       return pulse ? c.loop("opacity", { from: 0.55, to: 1, period: 900, easing: "ease-in-out" }) : c;
     };
     // Most urgent first, so a narrow card loses the least important chip.
@@ -605,8 +617,9 @@ export default class Spaces extends View {
         .child(h_flex().gap(6).items_center()
           .child(div().min_w(0).truncate().font_semibold().text_size(13.5).text_color(t.foreground).child(w.name))
           .when(Boolean(dot), (el) => {
-            const d = div().flex_none().size(7).bg(dot);
-            return el.child(blocked > 0 ? d.loop("opacity", { from: 0.3, to: 1, period: 800, easing: "ease-in-out" }) : d);
+            const d = div().relative().flex_none().size(7).bg(dot)
+              .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(dot + "44"));
+            return el.child(blocked > 0 ? d.loop("opacity", { from: 0.3, to: 1, period: 800, easing: "ease-in-out" }) : d.loop("opacity", { from: 0.6, to: 1, period: 1600, easing: "ease-in-out" }));
           }))
         .child(h_flex().gap(5).items_center().text_size(10.5).font_family(MONO).text_color(t.dim)
           .child(glyph)
