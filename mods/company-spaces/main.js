@@ -93,10 +93,10 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
     .child(div().absolute().left(8).top(0).w(4).h(end).bg(line))
     .child(div().absolute().left(8).top(0).w(1).h(end).bg("#ffffff66"))
     .children(sleepers)
-    .when(stop === "station" && (here || blocked), (el) => el.child(div().absolute().left(-3).top(c - 13).w(26).h(26).children(pix(blocked ? "#f38ba8" : "#f9e2af", 26, 26))
+    .when(stop === "station" && (here || blocked), (el) => el.child(div().absolute().left(0).top(c - 10).w(20).h(20).children(pix(blocked ? "#f38ba8" : "#f9e2af", 20, 20))
       .loop("opacity", { from: 0.4, to: 0.9, period: blocked ? 800 : 1800, easing: "ease-in-out" })))
     .when(stop === "station", (el) => el.child(node
-      .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).bg((here ? "#f9e2af" : line) + "99").loop("opacity", { from: 0.5, to: 1, period: here ? 1600 : 3000, easing: "ease-in-out" }))))
+      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).bg((here ? "#f9e2af" : line) + "99").loop("opacity", { from: 0.5, to: 1, period: here ? 1600 : 3000, easing: "ease-in-out" }))))
     .when(stop === "end", (el) => el.child(div().absolute().left(4).top(c - 6).w(12).h(12).rounded(2).border_2().border_dashed().border_color(line).bg(t.chrome)))
     .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color(day() ? "#a49cc8" : "#2a2c40").bg(day() ? "#5b5480" : "#e8ecf8")
       .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#d7d2e9" : "#2a2c40"))
