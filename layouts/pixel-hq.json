@@ -68,10 +68,10 @@
       "max": 480,
       "background": "chrome",
       "border": {
-        "width": 0,
+        "width": 1,
         "color": "border"
       },
-      "radius": 14,
+      "radius": 8,
       "shadow": "md",
       "resizable": false
     },
@@ -90,10 +90,10 @@
           },
           "background": "chrome",
           "border": {
-            "width": 0,
+            "width": 1,
             "color": "border"
           },
-          "radius": 12,
+          "radius": 8,
           "window_drag": true
         },
         {
@@ -116,15 +116,15 @@
                   },
                   "background": "background",
                   "border": {
-                    "width": 0,
+                    "width": 1,
                     "color": "border"
                   },
                   "focus": {
-                    "width": 0,
+                    "width": 1.5,
                     "color": "accent"
                   },
                   "shadow": "lg",
-                  "radius": 14,
+                  "radius": 8,
                   "gap": 8,
                   "lone": true
                 }
@@ -178,10 +178,10 @@
           },
           "background": "chrome",
           "border": {
-            "width": 0,
+            "width": 1,
             "color": "border"
           },
-          "radius": 12
+          "radius": 8
         }
       ],
       "gap": 8,

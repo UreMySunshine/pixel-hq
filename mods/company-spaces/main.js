@@ -608,7 +608,6 @@ export default class Spaces extends View {
     const chip = (text, color, pulse) => {
       const c = h_flex().relative().flex_none().px(5).h(15).items_center().rounded(2).border_1().border_color(color + "77").bg(color + "26")
         .font_family(MONO).font_bold().text_size(9.5).text_color(color)
-        .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(4).border_2().border_color(color + "33"))
         .child(text);
       return pulse ? c.loop("opacity", { from: 0.55, to: 1, period: 900, easing: "ease-in-out" }) : c;
     };
