@@ -11,6 +11,7 @@ import {
   save, library, addPictures, openFolder,
 } from "./figures.js";
 import { PLAYS, svgToWebp } from "./animate.js";
+import { agentTaskArgv } from "./crew.js";
 
 const ICON = (n) => (n.includes("/") ? n : `mods/workspace-chrome/${n}.svg`);
 const SPEEDS = [{ ms: 800, label: "Slow" }, { ms: 400, label: "Normal" }, { ms: 180, label: "Fast" }];
@@ -80,7 +81,8 @@ export class Editor {
       `- Pictures render square, 27-45 px tall, on a dark background, so transparent backgrounds and tightly cropped, square-ish art work best. PNG, JPEG, GIF, WebP and SVG load.`,
       `- Write new files into ${home}/${OWN_DIR}/${this.setId}/ and never overwrite my originals. Then point this set's slots at them in the settings file. Use whatever tools are on this machine (e.g. python, ImageMagick, rsvg-convert, ffmpeg); ask before installing anything.`,
     ].join("\n");
-    run("tab.new", { name: `Tweak ${set.name}`, folder: home, argv: this.agent.run, task });
+    const argv = agentTaskArgv(this.agent?.run, this.agent?.key);
+    run("tab.new", { name: `Tweak ${set.name}`, folder: home, argv, task });
     const overlay = props()?.overlay;
     if (overlay) closeOverlay(overlay);
   }

@@ -1,4 +1,4 @@
 {
-  "version": "1.3.0",
-  "notes": "Paper piles for Codex and OpenCode too, and a one-click Update button"
+  "version": "1.4.6",
+  "notes": "Updates finish in one pass and show the version actually installed"
 }

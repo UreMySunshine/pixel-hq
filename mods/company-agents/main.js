@@ -3,13 +3,14 @@
 
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
-import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, appHome, exec, readTextFile, nextCommand, hc } from "herdr";
+import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, appHome, exec, readTextFile, writeTextFile, nextCommand, hc, knownAgents } from "herdr";
 import { figureFor, load } from "./figures.js";
-import { agentOf, speciesOf, duckWidth, DUCK_CENTER } from "./duck.js";
+import { agentOf, speciesOf, duckWidth, DUCK_CENTER, IDLE_SNOOZE, IDLE_URGE } from "./duck.js";
 import { scene, yHorizon } from "./scene.js";
 import { pal } from "./palette.js";
 import { Editor } from "./editor.js";
-import { snapshot, clashes, hire } from "./crew.js";
+import { Updater } from "./updater.js";
+import { snapshot, clashes, hire, agentTaskArgv } from "./crew.js";
 
 // The figure editor, as a dialog; `space` opens it on that space's pick.
 const openFigures = (space) => openOverlay({ mod: "company-agents", kind: "dialog", width: 860, height: 640, props: { figures: true, ...(space ? { space } : {}) } });
@@ -90,9 +91,6 @@ function contextBar(t, pct, model, address) {
     .when(Boolean(model), el => el.child(div().min_w(0).truncate().text_size(10).text_color(t.muted).child(`· ${model}`)));
 }
 
-// What the Update button hands to an agent.
-const UPDATE_PROMPT = "Read ~/.config/herdr-app/AGENTS.md, then update my Pixel HQ layout to the latest version from herdr.dev/layouts/bnhan2710/pixel-hq. Overwriting my installed pixel-hq files is intended; keep my other layouts and mods.";
-
 // Finds a Codex terminal's session file (the one its process, or a child of it, has open; else the newest recent one that began in the
 // same folder) and prints its last token_count event, whose last_token_usage and model_context_window say how full the context is.
 const CODEX_SH = `home="\${CODEX_HOME:-$HOME/.codex}/sessions"
@@ -107,10 +105,27 @@ fi
 [ -n "$f" ] || exit 3
 tail -n 600 "$f" | grep '"type":"token_count"' | tail -1`;
 
+// Finds an Antigravity terminal's transcript file and prints its last planner response with token usage.
+const AGY_SH = `home="\${AGY_HOME:-$HOME/.gemini/antigravity-cli}"
+pids="$1"; for i in 1 2 3; do pids="$pids $(for p in $pids; do pgrep -P "$p" 2>/dev/null; done)"; done
+cid=""
+if [ -n "$1" ]; then
+  lock=$(lsof -p "$(echo $pids | tr -s ' ' ',')" 2>/dev/null | grep -o '/presence/.*\\.lock' | head -1)
+  [ -n "$lock" ] && cid=$(basename "$lock" .lock)
+fi
+if [ -z "$cid" ] && [ -f "$home/history.jsonl" ]; then
+  cid=$(grep -F '"workspace":"'"$2"'"' "$home/history.jsonl" 2>/dev/null | tail -1 | grep -o '"conversationId":"[^"]*"' | cut -d'"' -f4)
+fi
+[ -n "$cid" ] || exit 3
+f="$home/brain/$cid/.system_generated/logs/transcript.jsonl"
+[ -f "$f" ] || exit 3
+tail -n 300 "$f" | grep '"input_tokens":' | tail -1`;
+
 export default class Agents extends View {
   init(_props, cx) {
     if (props()?.sortMenu) return;
     if (props()?.figures) { this.editor = new Editor(cx); return; }
+    if (props()?.updateModal) { this.updater = new Updater(cx); return; }
     // Figure sets come from ~/.config/herdr-app/pond-agents.json; hand edits show within seconds.
     this.file = {};
     const reload = (cx) => cx.spawn(async (cx) => {
@@ -144,12 +159,12 @@ export default class Agents extends View {
     this.scanning = false;
     this.scan(cx);
     cx.timer.every(6000, (cx) => this.scan(cx));
-    // Codex does not report its context, but it writes it to its session file: read it for each Codex desk.
+    // Codex & Antigravity do not report context via OSC, but write session/transcript files: read them for each desk.
     this.ctxRead = new Map();
     this.scanCodex(cx);
     cx.timer.every(8000, (cx) => this.scanCodex(cx));
     // `company-agents.hire` (a key binding, or herdr-app do) opens the hire form.
-    cx.spawn(async (cx) => { for (;;) { const c = await nextCommand(); if (c === "hire") this.openHire(cx); if (c === "update") this.runUpdate(cx); } });
+    cx.spawn(async (cx) => { for (;;) { const c = await nextCommand(); if (c === "hire") this.openHire(cx); if (c === "update") this.runUpdate(); } });
     // OpenCode 1.x does not report a status by itself, so without help it never gets a desk. Once, if OpenCode is installed, drop its
     // status plugin (this mod's opencode-status.js) into OpenCode's plugins folder. Only ever replaces Pixel HQ's own older copy;
     // deleting the file removes it for good.
@@ -165,9 +180,14 @@ export default class Agents extends View {
     this.breakerList = [];
     this.nextAt = Date.now() + 6000;
     this.hint = null;
+    this.nudged = new Map();
     cx.timer.every(1000, (cx) => {
       const now = Date.now();
       if (this.hint && now > this.hint.until) { this.hint = null; cx.notify(); }
+      if (this.nudged.size) {
+        for (const [addr, until] of this.nudged) if (now > until) this.nudged.delete(addr);
+        cx.notify();
+      }
       if (this.out) {
         if (now >= this.out.until) { this.out = null; this.nextAt = now + 14000 + Math.random() * 18000; cx.notify(); }
         return;
@@ -179,6 +199,8 @@ export default class Agents extends View {
     });
     // Each agent's last state and when it changed (ms), kept across restarts.
     this.changed = JSON.parse(localStorage.getItem("changed") ?? "{}");
+    try { this.seen = JSON.parse(localStorage.getItem("seen") ?? "{}"); } catch { this.seen = {}; }
+    this.watching = null;
     this.pendingPins = JSON.parse(localStorage.getItem("pins") ?? "[]");
     if (!this.pendingPins.length) localStorage.removeItem("pins");
     this.migratingPins = new Set();
@@ -224,6 +246,24 @@ export default class Agents extends View {
 
   since(a) {
     return this.changed[a.address]?.at ?? 0;
+  }
+
+  watch(list, now) {
+    const cur = list.find((a) => a.focused)?.address ?? null;
+    if (cur === this.watching) return;
+    if (this.watching) {
+      this.seen[this.watching] = now;
+      for (const k of Object.keys(this.seen)) if (!this.changed[k]) delete this.seen[k];
+      localStorage.setItem("seen", JSON.stringify(this.seen));
+    }
+    this.watching = cur;
+  }
+
+  waitOf(address, status, now) {
+    const at = this.changed[address]?.at ?? now;
+    if (status !== "idle") return now - at;
+    if (address === this.watching) return 0;
+    return now - Math.max(at, this.seen[address] ?? 0);
   }
 
   // Looking at a done agent makes it idle; it stays with Done until you leave
@@ -291,7 +331,7 @@ export default class Agents extends View {
   subRow(t, s, shown, compact, space) {
     const k = s.t;
     const st = kidStatus(k, this.listed);
-    const pic = this.figure(space, st, 27, Date.now() - (this.changed[k.address]?.at ?? Date.now()), `fig-${k.address}`, k.program?.key);
+    const pic = this.figure(space, st, 27, this.waitOf(k.address, st, Date.now()), `fig-${k.address}`, k.program?.key);
     const on = k.address === shown;
     return h_flex()
       .id(`sub-${k.address}`)
@@ -365,9 +405,24 @@ export default class Agents extends View {
         const used = ev?.payload?.info?.last_token_usage?.total_tokens, win = ev?.payload?.info?.model_context_window;
         if (used > 0 && win > 0) next.set(a.address, { pct: Math.max(0, Math.min(100, Math.round((used * 100) / win))), model: null });
       }
+      for (const a of agents().filter((x) => (String(x.program?.key ?? "").toLowerCase().includes("antigravity") || x.program?.key === "agy") && !remote.has(x.space))) {
+        try {
+          const info = JSON.parse((await hc(["get", a.address, "--json"]).catch(() => ({ stdout: "{}" }))).stdout || "{}");
+          const pid = info?.foreground?.pid;
+          const cwd = paneBy.get(a.pane)?.cwd;
+          if (!pid && !cwd) continue;
+          const r = await exec("sh", ["-c", AGY_SH, "sh", String(pid ?? ""), cwd ?? "/dev/null/none"], { timeout: 8000 }).catch(() => null);
+          const ev = r?.code === 0 && r.stdout ? JSON.parse(r.stdout.trim().split("\n").pop()) : null;
+          const used = (ev?.input_tokens ?? 0) + (ev?.cache_read_tokens ?? 0);
+          const win = 1000000;
+          if (used > 0) next.set(a.address, { pct: Math.max(0, Math.min(100, Math.round((used * 100) / win))), model: ev?.model ?? "agy" });
+        } catch {
+          continue;
+        }
+      }
       const sig = JSON.stringify([...next]);
       if (sig !== JSON.stringify([...this.ctxRead])) { this.ctxRead = next; cx.notify(); }
-    } catch { /* no codex, no lsof, odd output: no pile */ }
+    } catch { /* no codex/agy, no lsof, odd output: no pile */ }
     this.scanningCodex = false;
   }
 
@@ -401,19 +456,21 @@ export default class Agents extends View {
     cx.notify();
   }
 
-  // The Update button: opens a new tab in the shown space with an agent (the one you are in, else Claude) that starts on the update prompt.
-  runUpdate(cx) {
-    // Once per click: every copy of this mod hears the same command, and a double click must not open two agents.
+  runUpdate() {
     if (Date.now() - Number(shared("pixel-hq.update-at") ?? 0) < 5000) return;
     setShared("pixel-hq.update-at", Date.now());
-    const sp = spaces().find((x) => x.active);
-    const here = agents().find((a) => a.address === focused()?.agent);
-    const key = String(here?.program?.key ?? "").toLowerCase();
-    const argv = key.includes("codex") ? ["codex"] : key.includes("opencode") ? ["opencode"] : ["claude"];
-    if (this.update) localStorage.setItem("upd-dismissed", this.update.version);
-    this.update = null;
-    run("tab.new", { name: "update Pixel HQ", folder: appHome(), argv, task: UPDATE_PROMPT, space: sp?.id });
-    cx.notify();
+    openOverlay({
+      mod: "company-agents",
+      kind: "dialog",
+      modal: true,
+      width: 480,
+      height: 240,
+      props: {
+        updateModal: true,
+        version: this.update?.version,
+        notes: this.update?.notes,
+      },
+    });
   }
 
   // The paper pile on a desk: the first click arms it, the second (within 6 s) sends the agent /compact (which already summarizes).
@@ -428,16 +485,34 @@ export default class Agents extends View {
     cx.notify();
   }
 
+  nudge(a, cx) {
+    const now = Date.now();
+    this.hint = { addr: a.address, text: "nudged! ⚡", until: now + 3500 };
+    this.nudged.set(a.address, now + 3000);
+    run("pane.focus", { pane: a.pane });
+    cx.notify();
+  }
+
   async checkUpdate(cx) {
     try {
       const mine = JSON.parse(await readTextFile(`${appHome()}/mods/company-agents/version.json`));
-      const res = await fetch("https://raw.githubusercontent.com/bnhan2710/pixel-hq/main/mods/company-agents/version.json");
+      const res = await fetch(`https://raw.githubusercontent.com/bnhan2710/pixel-hq/main/mods/company-agents/version.json?t=${Date.now()}`);
       if (!res.ok) return;
       const latest = JSON.parse(await res.text());
       const num = (v) => String(v).split(".").map((n) => parseInt(n, 10) || 0);
       const [a, b] = [num(latest.version), num(mine.version)];
       const newer = [0, 1, 2].map((i) => (a[i] ?? 0) - (b[i] ?? 0)).find((d) => d !== 0) > 0;
-      if (!newer || localStorage.getItem("upd-dismissed") === String(latest.version)) return;
+      if (!newer || (shared("pixel-hq.dismissed-version") || localStorage.getItem("upd-dismissed")) === String(latest.version)) {
+        if (mine?.version) {
+          localStorage.setItem("upd-dismissed", String(mine.version));
+          setShared("pixel-hq.dismissed-version", String(mine.version));
+        }
+        if (this.update) {
+          this.update = null;
+          cx.notify();
+        }
+        return;
+      }
       this.update = { version: String(latest.version), notes: latest.notes ? String(latest.notes) : "" };
       cx.notify();
     } catch { /* offline, no version.json, or not valid: stay quiet */ }
@@ -471,6 +546,11 @@ export default class Agents extends View {
     const t = theme();
     if (props()?.sortMenu) return this.sortMenu(t);
     if (this.editor) return this.editor.render(cx);
+    if (this.updater) return this.updater.render(cx);
+    const dismissed = shared("pixel-hq.dismissed-version") || localStorage.getItem("upd-dismissed");
+    if (this.update && dismissed === String(this.update.version)) {
+      this.update = null;
+    }
     const collapsed = narrow();
     const sort = sortOf();
     let list = agents();
@@ -480,6 +560,7 @@ export default class Agents extends View {
     const shown = focused()?.agent;
     const now = Date.now();
     this.track(list, now);
+    this.watch(list, now);
     this.hold(list);
     // A kept sub-agent (one with a pane) is in agents() too: where a tree shows
     // it, it gets no row of its own, unless it's pinned.
@@ -559,7 +640,7 @@ export default class Agents extends View {
     for (const [addr, c] of this.ctxRead) if (!contextOf.has(addr)) contextOf.set(addr, c);
 
     const row = (a, i, subs = []) => {
-      const pic = figureFor(a.space_name, a.status, 45, now - this.since(a), speciesOf(a.program?.key));
+      const pic = figureFor(a.space_name, a.status, 45, this.waitOf(a.address, a.status, now), speciesOf(a.program?.key));
       const ctx = contextOf.get(a.address);
       const more = detail.get(a.address);
       // An agent on another machine (`vps/t7`) says which.
@@ -704,17 +785,21 @@ export default class Agents extends View {
       const d = this.drag;
       if (!d) return;
       this.drag = null;
-      if (!d.moved) run("pane.focus", { pane: d.pane });
-      else localStorage.setItem("petpos", JSON.stringify(this.petpos));
+      if (!d.moved) {
+        const clicked = list.find((x) => x.address === d.addr);
+        const isLongIdle = clicked?.status === "idle" && this.waitOf(clicked.address, clicked.status, now) >= IDLE_SNOOZE;
+        if (isLongIdle) this.nudge(clicked, cx);
+        else run("pane.focus", { pane: d.pane });
+      } else localStorage.setItem("petpos", JSON.stringify(this.petpos));
       cx.notify();
     };
     const ROLES = (a) => (agentOf(a.program?.key)?.role ?? "").toLowerCase();
-    const STATE = { working: "typing working busy", idle: "idle break coffee", done: "shipped done finished", blocked: "needs you blocked waiting" };
+    const STATE = { working: "typing working busy", idle: "idle break coffee snooze urge sleeping", done: "shipped done finished", blocked: "needs you blocked waiting" };
     const q = this.query.trim().toLowerCase();
     const hitOf = (a) => !q || q.split(/\s+/).every((w) => [detail.get(a.address), a.space_name, label(a), a.program?.name, ROLES(a), STATE[a.status]].join(" ").toLowerCase().includes(w));
     const hits = list.filter(hitOf);
     this.firstHit = q ? hits[0]?.pane ?? null : null;
-    const breakers = list.filter((x) => x.status === "idle" && !x.focused).map((x) => x.address);
+    const breakers = list.filter((x) => x.status === "idle" && !x.focused && this.waitOf(x.address, x.status, now) < IDLE_SNOOZE).map((x) => x.address);
     this.breakerList = breakers;
     const stable = list.map((x) => x.address).sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
     const seated = list.slice(0, pick.cols * pick.rows);
@@ -744,11 +829,16 @@ export default class Agents extends View {
       const clText = cl ? (cl.kind === "file" ? `clash: ${String(cl.files[0] ?? "").split("/").pop()}${cl.files.length > 1 ? ` +${cl.files.length - 1}` : ""}` : "same folder") : "";
       const clTip = cl ? (cl.kind === "file" ? `Another desk also changed ${cl.files.join(", ")}` : "Another desk is working in this same folder") : "";
       const when = this.since(a);
+      const waited = now - when;
+      const unseen = this.waitOf(a.address, a.status, now);
       const hot = a.status === "blocked";
+      const isIdle = a.status === "idle";
+      const isUrge = isIdle && unseen >= IDLE_URGE;
+      const isSnooze = isIdle && unseen >= IDLE_SNOOZE && !isUrge;
+      const isNudged = this.nudged.has(a.address);
       // The pet sits on a chair behind a wooden desk (the MacBook is part of the pet).
       const ctr = DUCK_CENTER * petW;
-      const k = breakers.indexOf(a.address);
-      const away = k >= 0;
+      const away = this.out?.addr === a.address && breakers.includes(a.address);
       // On a break the pet steps out beside its desk for a moment and comes right back, over and over.
       const dir = left + petW / 2 < sz.width / 2 ? 1 : -1;
       const dx = dir * (petW + kk(30));
@@ -782,10 +872,10 @@ export default class Agents extends View {
           .children([[6, 0, 6, 4], [3, 4, 6, 4], [0, 8, 10, 4], [4, 12, 5, 4], [2, 16, 4, 2]].map(([x, y, w, h]) => div().absolute().left(kk(x)).top(kk(y)).w(kk(w)).h(kk(h)).bg(cl.kind === "file" ? "#ff5370" : "#f9b84a")))
           .loop("opacity", { from: 0.25, to: 1, period: 520, easing: "ease-in-out" })))
         .child(div().id(`walker-${a.address}`).absolute()
-          .left(away && this.out?.addr === a.address ? dx : 0).top(away && this.out?.addr === a.address ? dy : 0)
+          .left(away ? dx : 0).top(away ? dy : 0)
           // Glide out and back, but not while it is being dragged, so it follows the pointer exactly.
           .when(this.drag?.addr !== a.address, (el) => el.transition("left", 800).transition("top", 800))
-          .child(figureFor(a.space_name, away ? "idle" : a.status, PET, now - when, speciesOf(a.program?.key))))
+          .child(figureFor(a.space_name, isNudged ? "done" : a.status, PET, unseen, speciesOf(a.program?.key))))
         // Shipped: pixel confetti rains over the desk until someone looks at it.
         .when(a.status === "done", (el) => el.children([["#f9e2af", 0.10, 900], ["#f38ba8", 0.22, 1300], ["#a6e3a1", 0.34, 1000], ["#89b4fa", 0.46, 1500], ["#cba6f7", 0.58, 1100], ["#fab387", 0.70, 1400], ["#94e2d5", 0.82, 950]]
           .map(([c, fx0, p], j) => div().absolute().left(petW * fx0).top(-20).w(4).h(4).bg(c).loop("top", { from: -22 - (j % 3) * 6, to: PET * 0.55, period: p, easing: "linear" }))))
@@ -824,15 +914,16 @@ export default class Agents extends View {
         })
         .on_mouse_up("left", (_e, cx) => endDrag(cx))
         .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); openFigures(a.space_name); })
-        .tooltip(`${a.program?.name ?? ""} · ${a.status} · ${text}${branch ? ` · ${branch}` : ""}${clTip ? ` · ${clTip}` : ""} · drag to move`)
+        .tooltip(`${a.program?.name ?? ""} · ${isUrge ? `idle for ${duration(waited)} · click to focus` : isSnooze ? `snoozing (${duration(waited)}) · click to focus` : a.status} · ${text}${branch ? ` · ${branch}` : ""}${clTip ? ` · ${clTip}` : ""} · drag to move`)
         .child(seat)
         .child(div().relative().mt(6).max_w(Math.max(petW + 22, cellW - 4)).px(5).h(15).flex().items_center().rounded(3)
-          .bg(this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : P.plate)
+          .bg(this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : isUrge ? "#fab387" : isSnooze ? "#45475a" : P.plate)
           .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(5)
-            .bg((this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : P.neon) + "44")
+            .bg((this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : isUrge ? "#fab387" : isSnooze ? "#45475a" : P.neon) + "44")
             .loop("opacity", { from: 0.45, to: 1, period: hot || cl ? 800 : 2400, easing: "ease-in-out" }))
-          .text_size(10.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : P.plateInk).truncate()
-          .child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? ` · ${duration(now - when)}` : ""}`))
+          .text_size(10.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : isUrge ? "#1e1e2e" : isSnooze ? "#cdd6f4" : P.plateInk).truncate()
+          .child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? (isUrge ? ` · idle ${duration(waited)} ⏰` : isSnooze ? ` · zzz ${duration(waited)}` : ` · ${duration(waited)}`) : ""}`))
+        // The branch on the desk's nameplate, with a small git-branch glyph.
         .when(Boolean(branch), (el) => el.child(h_flex().mt(2).gap(3).items_center().max_w(Math.max(petW + 22, cellW - 4)).text_size(9.5)
           .child(div().relative().w(8).h(10).flex_none().children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg(P.accent))))
           .child(div().min_w(0).truncate().font_family(monoF).text_color(P.accent).child(branch))));
@@ -866,19 +957,25 @@ export default class Agents extends View {
       })
       .child(scene(sz.width, sz.height))
       .when(list.length === 0, (el) => el.child(div().absolute().left(12).top(sz.height * 0.5).w(sz.width - 24).px(8).py(6).rounded(3).bg(P.plate).text_size(12).text_color(P.plateInk).child("No staff on this floor yet. Hire one with the + above, or start an agent in this space.")))
+      .when(hidden > 0, (el) => el.child(div().absolute().right(8).top(horizon + 6).px(8).py(3).rounded(8).bg(P.deepBox).border_1().border_color(P.frame).text_size(11).text_color(t.muted).child(`+${hidden} more · narrow the panel to list all`)))
+      .children(links)
+      .children(this.drag?.moved ? [...pets.filter((_, i) => seated[i].address !== this.drag.addr), ...pets.filter((_, i) => seated[i].address === this.drag.addr)] : pets)
       .when(Boolean(this.update || this.notice), (el) => {
         const btn = (id, text, fill, ink, act) => div().id(id).px(10).h(22).flex().items_center().cursor_pointer().bg(fill).text_size(10.5).font_family(monoF).font_bold().text_color(ink).on_click(act).child(text);
-        const box = v_flex().id("oc-notice").absolute().left(8).right(8).top(horizon + 6).px(8).py(6).gap(6).rounded(8).bg(P.deepBox).border_1().border_color(P.accent).text_size(11).text_color(t.foreground);
+        const box = v_flex().id("oc-notice").absolute().left(8).right(8).top(horizon + 6).px(8).py(6).gap(6).rounded(8).bg(P.deepBox).border_1().border_color(P.accent).text_size(11).text_color(t.foreground)
+          .on_mouse_down("left", (_e, cx) => cx.stop_propagation());
         return el.child(this.update
           ? box.child(div().child(`Pixel HQ ${this.update.version} is out${this.update.notes ? ` · ${this.update.notes}` : ""}`))
             .child(h_flex().gap(6)
-              .child(btn("upd-go", "Update now", P.accent, P.accentInk, (_e, cx) => this.runUpdate(cx)))
-              .child(btn("upd-later", "Later", P.panel, P.panelInk, (_e, cx) => { localStorage.setItem("upd-dismissed", this.update.version); this.update = null; cx.notify(); })))
+              .child(btn("upd-go", "Update now", P.accent, P.accentInk, () => this.runUpdate()))
+              .child(btn("upd-later", "Later", P.panel, P.panelInk, (_e, cx) => {
+                localStorage.setItem("upd-dismissed", this.update.version);
+                setShared("pixel-hq.dismissed-version", this.update.version);
+                this.update = null;
+                cx.notify();
+              })))
           : box.cursor_pointer().on_click((_e, cx) => { this.notice = null; cx.notify(); }).child(this.notice));
-      })
-      .when(hidden > 0, (el) => el.child(div().absolute().right(8).top(horizon + 6).px(8).py(3).rounded(8).bg(P.deepBox).border_1().border_color(P.frame).text_size(11).text_color(t.muted).child(`+${hidden} more · narrow the panel to list all`)))
-      .children(links)
-      .children(this.drag?.moved ? [...pets.filter((_, i) => seated[i].address !== this.drag.addr), ...pets.filter((_, i) => seated[i].address === this.drag.addr)] : pets);
+      });
 
     // Pixel UI: notched 2px frames, a hard bottom shadow, a mono caps title and a hand-drawn magnifier.
     const frame = (bc, bg) => [

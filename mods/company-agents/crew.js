@@ -81,3 +81,17 @@ export async function hire(exec, { ticket, repo }) {
   if (r.code !== 0) throw new Error((r.stderr || "git worktree add failed").trim().split("\n").pop());
   return { path, branch: t, reused: false };
 }
+
+export function agentTaskArgv(run, key = "") {
+  const base = Array.isArray(run) && run.length ? [...run] : [String(key || "claude")];
+  const bin = String(base[0] ?? "").toLowerCase();
+  const k = String(key ?? "").toLowerCase();
+  if (bin.includes("agy") || bin.includes("antigravity") || k.includes("agy") || k.includes("antigravity")) {
+    if (!base.includes("-i") && !base.includes("--prompt-interactive")) return [...base, "-i"];
+  }
+  if (bin.includes("opencode") || k.includes("opencode")) {
+    if (!base.includes("--prompt")) return [...base, "--prompt"];
+  }
+  return base;
+}
+
