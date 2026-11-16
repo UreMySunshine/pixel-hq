@@ -68,7 +68,7 @@
       "max": 480,
       "background": "chrome",
       "border": {
-        "width": 1,
+        "width": 0,
         "color": "border"
       },
       "radius": 14,
@@ -90,7 +90,7 @@
           },
           "background": "chrome",
           "border": {
-            "width": 1,
+            "width": 0,
             "color": "border"
           },
           "radius": 12,
@@ -116,11 +116,11 @@
                   },
                   "background": "background",
                   "border": {
-                    "width": 1,
+                    "width": 0,
                     "color": "border"
                   },
                   "focus": {
-                    "width": 1.5,
+                    "width": 0,
                     "color": "accent"
                   },
                   "shadow": "lg",
@@ -178,7 +178,7 @@
           },
           "background": "chrome",
           "border": {
-            "width": 1,
+            "width": 0,
             "color": "border"
           },
           "radius": 12
