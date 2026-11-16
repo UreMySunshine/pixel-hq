@@ -496,7 +496,7 @@ export default class Agents extends View {
   async checkUpdate(cx) {
     try {
       const mine = JSON.parse(await readTextFile(`${appHome()}/mods/company-agents/version.json`));
-      const res = await fetch(`https://raw.githubusercontent.com/bnhan2710/pixel-hq/main/mods/company-agents/version.json?t=${Date.now()}`);
+      const res = await fetch(`https://raw.githubusercontent.com/UreMySunshine/pixel-hq/light/mods/company-agents/version.json?t=${Date.now()}`);
       if (!res.ok) return;
       const latest = JSON.parse(await res.text());
       const num = (v) => String(v).split(".").map((n) => parseInt(n, 10) || 0);

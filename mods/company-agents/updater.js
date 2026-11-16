@@ -3,11 +3,13 @@ import { v_flex, h_flex } from "gpui-base";
 import { theme, run, appHome, readTextFile, writeTextFile, closeOverlay, props, spaces, agents, focused, knownAgents, shared, setShared } from "herdr";
 import { agentTaskArgv } from "./crew.js";
 
-const UPDATE_PROMPT = "Read ~/.config/herdr-app/AGENTS.md, then update my Pixel HQ layout to the latest version from github.com/bnhan2710/pixel-hq. Overwriting my installed pixel-hq files is intended; keep my other layouts and mods.";
+const UPDATE_PROMPT = "Read ~/.config/herdr-app/AGENTS.md, then update my Pixel HQ layout to the latest version from github.com/UreMySunshine/pixel-hq (the light branch). Overwriting my installed pixel-hq files is intended; keep my other layouts and mods.";
 
 const PIXEL_HQ_FILES = [
   "layouts/pixel-hq.json",
+  "layouts/pixel-hq.svg",
   "themes/pixel-hq.json",
+  "themes/pixel-hq-light.json",
   "mods/company-brand/main.js",
   "mods/company-brand/mod.json",
   "mods/company-brand/search.svg",
@@ -32,6 +34,7 @@ const PIXEL_HQ_FILES = [
   "mods/company-agents/editor.js",
   "mods/company-agents/figures.js",
   "mods/company-agents/opencode-status.js",
+  "mods/company-agents/palette.js",
   "mods/company-agents/scene.js",
   "mods/company-agents/sparkles.svg",
   "mods/company-agents/updater.js",
@@ -73,13 +76,13 @@ export class Updater {
     cx.notify();
 
     try {
-      const treeRes = await fetch("https://api.github.com/repos/bnhan2710/pixel-hq/git/trees/main?recursive=1").catch(() => null);
+      const treeRes = await fetch("https://api.github.com/repos/UreMySunshine/pixel-hq/git/trees/light?recursive=1").catch(() => null);
       let fileList = [];
       if (treeRes && treeRes.ok) {
         const treeData = await treeRes.json().catch(() => null);
         if (Array.isArray(treeData?.tree)) {
           fileList = treeData.tree
-            .filter((f) => f.type === "blob" && (f.path.startsWith("layouts/") || f.path.startsWith("mods/") || f.path.startsWith("themes/")) && !f.path.endsWith("README.md") && !f.path.endsWith(".png"))
+            .filter((f) => f.type === "blob" && (f.path.startsWith("layouts/") || f.path.startsWith("mods/") || f.path.startsWith("themes/")) && !f.path.endsWith("README.md") && !/\.(png|gif|d\.ts)$/.test(f.path) && !f.path.endsWith("jsconfig.json"))
             .map((f) => f.path);
         }
       }
@@ -109,7 +112,7 @@ export class Updater {
         this.message = `[${i + 1}/${fileList.length}] Downloading ${p}...`;
         cx.notify();
 
-        const url = `https://raw.githubusercontent.com/bnhan2710/pixel-hq/main/${p}?t=${Date.now()}`;
+        const url = `https://raw.githubusercontent.com/UreMySunshine/pixel-hq/light/${p}?t=${Date.now()}`;
         const res = await fetch(url);
         if (res.status === 404) continue;
         if (!res.ok) throw new Error(`HTTP ${res.status} while fetching ${p}`);
