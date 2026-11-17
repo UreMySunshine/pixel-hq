@@ -12,6 +12,13 @@ const soften = (c, k = 0.82) => {
   const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
   return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
 };
+// A label color pushed toward ink: keeps the hue, reads on the pale tint its plate sits on.
+const deepen = (c, k = 0.65) => {
+  const to = "#1d1e3e";
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
+};
 // A notched pixel plate: a 1px frame with cut corners around a tint of the same color.
 const notch = (border, fill) => [
   div().absolute().left(2).right(2).top(0).bottom(0).bg(border),
@@ -53,13 +60,13 @@ export default class WorkspaceStatus extends View {
     const plate = (color, text) => h_flex().relative().h(15).pl(6).pr(6).gap(4).items_center()
       .children(notch(color + "aa", soften(color)))
       .child(div().flex_none().size(4).bg(color))
-      .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(color).child(text));
+      .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(deepen(color)).child(text));
     const mark = (icon, text) => h_flex().gap(5).items_center().child(icon)
       .child(div().font_family(MONO).text_size(9.5).child(text));
     const sep = () => div().flex_none().w(1).h(11).bg(t.surface);
     return h_flex().size_full().px(12).gap(11).items_center().bg(t.chrome).border_t(1).border_color(t.surface)
-      .child(h_flex().relative().h(15).pl(6).pr(6).items_center().children(notch(t.accent + "aa", soften(t.accent)))
-        .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(t.accent).child("PIXEL HQ")))
+      .child(h_flex().relative().h(15).pl(6).pr(6).items_center().children(notch(t.accent, t.accent))
+        .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(t.accent_foreground).child("PIXEL HQ")))
       .child(sep())
       .child(mark(space?.machine ? server(t.muted) : monitor(t.muted), space?.machine ?? "This computer"))
       .when(Boolean(space?.branch), el => el.child(mark(branch(t.muted), space.branch)))
@@ -74,6 +81,6 @@ export default class WorkspaceStatus extends View {
       .child(h_flex().id("palette").relative().h(15).pl(5).pr(5).items_center().cursor_pointer()
         .children(notch(t.raised, soften(t.raised)))
         .on_click(() => run("app.palette"))
-        .child(div().font_family(MONO).text_size(9).text_color(t.dim).child(this.hint(t))));
+        .child(div().font_family(MONO).text_size(9).text_color(deepen(t.dim)).child(this.hint(t))));
   }
 }

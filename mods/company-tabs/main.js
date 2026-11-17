@@ -28,13 +28,6 @@ function label(tab, lead) {
 }
 
 const MONO = "JetBrains Mono";
-// Theme fills like `selected` carry alpha; composited over the bar they stay a tint, not a slab.
-const over = (color, under) => {
-  const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
-  const a = color.length === 9 ? parseInt(color.slice(7, 9), 16) / 255 : 1;
-  const [r1, g1, b1] = hex(color), [r2, g2, b2] = hex(under);
-  return "#" + [r1, g1, b1].map((v, i) => Math.round(v * a + [r2, g2, b2][i] * (1 - a)).toString(16).padStart(2, "0")).join("");
-};
 // A notched rectangle, drawn as two overlapping blocks with 2px cut corners. Insets are
 // [left, right, top, bottom] from the container, so a shape can sit inside another.
 const notch = (c, [l, r, t, b]) => [
@@ -129,8 +122,6 @@ export default class Tabs extends View {
       if (active >= 0) this.scroll.scroll_to_item(active);
     }
     const stop = (_e, cx) => cx.stop_propagation();
-    // The shown tab's fill is a tint of the accent, so its name stays readable in both themes.
-    const lit = over(t.accent + "22", t.chrome);
     const button = (id, glyph, action) => div().id(id).relative().size(24).flex_none().flex().items_center().justify_center()
       .children(box(t.raised, t.chrome, t.surface)).font_family(MONO).font_bold().text_size(11).text_color(t.dim)
       .hover(s => s.text_color(t.foreground))
@@ -140,7 +131,7 @@ export default class Tabs extends View {
       const program = lead?.program;
       const name = label(c, lead);
       return h_flex().id(`tab-${c.id}`).relative().h(28).pl(7).pr(9).pt(4).pb(6).gap(6).items_center().flex_none()
-        .children(box(c.active ? t.accent : t.raised, c.active ? lit : t.chrome, t.surface))
+        .children(box(c.active ? t.accent : t.raised, c.active ? t.accent : t.chrome, t.surface))
         // A rename or status dot on this or an earlier tab can push the active one out.
         .when(i <= active, el => el.on_size_change((_size, cx) => { this.scroll.scroll_to_item(active); cx.notify(); }))
         .on_mouse_down("left", (e, cx) => { cx.stop_propagation(); this.pressed = i; if (e.click_count === 2) run("tab.rename", { id: c.id }); })
@@ -150,13 +141,13 @@ export default class Tabs extends View {
           else run("tab.select", { id: c.id });
         })
         .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); openOverlay({ mod: "menu", kind: "popup", width: 200, props: { tab: "tab", target: { id: c.id, space: space.id } } }); })
-        .when(Boolean(program?.icon), el => el.child(program.tint ? svg(program.icon).size(13).text_color(t.muted) : image(program.icon).size(13)))
-        .child(div().max_w(170).truncate().font_family(MONO).font_bold().text_size(10.5).text_color(c.active ? t.accent : t.muted).child(c.zoomed ? `${name} Z` : name))
-        .when(c.status === "working", el => el.child(div().flex_none().size(4).bg(t.working).loop("opacity", { from: 0.3, to: 1, period: 900, easing: "linear" })))
-        .when(c.status === "blocked" || c.status === "done", el => el.child(div().flex_none().size(4).bg(t[c.status])))
+        .when(Boolean(program?.icon), el => el.child(program.tint ? svg(program.icon).size(13).text_color(c.active ? t.accent_foreground : t.muted) : image(program.icon).size(13)))
+        .child(div().max_w(170).truncate().font_family(MONO).font_bold().text_size(10.5).text_color(c.active ? t.accent_foreground : t.muted).child(c.zoomed ? `${name} Z` : name))
+        .when(c.status === "working", el => el.child(div().flex_none().size(4).bg(c.active ? t.accent_foreground : t.working).loop("opacity", { from: 0.3, to: 1, period: 900, easing: "linear" })))
+        .when(c.status === "blocked" || c.status === "done", el => el.child(div().flex_none().size(4).bg(c.active ? t.accent_foreground : t[c.status])))
         .when(c.active, el => el.child(div().id(`close-${c.id}`).flex_none().relative().w(8).h(8).cursor_pointer().on_mouse_down("left", stop)
           .on_click((_e, cx) => { cx.stop_propagation(); run("tab.close", { id: c.id }); })
-          .children(cross(t.dim, 8))));
+          .children(cross(t.accent_foreground, 8))));
     };
     const root = layout(), sidebar = find(root, "sidebar"), w = window();
     // Old saved rails and a dragged-narrow sidebar can be smaller than the window buttons.
@@ -169,8 +160,8 @@ export default class Tabs extends View {
     const panelButton = (id, text) => {
       const on = panel && !panel.hidden && body?.active === id;
       return h_flex().id(`panel-${id}`).relative().h(24).pl(6).pr(8).pt(4).pb(6).flex_none().items_center()
-        .children(box(on ? t.accent : t.raised, on ? lit : t.chrome, t.surface))
-        .font_family(MONO).font_bold().text_size(9).text_color(on ? t.accent : t.muted)
+        .children(box(on ? t.accent : t.raised, on ? t.accent : t.chrome, t.surface))
+        .font_family(MONO).font_bold().text_size(9).text_color(on ? t.accent_foreground : t.muted)
         .on_mouse_down("left", stop)
         .on_click(() => {
           if (on) run("layout.hide", { id: "panel" });
