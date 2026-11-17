@@ -27,6 +27,20 @@ function find(node, id) {
 // The sidebar's rail goes by its width, not a flag: dragging its edge narrows it too.
 const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 160;
 
+// A notched shape: two overlapping blocks with 2px cut corners. Insets are
+// [left, right, top, bottom], so a shape can sit inside another.
+const notch = (c, [l, r, t, b]) => [
+  div().absolute().left(l + 2).right(r + 2).top(t).bottom(b).bg(c),
+  div().absolute().left(l).right(r).top(t + 2).bottom(b + 2).bg(c),
+];
+// A desk's nameplate: a hard 2px shadow, a 1px notched frame, the fill inside. The plate
+// leaves the shadow's 2px on its right and bottom.
+const plate = (border, fill, shadow) => [
+  ...notch(shadow, [2, 0, 2, 0]),
+  ...notch(border, [0, 2, 0, 2]),
+  ...notch(fill, [1, 3, 1, 3]),
+];
+
 // To the rail (on macOS wide enough for the traffic lights), or back to the width it had.
 function toggleSidebar() {
   const width = find(layout(), "sidebar")?.size?.px;
@@ -771,9 +785,11 @@ export default class Agents extends View {
     const fieldTop = horizon + 20;
     const nAgents = list.length;
     const paneBy = new Map(panes().map((p) => [p.pane, p]));
-    const withBranch = list.some((a) => paneBy.get(a.pane)?.branch);
     const plan = (sc) => {
-      const P = Math.round(46 * sc), pw = duckWidth(P), cw = Math.max(pw + Math.round(24 * sc), 76), ch = P + Math.round(28 * sc) + 26 + (withBranch ? 15 : 0);
+      // The chair back and headrest reach 17 units above the seat, so a cell reserves that too;
+      // without it a desk's nameplate lands on the pet in the row below.
+      const P = Math.round(46 * sc), pw = duckWidth(P), cw = Math.max(pw + Math.round(24 * sc), 76);
+      const ch = P + Math.round(28 * sc) + 26 + Math.round(17 * sc);
       return { sc, P, pw, cw, ch, cols: Math.max(1, Math.floor((sz.width - 8) / cw)), rows: Math.max(1, Math.floor((sz.height - fieldTop - 4) / ch)) };
     };
     const P0 = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42].map(plan);
@@ -823,7 +839,7 @@ export default class Agents extends View {
       const ctxPct = contextOf.get(a.address)?.pct ?? null;
       const more = detail.get(a.address);
       const text = more ?? a.space_name ?? label(a);
-      // The desk's branch (its own worktree, ideally) and whether another desk is about to step on it.
+      // Every desk in a space sits on that space's branch, so the tooltip names it once, on the desk's hover.
       const branch = paneBy.get(a.pane)?.branch ?? null;
       const cl = this.clash.get(a.address) ?? null;
       const clText = cl ? (cl.kind === "file" ? `clash: ${String(cl.files[0] ?? "").split("/").pop()}${cl.files.length > 1 ? ` +${cl.files.length - 1}` : ""}` : "same folder") : "";
@@ -916,17 +932,17 @@ export default class Agents extends View {
         .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); openFigures(a.space_name); })
         .tooltip(`${a.program?.name ?? ""} · ${isUrge ? `idle for ${duration(waited)} · click to focus` : isSnooze ? `snoozing (${duration(waited)}) · click to focus` : a.status} · ${text}${branch ? ` · ${branch}` : ""}${clTip ? ` · ${clTip}` : ""} · drag to move`)
         .child(seat)
-        .child(div().relative().mt(6).max_w(Math.max(petW + 22, cellW - 4)).px(5).h(15).flex().items_center().rounded(3)
-          .bg(this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : isUrge ? "#fab387" : isSnooze ? "#45475a" : P.plate)
-          .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(5)
-            .bg((this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : isUrge ? "#fab387" : isSnooze ? "#45475a" : P.neon) + "44")
-            .loop("opacity", { from: 0.45, to: 1, period: hot || cl ? 800 : 2400, easing: "ease-in-out" }))
-          .text_size(10.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : isUrge ? "#1e1e2e" : isSnooze ? "#cdd6f4" : P.plateInk).truncate()
-          .child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? (isUrge ? ` · idle ${duration(waited)} ⏰` : isSnooze ? ` · zzz ${duration(waited)}` : ` · ${duration(waited)}`) : ""}`))
-        // The branch on the desk's nameplate, with a small git-branch glyph.
-        .when(Boolean(branch), (el) => el.child(h_flex().mt(2).gap(3).items_center().max_w(Math.max(petW + 22, cellW - 4)).text_size(9.5)
-          .child(div().relative().w(8).h(10).flex_none().children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg(P.accent))))
-          .child(div().min_w(0).truncate().font_family(monoF).text_color(P.accent).child(branch))));
+        // Fixed height, so a desk never grows past the band `ch` reserves for its nameplate.
+        .child(div().relative().mt(4).h(18).max_w(Math.max(petW + 22, cellW - 4)).pl(6).pr(8).flex().items_center()
+          .children(plate(
+            (this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : isUrge ? "#fab387" : isSnooze ? "#45475a" : P.frame),
+            this.hint?.addr === a.address ? "#cba6f7" : cl ? (cl.kind === "file" ? "#ff5370" : "#f9b84a") : a.focused || (q && hitOf(a)) ? "#f9e2af" : hot ? "#f38ba8" : isUrge ? "#fab387" : isSnooze ? "#45475a" : P.plate,
+            P.shadow,
+          ))
+          .font_family(monoF).font_bold().text_size(9.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : isUrge ? "#1e1e2e" : isSnooze ? "#cdd6f4" : P.plateInk)
+          // The ellipsis must sit on the element that holds the text; on the plate it never shows.
+          .child(div().min_w(0).truncate().child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? (isUrge ? ` · idle ${duration(waited)} ⏰` : isSnooze ? ` · zzz ${duration(waited)}` : ` · ${duration(waited)}`) : ""}`)))
+        // The branch is a property of the space, so the floor card carries it, not every desk.
     });
     // A dotted line of sparks between two desks that are about to clash.
     const links = [];

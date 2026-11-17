@@ -18,18 +18,27 @@ tabs and terminals on the right, a status bar at the bottom.
 - **Brand block** (top of the sidebar, 46px): the Pixel HQ logo (`mods/company-brand/logo.png`, a pixel-art corgi at a laptop in a rounded purple frame, 34px, transparent corners), "Pixel HQ"
   in semibold 14px and under it "engineering floor" in dim 10px. Search and sidebar-toggle buttons on the right.
 - **Floors** (the spaces block, header "Spaces" with a + button): each top-level space is one floor, a 52px card (rounded 8, no outline).
-  - Tile (54x40, rounded 6, 1px dark outline): a cut-away of one floor of the night office. Slate wall (a touch lighter while the floor has staff, `#2a2f52`) with a 3px band in the space's color (the one Herdr stores in `space.colors`) along the top, a window with a city skyline, a moon and a few lit panes (brighter while an agent in the space is typing), a small LED screen of colored code lines (some blink while someone types), and a tiled floor with one desk per agent, up to three: a chair, a 8x7 pet in its own colors (crab orange, robot blue, penguin dark with a white belly, Antigravity orange over blue, other agents cream) and a laptop that glows white. A blocked agent's laptop glows pink with a blinking amber `!`; a done agent gets green and yellow sparkles. Empty desks show a dark laptop.
+  - Tile (54x40, rounded 6, 1px dark outline): a cut-away of one floor of the night office. Slate wall (a touch lighter while the floor has staff, `#2a2f52`) with a 3px band in the space's color (the one Herdr stores in `space.colors`) along the top, a window with a city skyline, a moon and a few lit panes (brighter while an agent in the space is typing), a small LED screen of colored code lines (some blink while someone types), and a tiled floor with one desk per agent, up to three (the three most urgent; when more are aboard, a notched `+N` plate under the desks counts the rest): a chair, a 8x7 pet in its own colors (crab orange, robot blue, penguin dark with a white belly, Antigravity orange over blue, other agents cream) and a laptop that glows white. A blocked agent's laptop glows pink with a blinking amber `!`; a done agent gets green and yellow sparkles. Empty desks show a dark laptop.
   - Line 1: the space name, semibold. Line 2, dim 11px: the git branch (or the folder name without git), a dot, and "N staff" or "empty",
     then green up and red down arrows for ahead and behind.
-  - Right edge: one 8px dot. Blue while someone is typing, pink and softly pulsing when an agent needs you, nothing otherwise.
-  - The active floor gets the shipped selected background. Worktree spaces keep the shipped compact tree rows; drag to reorder, the right-click menu
+  - Right edge: one pixel lamp: a notched 6px core in a notched 12px halo. Blue and slowly breathing while someone is typing,
+    pink and faster when an agent needs you, nothing otherwise. Status chips are the same plates as the status bar, with the
+    state's color as the frame, a tint of it as the fill and a 4px lamp in front of the count.
+  - The active floor gets the shipped selected background; the line ends with a dashed "new station" row whose pixel icon is four
+    dashed corners around a plus. A worktree space is the same floor card, indented under its repo's card and marked by a station sign in its space color on the card's left edge, which glows while that space is shown; its line names the repo before the branch (`repo › branch`). Drag to reorder, the right-click menu
     and the collapsed rail work as in the shipped mod.
-  - The mod resizes its own block (`layout.resize`) to `31 + floors x 54 + 20` px, between 100 and 380, plus 56 per remote machine, so the
-    office gets the rest; more floors than fit scroll. The layout file starts it at 104px.
+  - The block and the office split the sidebar's list area at a 3:2 weight, so the floors get three fifths and the office two fifths;
+    more floors than fit scroll.
 - **Pixel header and search** (above the office): a 30px plaque with a notched 2px frame (`#45475a`, corners cut) on a `#181825` fill and a hard 2px `#11111b` shadow below. It holds the corgi logo (24px, the same `logo.png`), "ENGINEERING FLOOR" in JetBrains Mono bold 10px caps in `#89b4fa`, then the figures and sort buttons.
 - **Find staff** (32px, 10px side margins, same notched frame on `#11111b`, frame turns `#89b4fa` while typing): a hand-drawn pixel magnifier (11 rectangles of 1.5px), the placeholder "Find staff" in mono, and while there is text "matches/total" and an x button. A pet matches when every word of the query appears in its tab or title text, space name, program name, job title (staff engineer, code reviewer, platform engineer, systems architect) or a status word (typing/working, idle/break, shipped/done, needs you/blocked). Pets that do not match drop to 14% opacity and matches get a yellow nameplate; Enter focuses the first match.
-- **Status bar** (28px): "Pixel HQ" in lavender, machine, git branch, "N on the team", then colored dots:
-  "typing", "need you" ("needs you" for one), "shipped", "on break".
+- **Status bar** (28px): the `PIXEL HQ` plate, machine, git branch, "N on the team", then plates for
+  "typing", "need you" ("needs you" for one), "shipped", "on break", and the palette hint at the right. A plate is a 1px notched
+  frame in the state's color around a tint of that color, with a 4px lamp and mono bold 9.5px text; the machine and branch
+  figures are drawn with pixel glyphs.
+- **Tabs** (42px): each tab is a pixel box: a 2px notched frame in the bar's raised tone, a tinted fill and a hard 2px shadow
+  on its right and bottom. The shown tab's frame turns accent, its fill a tint of it and its name accent; other names are muted.
+  Names are mono bold 10.5px, cut with an ellipsis. A working tab carries a pulsing 4px square, a blocked or shipped one a
+  solid one, and the shown tab a 2px-stepped pixel cross. The `+`, `FILES`, `CHANGES` and window buttons are the same boxes.
 
 ## The pets
 
@@ -58,7 +67,7 @@ a lanyard; the robot has its own chest screen and wears none.
 
 The back wall is a slate night office, left to right: a potted plant, a window with a moon, a round clock, a second window, a water cooler, and two angled LED screens full of colored code lines (some blink) with a glowing projector pad in front that floats a green hologram of the world. Below it is a dark tiled floor with window light. Every pet sits on a grey office chair with a headrest and armrests, behind a steel-grey desk with cubicle panels on both sides.
 
-Desks adapt to the team. Up to four agents get full-size desks in two staggered columns; more agents shrink every desk (never below 0.42x) and add columns and rows until all fit, with each name label as wide as its column (full text in the tooltip). Nobody is ever hidden unless the panel is too small even at the smallest size, then a badge counts the rest.
+Desks adapt to the team. Up to four agents get full-size desks in two staggered columns; more agents shrink every desk (never below 0.42x) and add columns and rows until all fit, with each nameplate as wide as its column and a fixed 18px tall (full text in the tooltip). Nobody is ever hidden unless the panel is too small even at the smallest size, then a badge counts the rest.
 
 ## OpenCode status plugin
 
@@ -80,16 +89,17 @@ On first run the `company-agents` mod copies it, with `exec("sh", ...)`, to `$XD
 
 The Spaces block is a metro: one line per machine, one station per space (the machine's own line first). A line starts with a square notched badge in the line's color holding the machine's first letter, "THIS COMPUTER LINE" in mono bold 10px caps, a station count and a fold chevron, on a `#181825` bar with a 2px underline in the line color. The track is a 4px line in a soft pastel (periwinkle `#8fa3f0` for the first line, then `#7aa7e8`, `#6fc7bd`, `#b394f0`, `#8fcf94`, `#e49ac8`) with a 1px highlight and dark 2px sleepers every 8px. Each station is a 14px square with notched corners in the line color and a white core; the shown space's core is warm yellow with a soft pulsing halo, and a blocked agent turns it pink and pulses faster. A small train (a 10x14 white car with a window and a headlight) rides up and down the track beside a station while its agents are working. A dashed square ends the line ("new station").
 
-Each floor card is 66px: the night-office tile (54x40, as above) inside a notched 60x46 frame in the space's own color; the name (semibold 13.5px) with a small pulsing square when something is happening; a mono 10.5px line with a git-branch glyph and the branch (blue) or folder (dim), `· N aboard` or `· no service`, and the ahead/behind arrows; and a row of status chips, most urgent first (`N needs you` pink and pulsing, `N typing` blue, `N shipped` green, `N break` gray), or "dark floor" when nobody is there. The shown floor gets the selected background and a 3px bar in the line color at the left edge.
+Each floor card is 66px: the night-office tile (54x40, as above) inside a notched 60x46 frame in the space's own color; the name (semibold 13.5px) with a small pulsing square when something is happening; a mono 10.5px line with a git-branch glyph and the branch (blue) or folder (dim), `· N aboard` or `· no service`, and the ahead/behind arrows; and a row of status chips, most urgent first (`N needs you` pink and pulsing, `N typing` blue, `N shipped` green, `N break` gray), or "dark floor" when nobody is there. The shown floor gets the selected background and a 3px bar in the line color at the left edge. A worktree's card reuses the same frame, indented under its repo's card and marked at the left by a station sign in its space color with the branch glyph, which glows while the space is shown; its line starts with the repo name (`repo › branch`).
 
 ## Worktrees, clashes and floors
 
 `mods/company-agents/crew.js` holds the git logic; the mod passes it Herdr's `exec`.
 
 - **Floors apart:** the office lists only the agents whose `space` is the shown space (`spaces()` `active`). The Spaces cards still count every space's staff.
-- **Branch tag:** under each desk's name pill, `branch` from `panes()` for the agent's pane, in mono 9.5px `#89b4fa` after a 8x10 git-branch glyph drawn from five rectangles. It adds 15px to a desk's height when any visible agent has a branch.
+- **Branch:** a branch belongs to the space, not to a desk, so it is shown on the space's floor card and in each desk's tooltip; no desk draws a branch line of its own.
+- **Nameplate:** under each desk, a pixel plate 18px tall: a 2px hard shadow, a 1px notched frame and a notched fill, mono bold 9.5px text with an ellipsis. The frame and fill take the state's color (violet for a hint, red or amber for a clash, yellow for the focused or matching desk, pink for blocked, peach for an urged idle desk, grey for a snoozing one, the palette frame otherwise), and the plate reads `clash: <file>`, `same folder` or a hint text in place of the name when those apply.
 - **Scan** every 6 s (remote machines' spaces skipped): for each agent's pane `cwd` run `git rev-parse --show-toplevel`, `git rev-parse --path-format=absolute --git-common-dir` and `git status --porcelain=v1` in the top. Two desks whose common dir is equal but whose tops differ and whose changed-file sets intersect are a **file clash**; two working agents (`status` working) with the same top (or the same non-git `cwd`) are a **folder clash**. The result is kept only when it changes.
-- **Look of a clash:** a lightning bolt (5 rectangles) blinking over the pet's head, red `#ff5370` for a file clash and amber `#f9b84a` for a folder clash; the name pill turns that color and reads `clash: <file>` (plus `+N`) or `same folder`; a dotted line of 4px squares every 10px, blinking at different rates, joins each clashing pair on the floor; the tooltip lists the files.
+- **Look of a clash:** a lightning bolt (5 rectangles) blinking over the pet's head, red `#ff5370` for a file clash and amber `#f9b84a` for a folder clash; the nameplate turns that color and reads `clash: <file>` (plus `+N`) or `same folder`; a dotted line of 4px squares every 10px, blinking at different rates, joins each clashing pair on the floor; the tooltip lists the files.
 - **Hire:** a 14px pixel `+` in the header plaque toggles a framed form (same notched frame): ticket input, repo input (default: the space's folder, else the focused pane's), four program chips (claude, codex, opencode, agy) and Hire / Cancel buttons. Hire validates the ticket (`^[A-Za-z0-9][A-Za-z0-9._/-]*$`, no `..`, no trailing `/` or `.lock`), finds the repo's top, makes `<top>/../.worktrees/<repo>-<ticket with / as ->` with `git worktree add -b <ticket>` (or without `-b` when the branch exists; an existing worktree at that path is reused), then runs `tab.new { name: ticket, folder, argv: [program], space: <shown space> }`. Errors show in red inside the form. The command `company-agents.hire` opens the form too (bind it to a key).
 
 ## Update notice
@@ -113,6 +123,8 @@ Each floor card is 66px: the night-office tile (54x40, as above) inside a notche
 - **`mods/company-pane/`**: a pane header. Reads `panes()` for its terminal; draws the pet with `duckMood`
   from its own `duck.js`; chip colors come from the status.
 - **`mods/company-status/`**: counts from `agents()` by status.
+- **`mods/company-tabs/`**: the shipped `tabs` mod with notched plates instead of rounded rows; the tab strip, `+`, `FILES`,
+  `CHANGES` and window buttons keep the shipped commands, wheel and drag behavior.
 - **`mods/company-spaces/`**: the shipped `spaces` mod with a floor card instead of the one-line row. It reads `agents()` and groups by `agent.space`.
 - **`mods/company-agents/`**: the agents block: `agents()` for the team, `setAgentOrder` on render, `run("pane.focus")`
   on click. The room is `scene.js` (rectangles plus a few `.loop()` twinkles), the pets are `duck.js`.

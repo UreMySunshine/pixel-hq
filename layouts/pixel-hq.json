@@ -1,7 +1,10 @@
 {
   "id": "root",
   "type": "row",
-  "theme": { "light": "pixel-hq-light", "dark": "pixel-hq" },
+  "theme": {
+    "light": "pixel-hq-light",
+    "dark": "pixel-hq"
+  },
   "preview": "layouts/pixel-hq.svg",
   "children": [
     {
@@ -30,7 +33,7 @@
                 "mod": "company-spaces"
               },
               "size": {
-                "px": 104
+                "weight": 3
               },
               "min": 90
             },
@@ -41,7 +44,7 @@
                 "mod": "company-agents"
               },
               "size": {
-                "weight": 1
+                "weight": 2
               },
               "min": 90
             }
@@ -83,7 +86,7 @@
           "id": "tabs",
           "type": "block",
           "content": {
-            "mod": "tabs"
+            "mod": "company-tabs"
           },
           "size": {
             "px": 42

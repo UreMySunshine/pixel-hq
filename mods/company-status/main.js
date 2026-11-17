@@ -1,6 +1,32 @@
-import { View, div, svg } from "gpui-kit";
+import { View, div } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, agents, theme, run, window, keys } from "herdr";
+import { spaces, agents, theme, run, window, keys, settings } from "herdr";
+
+const MONO = "JetBrains Mono";
+const R = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
+const day = () => settings().dark === false;
+// A strong color toned toward the panel tone, so a plate's fill stays a tint of its own color.
+const soften = (c, k = 0.82) => {
+  const to = day() ? "#d7d2e9" : "#cdd6f4";
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
+};
+// A notched pixel plate: a 1px frame with cut corners around a tint of the same color.
+const notch = (border, fill) => [
+  div().absolute().left(2).right(2).top(0).bottom(0).bg(border),
+  div().absolute().left(0).right(0).top(2).bottom(2).bg(border),
+  div().absolute().left(3).right(3).top(1).bottom(1).bg(fill),
+  div().absolute().left(1).right(1).top(3).bottom(3).bg(fill),
+];
+
+const monitor = (c) => div().relative().w(10).h(8).flex_none()
+  .child(R(0, 0, 10, 1, c)).child(R(0, 7, 10, 1, c)).child(R(0, 1, 1, 6, c)).child(R(9, 1, 1, 6, c))
+  .child(R(2, 2, 6, 4, c + "55")).child(R(3, 7, 4, 1, c));
+const server = (c) => div().relative().w(8).h(8).flex_none()
+  .children([0, 3, 6].flatMap((y) => [R(0, y, 8, 2, c), R(1, y, 6, 1, c + "88")]));
+const branch = (c) => div().relative().w(8).h(10).flex_none().children(
+  [[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w, h]) => R(x, y, w, h, c)));
 
 export default class WorkspaceStatus extends View {
   // The palette key as actually bound, not a hardcoded one; without a
@@ -18,21 +44,36 @@ export default class WorkspaceStatus extends View {
     const t = theme();
     const space = spaces().find(s => s.active);
     const list = agents();
-    const needs = list.filter(a => a.status === "blocked").length;
-    const label = (icon, text) => h_flex().gap(6).items_center().child(svg(`mods/workspace-chrome/${icon}.svg`).size(13)).child(text);
+    const working = t.working ?? "#89b4fa";
+    const blocked = t.blocked ?? "#e8744f";
+    const done = t.done ?? "#8ec07c";
+    const idle = t.idle ?? t.dim;
     const n = (k) => list.filter(a => a.status === k).length;
-    const pill = (color, text) => h_flex().relative().gap(6).items_center().child(div().relative().size(7).rounded(4).bg(color)
-      .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(color + "44").loop("opacity", { from: 0.45, to: 1, period: 1600, easing: "ease-in-out" }))).child(text);
-    return h_flex().size_full().px(14).gap(16).items_center().bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8).text_color(t.muted)
-      .child(div().font_semibold().text_color(t.accent).child("Pixel HQ"))
-      .child(label(space?.machine ? "server" : "monitor", space?.machine ?? "This computer"))
-      .when(Boolean(space?.branch), el => el.child(label("branch", space.branch)))
-      .child(div().text_color(t.dim).child(`${list.length} on the team`))
-      .when(n("working") > 0, el => el.child(pill(t.working ?? "#89b4fa", `${n("working")} typing`)))
-      .when(n("blocked") > 0, el => el.child(pill(t.blocked ?? "#e8744f", `${n("blocked")} ${n("blocked") === 1 ? "needs" : "need"} you`)))
-      .when(n("done") > 0, el => el.child(pill(t.done ?? "#8ec07c", `${n("done")} shipped`)))
-      .when(list.length - n("working") - n("blocked") - n("done") > 0, el => el.child(pill(t.idle ?? t.dim, `${list.length - n("working") - n("blocked") - n("done")} on break`)))
+    const rest = list.length - n("working") - n("blocked") - n("done");
+    const plate = (color, text) => h_flex().relative().h(15).pl(6).pr(6).gap(4).items_center()
+      .children(notch(color + "aa", soften(color)))
+      .child(div().flex_none().size(4).bg(color))
+      .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(color).child(text));
+    const mark = (icon, text) => h_flex().gap(5).items_center().child(icon)
+      .child(div().font_family(MONO).text_size(9.5).child(text));
+    const sep = () => div().flex_none().w(1).h(11).bg(t.surface);
+    return h_flex().size_full().px(12).gap(11).items_center().bg(t.chrome).border_t(1).border_color(t.surface)
+      .child(h_flex().relative().h(15).pl(6).pr(6).items_center().children(notch(t.accent + "aa", soften(t.accent)))
+        .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(t.accent).child("PIXEL HQ")))
+      .child(sep())
+      .child(mark(space?.machine ? server(t.muted) : monitor(t.muted), space?.machine ?? "This computer"))
+      .when(Boolean(space?.branch), el => el.child(mark(branch(t.muted), space.branch)))
+      .child(sep())
+      .child(div().font_family(MONO).text_size(9.5).child(`${list.length} on the team`))
+      .when(n("working") > 0, el => el.child(plate(working, `${n("working")} typing`)))
+      .when(n("blocked") > 0, el => el.child(plate(blocked, `${n("blocked")} ${n("blocked") === 1 ? "needs" : "need"} you`)))
+      .when(n("done") > 0, el => el.child(plate(done, `${n("done")} shipped`)))
+      .when(rest > 0, el => el.child(plate(idle, `${rest} on break`)))
       .child(div().flex_1())
-      .child(div().id("palette").text_color(t.dim).on_click(() => run("app.palette")).child(this.hint(t)));
+      .child(sep())
+      .child(h_flex().id("palette").relative().h(15).pl(5).pr(5).items_center().cursor_pointer()
+        .children(notch(t.raised, soften(t.raised)))
+        .on_click(() => run("app.palette"))
+        .child(div().font_family(MONO).text_size(9).text_color(t.dim).child(this.hint(t))));
   }
 }

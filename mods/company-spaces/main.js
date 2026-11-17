@@ -26,9 +26,12 @@ function place(s, ps) {
   return ps.find((p) => tabs.has(p.tab) && p.cwd)?.cwd || s.folder;
 }
 // A space is one floor: a small pixel room, the name, the branch and who is aboard, and a status dot.
+// A worktree's card hangs off its repo's line, shifted right and marked by a station sign in its color.
 const CARD = 66;
-const rowHeight = ({ tree }) => (tree ? 28 : CARD);
+const TREE_INDENT = 10;
 const RAIL_CELL = 32;
+// The tile has three desks: the most urgent agents get them, the rest are counted.
+const RANK = { blocked: 3, working: 2, done: 1 };
 const railCell = (el) => h_flex().flex_none().justify_center().child(el);
 const where = (s, ps) => JSON.stringify([s.machine ?? null, place(s, ps)]);
 const base = (path) => path.replace(/\/+$/, "").split("/").pop();
@@ -102,6 +105,18 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
       .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#d7d2e9" : "#2a2c40"))
       .child(blocked ? lamp.loop("opacity", { from: 0.3, to: 1, period: 700, easing: "linear" }) : lamp)
       .loop("top", { from: c - 25, to: c - 19, period: 2400 })));
+}
+
+// A worktree's stop: a sign on its card's left edge, in the space's color, with the branch glyph.
+// The shown worktree's sign wears the same warm halo as a station at the main line.
+function treeSign(fill, ink, here) {
+  return div().absolute().left(18).top(CARD / 2 - 7).w(16).h(14)
+    .when(here, (el) => el.child(div().absolute().left(-2).top(-2).w(20).h(18).children(pix("#f9e2af", 20, 18))
+      .loop("opacity", { from: 0.4, to: 0.9, period: 1800, easing: "ease-in-out" })))
+    .children(pix(fill, 16, 14))
+    .child(div().absolute().left(4).top(2).w(8).h(10).children(
+      [[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]]
+        .map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg(ink))));
 }
 
 // A space speaks up only when something in it needs you.
@@ -461,7 +476,16 @@ export default class Spaces extends View {
         .when(collapsed, el => el.w(RAIL_CELL).rounded(6).justify_center().tooltip(`New space on ${m ?? "this computer"}`)
           .child(h_flex().size(18).rounded(5).border_1().border_color(t.dim).items_center().justify_center()
             .child(svg("mods/workspace-chrome/plus.svg").size(10))))
-        .when(!collapsed, el => el.h(26).gap(6).text_size(11.5).child(rail(t, line, 26, { stop: "end", last: true })).child("new station"));
+        .when(!collapsed, el => el.h(26).gap(6).text_size(11.5).child(rail(t, line, 26, { stop: "end", last: true }))
+          // A vacant platform: four dashed corners and a plus where the station will stand.
+          .child(div().relative().w(12).h(12).flex_none()
+            .children([[0, 0], [9, 0], [0, 9], [9, 9]].flatMap(([x, y]) => [
+              div().absolute().left(x).top(y).w(3).h(1).bg(t.dim),
+              div().absolute().left(x).top(y).w(1).h(3).bg(t.dim),
+            ]))
+            .child(div().absolute().left(5).top(3).w(2).h(6).bg(t.dim))
+            .child(div().absolute().left(3).top(5).w(6).h(2).bg(t.dim)))
+          .child("new station"));
       if (!collapsed && rebuilt) return [head];
       const cell = collapsed ? railCell : (el) => el;
       const failed = !collapsed && this.renameError?.m === m ? [div().px(8).pl(36).pb(4).flex_none().text_size(11).text_color(t.blocked).child(this.renameError.message)] : [];
@@ -534,31 +558,10 @@ export default class Spaces extends View {
     localStorage.setItem("machines.order", JSON.stringify(list));
   }
 
-  // Only what's unusual, after the name: "herdr \u00b7 spike \u21912 \u21931". The repo or
-  // branch goes when the name already says it (a worktree is named after its branch),
-  // and master/main go: nearly every space is on one.
-  gitTail(g, tree, name, t) {
-    const raw = g.branch ?? "detached";
-    const same = (a) => a.toLowerCase() === name.toLowerCase();
-    const branch = same(raw) || raw === "master" || raw === "main" ? "" : raw;
-    const repo = tree || same(g.name) ? "" : g.name;
-    const where = [repo, branch].filter(Boolean).join(" \u00b7 ");
-    return h_flex()
-      .flex_1()
-      .min_w(0)
-      .gap(5)
-      .justify_end()
-      .items_center()
-      .text_size(11.5)
-      .text_color(t.dim)
-      .when(Boolean(where), (el) => el.child(div().min_w(0).truncate().child(where)))
-      .when(g.ahead > 0, (el) => el.child(div().flex_none().text_color(t.ansi2).child(`\u2191${g.ahead}`)))
-      .when(g.behind > 0, (el) => el.child(div().flex_none().text_color(t.ansi1).child(`\u2193${g.behind}`)));
-  }
-
-  // The floor card for a top-level space: a small pixel room (one floor), the name, one dim line, one status dot.
-  card(w, i, g, fill, t) {
-    const crew = this.crew?.get(w.id) ?? [];
+  // The floor card for a space: a small pixel room (one floor), the name, one dim line, one status dot.
+  // A worktree's card is the same card, shifted under its repo's and naming that repo on its line.
+  card({ w, g, fill, tree }, t) {
+    const crew = [...(this.crew?.get(w.id) ?? [])].sort((a, b) => (RANK[b.status] ?? 0) - (RANK[a.status] ?? 0));
     const count = (k) => crew.filter((a) => a.status === k).length;
     const blocked = count("blocked"), working = count("working");
     // One floor of the building, cut away like a dollhouse: a window and LED screen on the wall, and one desk per agent
@@ -599,16 +602,36 @@ export default class Spaces extends View {
     const tile = div().relative().w(60).h(46).flex_none()
       .children(pix(soften(fill), 60, 46))
       .child(div().absolute().left(-2).top(-2).children(pix(fill + "3a", 64, 50)).loop("opacity", { from: lit ? 0.45 : 0.15, to: lit ? 1 : 0.35, period: 2400, easing: "ease-in-out" }))
-      .child(div().absolute().left(3).top(3).child(room));
+      .child(div().absolute().left(3).top(3).child(room))
+      .when(crew.length > 3, (el) => {
+        const more = String(crew.length - 3);
+        const bw = 12 + more.length * 6;
+        // A notched pixel plate below the desks, so the extra staff never hides the three who fit.
+        return el.child(div().absolute().left(58 - bw).top(41).w(bw).h(14)
+          .children(pix(t.dim, bw, 14))
+          .child(div().absolute().left(1).top(1).w(bw - 2).h(12).children(pix(t.chrome, bw - 2, 12)))
+          .child(div().absolute().left(0).right(0).top(0).bottom(0).flex().items_center().justify_center()
+            .font_family(MONO).font_bold().text_size(9).text_color(t.foreground).child(`+${more}`)));
+      });
     const raw = g?.branch ?? null;
     const place = raw ?? base(w.folder ?? "");
+    const repo = tree ? g?.name ?? "" : "";
     const done = count("done");
     const idle = crew.length - blocked - working - done;
     const dot = blocked > 0 ? t.blocked : working > 0 ? t.working : null;
+    // A status chip as a pixel plate: a 1px frame with cut corners around a tint of its own color,
+    // the count in mono bold behind a 4px state lamp. The height is fixed so the row keeps its pitch.
     const chip = (text, color, pulse) => {
-      const c = h_flex().relative().flex_none().px(5).h(15).items_center().rounded(2).border_1().border_color(color + "77").bg(color + "26")
-        .font_family(MONO).font_bold().text_size(9.5).text_color(color)
-        .child(text);
+      const fill = soften(color, 0.82);
+      const c = h_flex().relative().flex_none().h(14).pl(6).pr(6).gap(4).items_center()
+        .children([
+          div().absolute().left(2).right(2).top(0).bottom(0).bg(color + "aa"),
+          div().absolute().left(0).right(0).top(2).bottom(2).bg(color + "aa"),
+          div().absolute().left(3).right(3).top(1).bottom(1).bg(fill),
+          div().absolute().left(1).right(1).top(3).bottom(3).bg(fill),
+        ])
+        .child(div().flex_none().size(4).bg(color))
+        .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(color).child(text));
       return pulse ? c.loop("opacity", { from: 0.55, to: 1, period: 900, easing: "ease-in-out" }) : c;
     };
     // Most urgent first, so a narrow card loses the least important chip.
@@ -625,14 +648,20 @@ export default class Spaces extends View {
         .child(h_flex().gap(6).items_center()
           .child(div().min_w(0).truncate().font_semibold().text_size(13.5).text_color(t.foreground).child(w.name))
           .when(Boolean(dot), (el) => {
-            const d = div().relative().flex_none().size(7).bg(dot)
-              .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(dot + "44"));
+            // A pixel lamp: a notched 6px core inside a notched 12px halo that breathes.
+            // `pix` degenerates into a plus below 8px, so the core is drawn as two rects.
+            const halo = div().absolute().left(-3).top(-3).w(12).h(12).children(pix(dot + "55", 12, 12));
+            const core = div().relative().flex_none().w(6).h(6)
+              .child(div().absolute().left(1).top(0).w(4).h(6).bg(dot))
+              .child(div().absolute().left(0).top(1).w(6).h(4).bg(dot));
+            const d = div().relative().flex_none().w(6).h(6).child(halo).child(core);
             return el.child(blocked > 0 ? d.loop("opacity", { from: 0.3, to: 1, period: 800, easing: "ease-in-out" }) : d.loop("opacity", { from: 0.6, to: 1, period: 1600, easing: "ease-in-out" }));
           }))
         .child(h_flex().gap(5).items_center().text_size(10.5).font_family(MONO).text_color(t.dim)
+          .when(Boolean(repo), (el) => el.child(div().flex_none().text_color(t.dim).child(`${repo} ›`)))
           .child(glyph)
-          .child(div().min_w(0).truncate().text_color(raw ? t.accent : t.dim).child(place))
-          .child(div().flex_none().child(`\u00b7 ${crew.length ? `${crew.length} aboard` : "no service"}`))
+          .child(div().min_w(tree ? 46 : 0).truncate().text_size(10.5).font_family(MONO).text_color(raw ? t.accent : t.dim).child(place))
+          .when(!tree, (el) => el.child(div().flex_none().child(`\u00b7 ${crew.length ? `${crew.length} aboard` : "no service"}`)))
           .when(g?.ahead > 0, (el) => el.child(div().flex_none().text_color(t.ansi2).child(`\u2191${g.ahead}`)))
           .when(g?.behind > 0, (el) => el.child(div().flex_none().text_color(t.ansi1).child(`\u2193${g.behind}`))))
         .child(h_flex().gap(4).items_center().min_w(0).overflow_hidden().tooltip(`${working} typing · ${blocked} need you · ${done} shipped · ${idle} on break`).children(chips.length ? chips : [div().text_size(10).font_family(MONO).text_color(t.dim).child("dark floor")])));
@@ -648,7 +677,7 @@ export default class Spaces extends View {
       .relative()
       .id(`space-${w.id}`)
       .px(8)
-      .h(rowHeight({ tree }))
+      .h(CARD)
       .flex_none()
       .justify_center()
       .rounded(8)
@@ -686,16 +715,13 @@ export default class Spaces extends View {
         cx.notify();
       })
       .on_mouse_down("right", () => this.menu(w))
-      .child(h_flex().size_full().items_center()
-        .child(rail(t, line, rowHeight({ tree }), { stop: tree ? null : "station", here: on, crew: tree ? [] : this.crew?.get(w.id) ?? [] }))
-        .child(div().flex_1().min_w(0).h_full().flex().items_center().child(!tree ? this.card(w, i, g, fill, t) :
-        h_flex()
-          .gap(9)
-          .items_center()
-          .when(Boolean(tree), el => el.pl(4).child(svg("mods/workspace-chrome/branch.svg").size(13).text_color(t.dim)))
-          .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
-          .child(div().flex_shrink(0).max_w(150).truncate().text_color(t.foreground).child(w.name))
-          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()))),
+      .child(
+        h_flex().relative().size_full().items_center()
+          .when(Boolean(tree), (el) => el.child(treeSign(fill, t.chrome, on)))
+          .child(rail(t, line, CARD, { stop: tree ? null : "station", here: on, crew: tree ? [] : this.crew?.get(w.id) ?? [] }))
+          .child(div().flex_1().min_w(0).h_full().flex().items_center()
+            .when(Boolean(tree), (el) => el.pl(TREE_INDENT))
+            .child(this.card({ w, g, fill, tree }, t)))
       );
   }
 
@@ -722,14 +748,6 @@ export default class Spaces extends View {
     const sp = spaces();
     this.crew = new Map();
     for (const a of agents()) { if (!this.crew.has(a.space)) this.crew.set(a.space, []); this.crew.get(a.space).push(a); }
-    // The block is as tall as its floors, so the office below gets the rest (it scrolls past five floors).
-    if (!collapsed) {
-      const lines = new Set([null, ...sp.map((x) => x.machine ?? null), ...this.machines.map((m) => m.name), ...Object.keys(this.reconnecting)]);
-      const open = sp.filter((x) => !this.folded.has(x.machine ?? null)).length;
-      const heads = [...lines].reduce((sum, m) => sum + (this.folded.has(m) ? 32 : 60), 0);
-      const want = Math.max(100, Math.min(380, 31 + open * (CARD + 2) + 20 + heads));
-      if (this.appliedPx !== want) { this.appliedPx = want; run("layout.resize", { id: "spaces", px: want }); }
-    }
     const ids = new Set(sp.map(p => p.id));
     const kept = Object.fromEntries(Object.entries(shared("space.colors") ?? {}).filter(([id]) => ids.has(id)));
     let changed = Object.keys(kept).length !== Object.keys(shared("space.colors") ?? {}).length;
