@@ -54,7 +54,7 @@ const soften = (c, k = 0.3) => {
   const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
   return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
 };
-// The line head's bar and underline: a dark plaque by night, a pale one by day.
+// The line head is a platform: a dark canopy by night, a pale one by day.
 const HEADBAR = () => (day() ? "#d6d1ea" : "#181825");
 // One floor of the building, cut away: the room's wall, windows, moon or sun, LED screen and floor, by time of day.
 const ROOMC = () => (day() ? {
@@ -78,14 +78,19 @@ function grip(color) {
 
 // A solid pixel block with notched corners.
 const pix = (c, w, h) => [div().absolute().left(2).top(0).w(w - 4).h(h).bg(c), div().absolute().left(0).top(2).w(w).h(h - 4).bg(c)];
+// A notched rectangle, drawn as two overlapping blocks with 2px cut corners. Insets are
+// [left, right, top, bottom] from the container, so a shape can sit inside another.
+const notch = (c, [l, r, t, b]) => [
+  div().absolute().left(l + 2).right(r + 2).top(t).bottom(b).bg(c),
+  div().absolute().left(l).right(r).top(t + 2).bottom(b + 2).bg(c),
+];
 
 // The track: a thick line with dark sleepers, a square station with notched corners (pulsing where you are or where an agent needs you),
-// and a little train that rides while someone works.
-function rail(t, line, h, { stop = null, here = false, last = false, crew = [] } = {}) {
+// and a little locomotive that rides while someone works.
+function rail(t, line, h, { stop = null, here = false, last = false, crew = [], tint = line } = {}) {
   const c = Math.round(h / 2);
   const blocked = crew.some((a) => a.status === "blocked");
   const moving = blocked || crew.some((a) => a.status === "working");
-  const lamp = div().absolute().left(3).top(10).w(4).h(2).bg(blocked ? "#f38ba8" : "#f9e2af");
   const end = last ? c : h;
   const sleepers = [];
   for (let y = 2; y < end; y += 8) sleepers.push(div().absolute().left(5).top(y).w(10).h(2).bg("#00000038"));
@@ -101,10 +106,90 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [] }
     .when(stop === "station", (el) => el.child(node
       .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).bg((here ? "#f9e2af" : line) + "99").loop("opacity", { from: 0.5, to: 1, period: here ? 1600 : 3000, easing: "ease-in-out" }))))
     .when(stop === "end", (el) => el.child(div().absolute().left(4).top(c - 6).w(12).h(12).rounded(2).border_2().border_dashed().border_color(line).bg(t.chrome)))
-    .when(moving, (el) => el.child(div().absolute().left(5).w(10).h(14).rounded(2).border_1().border_color(day() ? "#a49cc8" : "#2a2c40").bg(day() ? "#5b5480" : "#e8ecf8")
-      .child(div().absolute().left(1).top(2).w(6).h(3).bg(day() ? "#d7d2e9" : "#2a2c40"))
-      .child(blocked ? lamp.loop("opacity", { from: 0.3, to: 1, period: 700, easing: "linear" }) : lamp)
-      .loop("top", { from: c - 25, to: c - 19, period: 2400 })));
+    .when(moving, (el) => el.child(loco(blocked, tint).absolute().left(3)
+      .loop("top", { from: c - 32, to: c - 20, period: 2400 })));
+}
+
+// A commuter car seen from above, one carriage: a rounded cream nose under two lit lamps, a
+// windscreen with light running across it, a band of the row's color fore and aft, a slatted roof
+// module between two rows of side windows, and the coupler at the tail.
+function loco(blocked, color) {
+  const ink = "#1d1e3e";
+  const cream = "#f0decc";
+  const glass = "#4d4986";
+  const glassLit = "#817edf";
+  const win = "#7372e0";
+  const winLit = "#aca7ee";
+  const roof = "#c7b8ea";
+  const roofDark = "#4e4a86";
+  const lamp = blocked ? "#f38ba8" : "#ffae1a";
+  const lampLit = "#fff2b8";
+  const T = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
+  return div().relative().w(12).h(24).flex_none()
+    .child(T(2, 0, 8, 1, ink)).child(T(3, 0, 6, 1, cream))
+    .child(T(1, 1, 10, 1, ink)).child(T(2, 1, 8, 1, cream))
+    .child(T(0, 2, 12, 22, ink)).child(T(1, 2, 10, 21, cream))
+    .child(T(1, 2, 2, 2, lamp)).child(T(1, 2, 1, 1, lampLit))
+    .child(T(9, 2, 2, 2, lamp)).child(T(9, 2, 1, 1, lampLit))
+    .child(T(2, 4, 8, 5, ink))
+    .child(T(3, 5, 6, 3, glass))
+    .child(T(3, 7, 2, 1, glassLit)).child(T(5, 6, 2, 1, glassLit))
+    .child(T(7, 7, 1, 1, glassLit)).child(T(8, 6, 1, 1, glassLit))
+    .child(T(1, 9, 10, 2, color))
+    .child(T(3, 12, 6, 7, roofDark)).child(T(4, 13, 4, 5, roof))
+    .child(T(5, 14, 2, 1, roofDark)).child(T(5, 16, 2, 1, roofDark))
+    .child(T(1, 12, 2, 2, win)).child(T(1, 12, 2, 1, winLit))
+    .child(T(9, 12, 2, 2, win)).child(T(9, 12, 2, 1, winLit))
+    .child(T(1, 16, 2, 2, win)).child(T(1, 16, 2, 1, winLit))
+    .child(T(9, 16, 2, 2, win)).child(T(9, 16, 2, 1, winLit))
+    .child(T(1, 20, 10, 2, color))
+    .child(T(2, 22, 1, 1, ink)).child(T(9, 22, 1, 1, ink))
+    .child(T(4, 22, 4, 2, ink));
+}
+
+// A line's header as a station platform: a striped canopy in the line's color with a scalloped
+// hem, two posts, a hung name plate, a bench, and a slab with a safety line and a tactile strip.
+function platform(line) {
+  const stripes = Array.from({ length: 40 }, (_, i) => div().flex_none().w(12).h(10).bg(i % 2 ? soften(line, 0.62) : line));
+  const hem = Array.from({ length: 40 }, (_, i) => div().flex_none().w(12).h(2).bg(i % 2 ? line : soften(line, 0.62)));
+  const ticks = Array.from({ length: 80 }, () => div().flex_none().w(3).h(2).bg(soften(line, 0.25)));
+  const B = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
+  const R = (x, y, w, h, c) => div().absolute().right(x).top(y).w(w).h(h).bg(c);
+  // A column: a capital that steps in three times, a shaft lit on the left, and a base that steps
+  // back out, so it reads as a cast pillar rather than a bar.
+  const post = (side) => {
+    const A = side === "l" ? B : R;
+    return [
+      A(0, 13, 16, 3, soften(line, 0.35)),
+      A(2, 16, 12, 3, soften(line, 0.45)),
+      A(4, 19, 8, 3, soften(line, 0.5)),
+      A(5, 22, 6, 33, soften(line, 0.45)),
+      A(5, 22, 2, 33, soften(line, 0.72)),
+      A(9, 22, 2, 33, soften(line, 0.25)),
+      A(4, 55, 8, 2, soften(line, 0.45)),
+      A(2, 57, 12, 2, soften(line, 0.35)),
+      A(0, 59, 16, 2, soften(line, 0.3)),
+      A(0, 61, 16, 1, soften(line, 0.1)),
+    ];
+  };
+  const benchLit = day() ? "#cdc6e8" : "#5d6489";
+  const benchBody = day() ? "#b3a8d8" : "#4a4f6e";
+  const benchDark = day() ? "#9a90c4" : "#383d58";
+  return [
+    div().absolute().left(0).right(0).top(0).h(10).overflow_hidden().child(h_flex().h(10).children(stripes)),
+    div().absolute().left(0).right(0).top(10).h(2).overflow_hidden().child(h_flex().h(2).gap(1).children(hem)),
+    div().absolute().left(0).right(0).top(12).h(1).bg("#00000028"),
+    ...post("l"), ...post("r"),
+    div().absolute().left(0).right(0).bottom(0).h(10).bg(soften(line, 0.8)),
+    div().absolute().left(0).right(0).bottom(5).h(2).bg(day() ? "#e0b94a" : "#c98a1e"),
+    div().absolute().left(0).right(0).bottom(1).h(2).overflow_hidden().child(h_flex().h(2).gap(4).children(ticks)),
+    // A bench on the platform: a backrest narrower than the seat, each bar lit along its top and
+    // shaded under its bottom, standing on four short legs.
+    B(30, 52, 22, 4, benchBody), B(30, 52, 22, 1, benchLit), B(30, 55, 22, 1, benchDark),
+    B(27, 56, 28, 3, benchBody), B(27, 56, 28, 1, benchLit), B(27, 58, 28, 1, benchDark),
+    B(30, 59, 2, 3, benchDark), B(34, 59, 2, 3, benchDark),
+    B(46, 59, 2, 3, benchDark), B(50, 59, 2, 3, benchDark),
+  ];
 }
 
 // A worktree's stop: a sign on its card's left edge, in the space's color, with the branch glyph.
@@ -403,7 +488,6 @@ export default class Spaces extends View {
       const from = this.dragLine ? machineNames.indexOf(this.dragLine.m) : -1;
       const target = !collapsed && from !== -1 && from !== at && this.overLine?.m === m;
       const hovered = !collapsed && !this.dragLine && this.hoverLine?.m === m;
-      const lineKey = m ?? "local";
       const dropBar = (el, end) => el.child(div().absolute().left(0).right(0).h(2).bg(t.accent).when(end, bar => bar.bottom(0)).when(!end, bar => bar.top(0)));
       const renaming = !collapsed && Boolean(m) && this.renaming?.m === m;
       const mine = rows.filter((r) => (r.w.machine ?? null) === m);
@@ -419,14 +503,38 @@ export default class Spaces extends View {
         .child(div().absolute().left(-2).top(-2).children(pix(line + "3d", 24, 24)).loop("opacity", { from: 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
         .children(pix(line, 20, 20))
         .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(10).text_color(day() ? "#ffffff" : "#11111b")
-          .child([...(m ?? "this computer")][0].toUpperCase()))
-        .when(!folded && !rebuilt && !login && (mine.length > 0 || !loading(m)), (el) => el.child(div().absolute().left(8).top(18).w(4).h(10).bg(line)));
+          .child([...(m ?? "this computer")][0].toUpperCase()));
       const icon = svg(`mods/workspace-chrome/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
       const badge = div().absolute().right(-3).bottom(-2).size(6).rounded(3).border_1().border_color(t.chrome).bg(connected ? t.ansi2 : t.dim);
-      const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 28).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
+      // One plate spans the platform, hung from the canopy by two rods: the badge and the line's
+      // name at the left, the stop count and the fold mark at the right.
+      const sign = h_flex().relative().absolute().left(20).right(20).top(15).h(34).pl(7).pr(8).gap(7).items_center()
+        .child(div().absolute().left(24).top(-3).w(2).h(3).bg(day() ? "#8d86b4" : "#3a3f5c"))
+        .child(div().absolute().right(24).top(-3).w(2).h(3).bg(day() ? "#8d86b4" : "#3a3f5c"))
+        .children([
+          ...notch(day() ? "#00000026" : "#00000055", [2, 0, 2, 0]),
+          ...notch(line, [0, 2, 0, 2]),
+          ...notch(day() ? "#faf9fc" : "#1c1e2b", [2, 4, 2, 4]),
+        ])
+        .child(bullet)
+        .child(v_flex().flex_1().min_w(0).gap(1).justify_center()
+          .child(div().min_w(0).truncate().font_family(MONO).font_bold().text_size(9.5).text_color(connected ? t.foreground : t.dim)
+            .when(!renaming, el => el.child(`${(m ?? "this computer").toUpperCase()} LINE`))
+            .when(renaming, el => el.child(Input.new(this.renaming.input).h(18).text_size(10).font_family(MONO).text_color(t.foreground))))
+          .when(!connected && !rebuilt && !login, el => el.child(div().flex_none().font_family(MONO).text_size(8.5).text_color(t.dim).child((machine?.state ?? "asleep").replace(/_/g, " "))))
+          .when(rebuilt, el => el.child(h_flex().gap(3).items_center().font_family(MONO).text_size(8.5)
+            .child(div().max_w(90).truncate().text_color(t.dim).child(repair?.error || "rebuilt ·"))
+            .child(div().id(`machine-connect-${m}`).flex_none().text_color(repair?.error ? t.blocked : t.muted)
+              .hover(s => s.text_color(t.foreground))
+              .tooltip(repair?.error || "This machine was rebuilt or replaced. Click to connect to the new one.")
+              .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(machine, cx); })
+              .child(repair?.busy ? "Connecting…" : "Connect")))))
+        .child(div().flex_none().font_family(MONO).font_bold().text_size(9).text_color(t.dim).child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
+        .child(svg(`mods/workspace-chrome/chevron-${folded ? "right" : "down"}.svg`).size(10).flex_none());
+      const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 72).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
         .when(collapsed, el => el.mt(4).w(RAIL_CELL).justify_center().rounded(6).tooltip(login ? `${m} needs a login: run ${login}. Click for Copy.` : m ? `${m} · ${connected ? "connected" : (machine?.state ?? "asleep").replace(/_/g, " ")}` : "This computer"))
         .when(collapsed, el => el.cursor_pointer())
-        .when(!collapsed, el => el.bg(HEADBAR()).mb(2).h(30).child(div().absolute().left(0).right(0).bottom(0).h(2).bg(line)))
+        .when(!collapsed, el => el.bg(HEADBAR()).mb(2).children(platform(line)))
         .hover(s => s.bg(t.hover))
         .on_click((_e, cx) => {
           if (renaming) return;
@@ -453,23 +561,8 @@ export default class Spaces extends View {
           .when(target, el => el.bg(t.hover))
           .when(target && from > at, el => dropBar(el, false))
           .when(hovered, el => el.child(grip(t.dim))))
-        .when(!collapsed, el => el.child(bullet))
         .when(collapsed, el => el.child(div().relative().flex_none().child(icon).when(Boolean(m), el => el.child(badge))))
-        .when(!collapsed, el => el.child(div().flex_1().truncate().font_family(MONO).font_bold().text_size(10).text_color(connected ? t.foreground : t.dim).when(!renaming, el => el.child(`${(m ?? "this computer").toUpperCase()} LINE`))
-          .when(renaming, el => el.child(Input.new(this.renaming.input).h(22).text_size(11).font_family(MONO).text_color(t.foreground))))
-          .when(!connected && !rebuilt && !login, el => el.child(div().flex_none().child((machine?.state ?? "asleep").replace(/_/g, " "))))
-          .when(rebuilt, el => el.child(h_flex().flex_none().gap(3).items_center()
-            .child(div().max_w(140).truncate().child(repair?.error || "rebuilt ·"))
-            .child(div().id(`machine-connect-${m}`).text_color(repair?.error ? t.blocked : t.muted)
-              .hover(s => s.text_color(t.foreground))
-              .tooltip(repair?.error || "This machine was rebuilt or replaced. Click to connect to the new one.")
-              .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(machine, cx); })
-              .child(repair?.busy ? "Connecting…" : "Connect"))))
-          .when(hovered && connected, el => el.child(div().id(`machine-add-${lineKey}`).flex_none().px(4).rounded(4).hover(s => s.bg(t.hover).text_color(t.foreground))
-            .tooltip(`New station on ${m ?? "this computer"}`)
-            .on_click((_e, cx) => { cx.stop_propagation(); run("space.new", { machine: m ?? "" }); }).child("+")))
-          .child(div().flex_none().child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
-          .child(svg(`mods/workspace-chrome/chevron-${folded ? "right" : "down"}.svg`).size(11).flex_none()));
+        .when(!collapsed, el => el.child(sign));
       const empty = h_flex().id(`machine-new-${m ?? "local"}`).h(28).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().rounded(7)
         .text_size(12).text_color(t.dim)
         .when(collapsed || connected, el => el.hover(s => s.bg(t.hover).text_color(t.foreground)).on_click(() => run("space.new", { machine: m ?? "" })))
@@ -718,7 +811,7 @@ export default class Spaces extends View {
       .child(
         h_flex().relative().size_full().items_center()
           .when(Boolean(tree), (el) => el.child(treeSign(fill, t.chrome, on)))
-          .child(rail(t, line, CARD, { stop: tree ? null : "station", here: on, crew: tree ? [] : this.crew?.get(w.id) ?? [] }))
+          .child(rail(t, line, CARD, { stop: tree ? null : "station", here: on, crew: tree ? [] : this.crew?.get(w.id) ?? [], tint: fill }))
           .child(div().flex_1().min_w(0).h_full().flex().items_center()
             .when(Boolean(tree), (el) => el.pl(TREE_INDENT))
             .child(this.card({ w, g, fill, tree }, t)))
