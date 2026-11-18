@@ -7,7 +7,7 @@ import { agents, terminals, panes, focused, spaces, run, theme, shared, setShare
 import { figureFor, load } from "./figures.js";
 import { agentOf, speciesOf, duckWidth, DUCK_CENTER, IDLE_SNOOZE, IDLE_URGE } from "./duck.js";
 import { scene, yHorizon } from "./scene.js";
-import { pal } from "./palette.js";
+import { pal, isDay } from "./palette.js";
 import { Editor } from "./editor.js";
 import { checkPixelHqUpdate, executePixelHqUpdate } from "./updater.js";
 import { snapshot, clashes, hire, agentTaskArgv } from "./crew.js";
@@ -1342,14 +1342,16 @@ export default class Agents extends View {
 
     // Expanded: a pixel farm with one small pet per agent, scattered over the field.
     const P = pal();
+    // Furniture: slate tones by night, a step darker by day so a desk's outline still reads on the pale floor.
+    const F = isDay()
+      ? { panel: "#737b9e", panelHi: "#8f97b8", panelEdge: "#5d648a", deskTop: "#666d94", deskFront: "#545a80", deskUnder: "#3b3f58", apron: "#33364b", shadow: "#2a24401f" }
+      : { panel: "#8b92b4", panelHi: "#aab1d2", panelEdge: "#6f7698", deskTop: "#7a81a6", deskFront: "#646a8c", deskUnder: "#454a68", apron: "#3b3f5a", shadow: "#00000000" };
     const sz = this.size ?? { width: 268, height: 640 };
     // Every agent gets a desk. The more agents, the smaller the desks (never below 0.42x), so all of them stay visible.
     const horizon = yHorizon(sz.height);
     const fieldTop = horizon + 20;
     const nAgents = list.length;
     const paneBy = new Map(panes().map((p) => [p.pane, p]));
-    const withVitals = list.some((a) => contextOf.get(a.address));
-    const withModel = list.some((a) => { const c = contextOf.get(a.address); return c ? modelOf(c) !== "" : false; });
     const plan = (sc, extraVitals) => {
       // The chair back and headrest reach 17 units above the seat, so a cell reserves that too;
       // without it a desk's nameplate lands on the pet in the row below.
@@ -1451,11 +1453,12 @@ export default class Agents extends View {
         .child(div().absolute().left(ctr - kk(15)).top(PET * 0.84 + kk(18)).w(kk(30)).h(kk(4)).bg("#2b2f45"))
         .child(div().absolute().left(ctr - kk(17)).top(PET * 0.84 + kk(22)).w(kk(5)).h(kk(4)).bg("#14172a"))
         .child(div().absolute().left(ctr + kk(12)).top(PET * 0.84 + kk(22)).w(kk(5)).h(kk(4)).bg("#14172a"))
-        // Cubicle panels on both sides of the desk.
-        .child(div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg("#8b92b4"))
-        .child(div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(2)).h(PET * 0.62).bg("#aab1d2"))
-        .child(div().absolute().left(petW + kk(4)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg("#8b92b4"))
-        .child(div().absolute().left(petW + kk(7)).top(PET * 0.34).w(kk(2)).h(PET * 0.62).bg("#6f7698"))
+        // Cubicle panels on both sides of the desk, on a contact shadow that lifts the desk off the floor.
+        .child(div().absolute().left(-kk(11)).top(PET * 0.84 + kk(22)).w(petW + kk(22)).h(kk(6)).bg(F.shadow))
+        .child(div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg(F.panel))
+        .child(div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(2)).h(PET * 0.62).bg(F.panelHi))
+        .child(div().absolute().left(petW + kk(4)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg(F.panel))
+        .child(div().absolute().left(petW + kk(7)).top(PET * 0.34).w(kk(2)).h(PET * 0.62).bg(F.panelEdge))
         .when(Boolean(cl), (el) => el.child(div().absolute().left(petW - kk(8)).top(-kk(26)).w(kk(12)).h(kk(18))
           .children([[6, 0, 6, 4], [3, 4, 6, 4], [0, 8, 10, 4], [4, 12, 5, 4], [2, 16, 4, 2]].map(([x, y, w, h]) => div().absolute().left(kk(x)).top(kk(y)).w(kk(w)).h(kk(h)).bg(cl.kind === "file" ? "#ff5370" : "#f9b84a")))
           .loop("opacity", { from: 0.25, to: 1, period: 520, easing: "ease-in-out" })))
@@ -1468,10 +1471,10 @@ export default class Agents extends View {
         .when(a.status === "done", (el) => el.children([["#f9e2af", 0.10, 900], ["#f38ba8", 0.22, 1300], ["#a6e3a1", 0.34, 1000], ["#89b4fa", 0.46, 1500], ["#cba6f7", 0.58, 1100], ["#fab387", 0.70, 1400], ["#94e2d5", 0.82, 950]]
           .map(([c, fx0, p], j) => div().absolute().left(petW * fx0).top(-20).w(4).h(4).bg(c).loop("top", { from: -22 - (j % 3) * 6, to: PET * 0.55, period: p, easing: "linear" }))))
         // A steel-grey desk with a front panel, and a mouse on top.
-        .child(div().absolute().left(-kk(6)).top(PET * 0.84).w(petW + kk(12)).h(kk(9)).bg("#646a8c"))
-        .child(div().absolute().left(-kk(6)).top(PET * 0.84).w(petW + kk(12)).h(kk(3)).bg("#7a81a6"))
-        .child(div().absolute().left(-kk(6)).top(PET * 0.84 + kk(9)).w(petW + kk(12)).h(kk(3)).bg("#454a68"))
-        .child(div().absolute().left(-kk(3)).top(PET * 0.84 + kk(12)).w(petW + kk(6)).h(kk(10)).bg("#3b3f5a"))
+        .child(div().absolute().left(-kk(6)).top(PET * 0.84).w(petW + kk(12)).h(kk(9)).bg(F.deskFront))
+        .child(div().absolute().left(-kk(6)).top(PET * 0.84).w(petW + kk(12)).h(kk(3)).bg(F.deskTop))
+        .child(div().absolute().left(-kk(6)).top(PET * 0.84 + kk(9)).w(petW + kk(12)).h(kk(3)).bg(F.deskUnder))
+        .child(div().absolute().left(-kk(3)).top(PET * 0.84 + kk(12)).w(petW + kk(6)).h(kk(10)).bg(F.apron))
         .child(div().absolute().left(ctr - kk(8)).top(PET * 0.84 + kk(15)).w(kk(16)).h(kk(3)).bg("#262a40"))
         .child(div().absolute().left(petW - kk(6)).top(PET * 0.84 - kk(4)).w(kk(7)).h(kk(4)).rounded(2).bg("#c9cee6"))
         // Papers pile up on the desk as the agent's context fills: one sheet per 10%, the top ones turn pink past 80%.
@@ -1479,11 +1482,12 @@ export default class Agents extends View {
           const n = Math.max(1, Math.min(10, Math.ceil(ctxPct / 10)));
           const sh = Math.max(2, kk(3)), hot = ctxPct >= 80, full = ctxPct >= 95;
           const sheets = Array.from({ length: n }, (_, k) => div().absolute().left(kk(1) + ((k * 7) % 3 - 1) * kk(1)).top((n - 1 - k) * sh + kk(2)).w(kk(15)).h(sh)
-            .bg(k >= n - 2 && hot ? (k === n - 1 ? "#f5b8c0" : "#f0cbd0") : k % 2 ? "#e9e2d4" : "#f6f1e7").border_b(1).border_color("#b9b19f"));
+            .bg(k >= n - 2 && hot ? (k === n - 1 ? "#f5b8c0" : "#f0cbd0") : k % 2 ? "#e9e2d4" : "#f6f1e7").border_b(1).border_color("#8b8371"));
           const pile = div().id(`pile-${a.address}`).absolute().left(petW - kk(25)).top(PET * 0.84 - n * sh - kk(4)).w(kk(18)).h(n * sh + kk(6)).cursor_pointer()
             .tooltip(`Context ${ctxPct}% used · click to /compact`)
             .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
             .on_click((_e, cx) => { cx.stop_propagation(); this.pileClick(a, cx); })
+            .child(div().absolute().left(-kk(1)).top(kk(1)).w(kk(19)).h(n * sh + kk(2)).bg("#3f4460"))
             .children(sheets);
           return el.child(full ? pile.loop("top", { from: PET * 0.84 - n * sh - kk(4), to: PET * 0.84 - n * sh - kk(6), period: 600, easing: "ease-in-out" }) : pile);
         })
