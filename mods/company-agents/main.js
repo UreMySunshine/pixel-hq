@@ -205,7 +205,7 @@ if not model:
       for line in open(cfg, "r", encoding="utf-8"):
         s = line.strip()
         if s.startswith("model =") or s.startswith("model="):
-          model = s.split("=", 1)[1].strip().strip("\"'")
+          model = s.split("=", 1)[1].strip().strip('"\\'')
           break
     except Exception: pass
 pct = None
