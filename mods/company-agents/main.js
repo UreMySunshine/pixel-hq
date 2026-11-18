@@ -92,22 +92,8 @@ function duration(ms) {
   return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`;
 }
 
-function thinBar(t, pct, color, width) {
-  const fill = pct > 0 ? Math.max(2, Math.round((width * pct) / 100)) : 0;
-  const halo = (c) => div().absolute().left(-1).right(-1).top(-2).bottom(-2).rounded(3).bg(c);
-  return div().w(width).h(3).flex_none().rounded(2).bg(t.border)
-    .child(div().relative().h_full().rounded(2).bg(color).w(fill)
-      .when(fill > 0, (el) => el.child(halo(color + "40"))));
-}
-const hpColor = (t, pct) => (pct >= 80 ? t.ansi1 : pct >= 60 ? t.ansi3 : t.ansi2);
-const spColor = (t, left) => (left <= 10 ? t.ansi1 : left <= 30 ? t.ansi3 : "#89b4fa");
 const modelOf = (ctx) => (ctx.model ? [ctx.model, ctx.effort].filter(Boolean).join(" · ") : ctx.effort ? `effort ${ctx.effort}` : "");
 const vitalsTip = (ctx) => [ctx.pct != null ? `Context ${ctx.pct}% used` : null, ctx.quota != null ? `${ctx.quota}% of the quota window left` : null, modelOf(ctx)].filter(Boolean).join(" · ");
-function vitalsBars(t, ctx, id, width) {
-  return v_flex().id(id).gap(2)
-    .when(ctx.pct != null, (el) => el.child(thinBar(t, ctx.pct, hpColor(t, ctx.pct), width)))
-    .when(ctx.quota != null, (el) => el.child(thinBar(t, ctx.quota, spColor(t, ctx.quota), width)));
-}
 
 // Reads the Antigravity transcript for a workspace: the last conversation the CLI logged for it, then the last
 // usage line with token counts. Pure file reads through the mod's own file API, so it behaves the same on every
@@ -1361,10 +1347,7 @@ export default class Agents extends View {
     };
     const scales = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42];
     const base = scales.map((s) => plan(s, 0));
-    const vitalsOn = withVitals && (base.find((p) => p.cols * p.rows >= nAgents) ?? base[base.length - 1]).cw >= 90;
-    const modelOn = withModel;
-    const P0 = scales.map((s) => plan(s, (vitalsOn ? 11 : 0) + (modelOn ? 13 : 0)));
-    const pick = P0.find((p) => p.cols * p.rows >= nAgents) ?? P0[P0.length - 1];
+    const pick = base.find((p) => p.cols * p.rows >= nAgents) ?? base[base.length - 1];
     const S = pick.sc, PET = pick.P, petW = pick.pw, cellW = pick.cw, cellH = pick.ch;
     const kk = (v) => Math.round(v * S);
     const fieldH = Math.max(0, sz.height - fieldTop - cellH);
@@ -1409,8 +1392,6 @@ export default class Agents extends View {
       posOf.set(a.address, { x: left + petW / 2, y: top + PET * 0.5 });
       const ctx = contextOf.get(a.address);
       const ctxPct = ctx?.pct ?? null;
-      // The desk line carries the model name alone; provider suffixes, effort and quota stay in the tooltip.
-      const modelLine = ctx ? ((ctx.model || "").split(" · ")[0] || (ctx.effort ? `effort ${ctx.effort}` : "")) : "";
       const more = detail.get(a.address);
       const text = more ?? a.space_name ?? label(a);
       // Every desk in a space sits on that space's branch, so the tooltip names it once, on the desk's hover.
@@ -1529,10 +1510,7 @@ export default class Agents extends View {
           .font_family(monoF).font_bold().text_size(9.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : isUrge ? "#1e1e2e" : isSnooze ? "#cdd6f4" : P.plateInk)
           // The ellipsis must sit on the element that holds the text; on the plate it never shows.
           .child(div().min_w(0).truncate().child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? (isUrge ? ` · idle ${duration(waited)} ⏰` : isSnooze ? ` · zzz ${duration(waited)}` : ` · ${duration(waited)}`) : ""}`)))
-        // The branch is a property of the space, so the floor card carries it, not every desk; the model is per desk and sits under its nameplate.
-        .when(modelOn && modelLine !== "", (el) => el.child(div().mt(2).max_w(Math.max(petW + 22, cellW - 4)).min_w(0).truncate()
-          .font_family(monoF).text_size(9).text_color(t.dim).child(modelLine)))
-        .when(ctx != null && cellW >= 90, (el) => el.child(div().mt(2).max_w(Math.max(petW + 22, cellW - 4)).child(vitalsBars(t, ctx, `farm-vitals-${a.address}`, Math.max(petW + 22, cellW - 4)))));
+        // A desk is its nameplate: branch sits on the floor card, model and vitals stay in the tooltip.
     });
     // A dotted line of sparks between two desks that are about to clash.
     const links = [];
