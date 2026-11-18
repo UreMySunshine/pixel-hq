@@ -148,7 +148,7 @@ const DAY = {
   wall: "#e2dff0", ceil: "#cbc6e0", band: "#d6d1ea", bandTop: "#bfb8dc", skirt: "#b0a8d2",
   frame: "#5b5480", sky: "#b7cdf5", glint: "#f9e2af", moon: "#f2c94c", bldg: "#8f92c4", pane: "#fab387", glass: "#ffffff59", sill: "#a49cc8",
   clockRim: "#9c94c2", clockFace: "#ffffff", hand: "#3c3a54", signBg: "#1e1e2e", sign: "#89dceb",
-  floor: "#e6e8f0", grout: "#ced1de", edge: "#8f93ab", pool: "#fff2c44d",
+  floor: "#d9dde9", grout: "#c3c8d8", edge: "#8f93ab", pool: "#fff3c9b3",
 };
 
 export function scene(W, H, isMusicPlaying = false) {
