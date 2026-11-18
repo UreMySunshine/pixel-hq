@@ -22,6 +22,11 @@ const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 160;
 // Where a space is now: its first terminal's live folder, else where it was made.
 // `ps`: panes(), read once by the caller (each read copies every pane).
 function place(s, ps) {
+  const activeTabId = (s.tabs ?? []).find((c) => c.active)?.id;
+  if (activeTabId) {
+    const activeCwd = ps.find((p) => p.tab === activeTabId && p.cwd)?.cwd;
+    if (activeCwd) return activeCwd;
+  }
   const tabs = new Set((s.tabs ?? []).map((c) => c.id));
   return ps.find((p) => tabs.has(p.tab) && p.cwd)?.cwd || s.folder;
 }
@@ -661,8 +666,8 @@ export default class Spaces extends View {
     // (up to three) with a tiny pet in its own colours. Lights are on while someone works; an empty floor goes dark.
     const R = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
     const lit = working > 0, any = crew.length > 0;
-    const C = ROOMC();
-    const skin = (a) => { const k = String(a.program?.key ?? "").toLowerCase(); return k.includes("claude") ? ["#D97757", "#D97757"] : k.includes("codex") ? ["#5B6CF0", "#5B6CF0"] : k.includes("opencode") ? ["#4A5B80", "#F7F4EC"] : (k.includes("antigravity") || k === "agy") ? ["#F6A03A", "#3186FF"] : (k.includes("deepseek") || k.includes("dsh")) ? ["#4D6BFE", "#EDEFF7"] : (k === "pi" || k.startsWith("pi-")) ? ["#4D9ABF", "#F1BE58"] : ["#F1E7D3", "#F1E7D3"]; };
+const C = ROOMC();
+    const skin = (a) => { const k = String(a.program?.key ?? a.program?.name ?? a.agent ?? a.report?.app ?? a.status?.app ?? a.app ?? a.name ?? a.title ?? "").toLowerCase(); return k.includes("claude") ? ["#D97757", "#D97757"] : k.includes("codex") ? ["#5B6CF0", "#5B6CF0"] : k.includes("opencode") ? ["#4A5B80", "#F7F4EC"] : (k.includes("antigravity") || k === "agy") ? ["#F6A03A", "#3186FF"] : (k.includes("deepseek") || k.includes("dsh")) ? ["#4D6BFE", "#EDEFF7"] : (k === "pi" || k.startsWith("pi-")) ? ["#4D9ABF", "#F1BE58"] : ["#F1E7D3", "#F1E7D3"]; };
     const room = div().relative().w(54).h(40).flex_none().overflow_hidden()
       .child(R(0, 0, 54, 24, any ? C.wallOn : C.wallOff)).child(R(0, 0, 54, 3, soften(fill))).child(R(0, 3, 54, 1, C.trim))
       .child(R(0, 0, 54, 5, "#89dceb2e").loop("opacity", { from: lit ? 0.5 : 0.2, to: lit ? 1 : 0.4, period: 2600, easing: "ease-in-out" }))
@@ -691,7 +696,7 @@ export default class Spaces extends View {
         const mark = a && a.status === "blocked" ? [R(x + 12, 20, 2, 5, "#f9e2af").loop("opacity", { from: 0.2, to: 1, period: 700, easing: "linear" }), R(x + 12, 26, 2, 2, "#f9e2af")] : a && a.status === "done" ? [R(x + 11, 21, 2, 2, "#a6e3a1"), R(x + 2, 20, 2, 2, "#f9e2af")] : [];
         return [...pet, R(x, 32, 14, 3, C.desk), R(x, 32, 14, 1, C.deskTop), glow, ...mark];
       }));
-    // The room sits in a notched frame in the space's own color, its rim lit like a neon sign.
+// The room sits in a notched frame in the space's own color, its rim lit like a neon sign.
     const tile = div().relative().w(60).h(46).flex_none()
       .children(pix(soften(fill), 60, 46))
       .child(div().absolute().left(-2).top(-2).children(pix(fill + "3a", 64, 50)).loop("opacity", { from: lit ? 0.45 : 0.15, to: lit ? 1 : 0.35, period: 2400, easing: "ease-in-out" }))
@@ -706,9 +711,13 @@ export default class Spaces extends View {
           .child(div().absolute().left(0).right(0).top(0).bottom(0).flex().items_center().justify_center()
             .font_family(MONO).font_bold().text_size(9).text_color(t.foreground).child(`+${more}`)));
       });
-    const raw = g?.branch ?? null;
+    const activeTab = (w.tabs ?? []).find((t) => t.active) ?? w.tabs?.[0];
+    const ps = panes();
+    const leadPane = ps.find((p) => p.tab === activeTab?.id && p.terminal) ?? ps.find((p) => (w.tabs ?? []).some((t) => t.id === p.tab) && p.terminal);
+    const raw = (g?.branch && g.branch !== "(detached)") ? g.branch : (w.branch || leadPane?.branch || (g?.branch === "(detached)" ? "detached" : null));
+    const repoName = g?.name || (leadPane?.cwd ? base(leadPane.cwd) : null);
     const place = raw ?? base(w.folder ?? "");
-    const repo = tree ? g?.name ?? "" : "";
+    const repo = tree ? repoName ?? "" : "";
     const done = count("done");
     const idle = crew.length - blocked - working - done;
     const dot = blocked > 0 ? t.blocked : working > 0 ? t.working : null;

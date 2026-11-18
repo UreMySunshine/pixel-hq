@@ -1,2 +1,6 @@
-*.d.ts
-jsconfig.json
+# gpui-shell rewrites these on every check; committing them only freezes a stale copy.
+mods/*/gpui-kit.d.ts
+mods/*/jsconfig.json
+
+__pycache__/
+*.pyc

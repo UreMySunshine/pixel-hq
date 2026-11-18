@@ -1,4 +1,5 @@
 {
-  "version": "1.4.6",
-  "notes": "Updates finish in one pass and show the version actually installed"
+  "version": "1.7.3",
+  "type": "normal",
+  "notes": "Add Pixel MusicBox: headless audio-only player for YouTube, SoundCloud, and radio streams"
 }

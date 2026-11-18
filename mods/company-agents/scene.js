@@ -1,6 +1,6 @@
 // A pixel-art office, seen from the front: a slate wall with two city windows and a server rack in the corner, a water cooler,
 // a tiled floor lit by the windows. Everything snaps to a 4px grid and is built from rectangles; lights twinkle with native .loop().
-// The wall, windows and floor are drawn for night or day (the layout's light and dark themes); the screens and gadgets stay as they are.
+// The wall, windows, floor and cabinet are drawn for night or day (the layout's light and dark themes); the screens and gadgets stay as they are.
 import { div } from "gpui-kit";
 import { isDay } from "./palette.js";
 
@@ -18,57 +18,119 @@ function ellipse(cx, cy, rx, ry, c) {
   return out;
 }
 
-// A server corner on the wall: two racks full of blinking status lights, and a holographic world map floating above a projector.
+// The tech corner on the wall: a server rack (drive bays, vents and fans, a glowing light on every unit) and a modern little desk with a monitor, keyboard and a mug.
 const LIGHTS = ["#f4723a", "#f9d23c", "#8fcb4f", "#37c5d6", "#c678dd", "#f38ba8"];
 const LIGHTS_DAY = ["#fab387", "#f9e2af", "#a6e3a1", "#89dceb", "#cba6f7", "#f38ba8"]; // Catppuccin Mocha pastels
-const WORLD = [
-  "....XXXX.....XXXXXX..",
-  "...XXXXXXX..XXXXXXXXX",
-  "....XXXXXX...XXXXXXX.",
-  ".....XXXX.....XXXXX..",
-  ".......XX......XXX...",
-  ".......XXX.....XX....",
-  "........XX....X......",
-];
-function ledWall(x, w, base) {
-  // Two LED code screens on the right wall, set at an angle: 4px strips that step down a little further each time.
-  // The screens stay dark so the code reads as glowing LEDs; by day the cabinet frame is a pale mauve and the
-  // panel a softer slate than night, so the rack sits in the sunlit wall without becoming a black slab.
-  const day = isDay();
-  const bezel = day ? "#9c94c2" : "#0a0c1a";
-  const screen = day ? "#313244" : "#10132a";
-  const lip = day ? "#b3add0" : "#2a2f55";
-  const lights = day ? LIGHTS_DAY : LIGHTS;
-  const o = [], top = 12, n = Math.floor(w / U), nA = Math.max(2, Math.round(n * 0.45));
-  const ph = base - top - Math.round(n * 0.7) - 4;
-  if (day) o.push(div().absolute().left(0).top(0).w(1).h(1).children([
-    r(x - 12, top - 10, w + 24, ph + 24, "#89dceb26"), r(x - 8, top - 8, w + 16, ph + 18, "#cba6f730"),
-    r(x - 4, top - 4, w + 8, ph + 10, "#89dceb40"),
-  ]).loop("opacity", { from: 0.55, to: 1, period: 2600, easing: "ease-in-out" }));
-  for (let i = 0; i < n; i++) {
-    const inA = i < nA, j = inA ? i : i - nA, dy = inA ? Math.round(j * 0.25) : Math.round(j * 0.75) - 2;
-    const cx0 = x + i * U + (inA ? 0 : 2);
-    if (j === 0) o.push(r(cx0 - 3, top + dy - 3, 3, ph + 6, bezel));
-    o.push(r(cx0, top + dy - 3, U, ph + 6, bezel), r(cx0, top + dy, U, ph, screen), r(cx0, top + dy, U, 3, lip));
-    for (let row = 0; row < Math.floor((ph - 8) / 6); row++) {
-      const seg = i + row * 3 + (inA ? 0 : 7);
-      if (seg % 3 === 2 || rnd(row * 13 + Math.floor(seg / 3) * 5 + (inA ? 0 : 99)) < 0.22) continue;
-      const bar = r(cx0, top + dy + 6 + row * 6, U, 3, lights[Math.floor(rnd(row * 3 + Math.floor(seg / 3) * 7) * lights.length)]);
-      o.push((row + i) % 7 === 0 ? bar.loop("opacity", { from: 0.35, to: 1, period: 900 + ((row * 130 + i * 90) % 900), easing: "ease-in-out" }) : bar);
+const CODE = ["#cba6f7", "#89b4fa", "#a6e3a1", "#f9e2af", "#f5c2e7", "#94e2d5"]; // keyword, function, string, class, tag, type
+function ledWall(x, w, base, isMusicPlaying = false) {
+  // The cabinet follows the theme — pale mauve frame and slate panels by day — while the screens stay dark so the
+  // code and the status lights read as glowing LEDs on the sunlit wall.
+  const P = isDay()
+    ? { frame: "#9c94c2", body: "#313244", side: "#2a2f55", lip: "#b3add0", slot: "#2a2f55", edge: "#a49cc8", plinth: "#2a2f55", foot: "#a49cc8", unit: "#45475a", unitTop: "#585b70", unitBottom: "#2a2f55", bay: "#585b70", bayHi: "#7e86ad", vent: "#313244", lights: LIGHTS_DAY }
+    : { frame: "#0a0c1a", body: "#1a1f3d", side: "#12152c", lip: "#2c3366", slot: "#0a0d26", edge: "#3a4180", plinth: "#10132a", foot: "#3a3f66", unit: "#252b52", unitTop: "#3a4180", unitBottom: "#0f1226", bay: "#323a70", bayHi: "#4a529a", vent: "#10132a", lights: LIGHTS };
+  const o = [], top = 8, rw = w >= 64 ? snap(Math.min(28, w * 0.34)) : snap(w), rh = snap(Math.min(base - top, 80)), rt = base - rh;
+  // Server rack: a cabinet with a lit top cap, a darker side, a plinth with feet, and units of three kinds.
+  o.push(r(x - 2, rt - 2, rw + 4, rh + 2, P.frame), r(x, rt, rw, rh, P.body), r(x + rw - 3, rt, 3, rh, P.side), r(x, rt, 1, rh, P.lip),
+    r(x, rt, rw, 3, P.lip), r(x + 3, rt + 4, rw - 8, 5, P.slot), r(x + 3, rt + 4, rw - 8, 1, P.edge), r(x, base - 5, rw, 5, P.plinth), r(x + 1, base - 1, 4, 1, P.foot), r(x + rw - 5, base - 1, 4, 1, P.foot));
+  for (let c = 0; c < Math.floor((rw - 12) / 2); c++) { const h = 1 + Math.floor(rnd(c * 3 + 1) * 3); o.push(r(x + 5 + c * 2, rt + 8 - h, 1, h, c % 4 === 3 ? "#f9e2af" : "#a6e3a1")); }
+  o.push(r(x - 6, rt - 4, rw + 12, rh + 4, "#a78bfa0b"));
+  const units = Math.max(3, Math.floor((rh - 22) / 11));
+  for (let k = 0; k < units; k++) {
+    const uy = rt + 11 + k * 11, ux = x + 3, uw = rw - 8, kind = k % 4, ledC = P.lights[[2, 2, 0, 3, 2, 1][k % 6]];
+    o.push(r(ux, uy, uw, 9, P.unit), r(ux, uy, uw, 1, P.unitTop), r(ux, uy + 8, uw, 1, P.unitBottom));
+    if (kind === 0) for (let b = 0; b < Math.min(3, Math.floor((uw - 10) / 5)); b++) o.push(r(ux + 8 + b * 5, uy + 2, 4, 5, P.bay), r(ux + 8 + b * 5, uy + 2, 4, 1, P.bayHi));
+    else if (kind === 1) for (let v = 0; v < Math.floor((uw - 10) / 3); v++) o.push(r(ux + 8 + v * 3, uy + 2, 1, 5, P.vent));
+    else if (kind === 3) for (let q = 0; q < Math.floor((uw - 10) / 3); q++) {
+      const pc = rnd(k * 9 + q) > 0.5 ? "#8fcb4f" : "#f4a23a", port = r(ux + 8 + q * 3, uy + 3, 2, 3, pc);
+      o.push(r(ux + 8 + q * 3, uy + 6, 2, 1, P.vent), (q + k) % 3 === 0 ? port.loop("opacity", { from: 0.2, to: 1, period: 350 + ((q * 170 + k * 90) % 500), easing: "linear" }) : port);
+    }
+    else for (let f = 0; f < (uw >= 28 ? 2 : 1); f++) o.push(r(ux + 8 + f * 8, uy + 2, 5, 5, P.vent), r(ux + 9 + f * 8, uy + 3, 3, 3, P.bay));
+    o.push(r(ux + 1, uy + 2, 5, 5, ledC + "33"));
+    const led = r(ux + 2, uy + 3, 3, 3, ledC);
+    o.push(k % 3 === 1 ? led.loop("opacity", { from: 0.25, to: 1, period: 700 + k * 230, easing: "ease-in-out" }) : led);
+  }
+  if (w >= 64) {
+    const rx = x + 3, ry = rt - 11;
+    o.push(
+      r(rx, ry + 2, 18, 9, "#313244"),
+      r(rx + 4, ry, 10, 2, "#45475a"),
+      r(rx + 2, ry + 4, 4, 5, "#181825"),
+      r(rx + 3, ry + 5, 2, 3, isMusicPlaying ? "#89b4fa" : "#45475a"),
+      r(rx + 12, ry + 4, 4, 5, "#181825"),
+      r(rx + 13, ry + 5, 2, 3, isMusicPlaying ? "#89b4fa" : "#45475a"),
+      r(rx + 7, ry + 4, 4, 4, "#11111b"),
+      r(rx + 15, ry - 3, 1, 3, "#89b4fa"),
+      r(rx + 8, ry + 2, 2, 1, isMusicPlaying ? "#a6e3a1" : "#585b70")
+    );
+    if (isMusicPlaying) {
+      o.push(
+        r(rx + 4, ry - 6, 2, 2, "#cba6f7").loop("opacity", { from: 0.1, to: 1, period: 1400, easing: "ease-in-out" }),
+        r(rx + 5, ry - 9, 1, 4, "#cba6f7").loop("opacity", { from: 0.1, to: 1, period: 1400, easing: "ease-in-out" }),
+        r(rx + 11, ry - 9, 2, 2, "#89b4fa").loop("opacity", { from: 0.8, to: 0.1, period: 1700, easing: "ease-in-out" }),
+        r(rx + 12, ry - 12, 1, 4, "#89b4fa").loop("opacity", { from: 0.8, to: 0.1, period: 1700, easing: "ease-in-out" }),
+        r(rx + 17, ry - 5, 2, 2, "#f5c2e7").loop("opacity", { from: 0.2, to: 0.9, period: 1200, easing: "ease-in-out" })
+      );
     }
   }
-  // The projector pad stands in front of the screens, a green hologram of the world above it.
-  const hx = x + Math.floor((w - 40) / 2), hy = base - 14;
-  const beamC = day ? "#89dceb80" : "#6fe0f01c", mapC = day ? "#a6e3a1" : "#7be495";
-  const beam = [];
-  for (let i = 0; i < 4; i++) beam.push(r(hx + 6 - i * 3, hy - 4 - i * 5, 28 + i * 6, 5, beamC));
-  const map = [];
-  WORLD.forEach((line, yy) => [...line].forEach((ch, xx) => { if (ch === "X") map.push(r(hx - 6 + xx * 2, hy - 30 + yy * 3, 2, 3, mapC)); }));
-  o.push(
-    div().absolute().left(0).top(0).w(1).h(1).children(beam).loop("opacity", { from: 0.5, to: 1, period: 2400, easing: "ease-in-out" }),
-    r(hx, hy, 40, 14, "#aab4d6"), r(hx, hy, 40, 3, "#d3d8ea"), r(hx + 4, hy - 3, 32, 5, day ? "#89dceb" : "#6fe0f0"), r(hx + 4, hy + 8, 6, 3, day ? "#f9e2af" : "#e8d44a"), r(hx + 28, hy + 8, 8, 3, day ? "#94e2d5" : "#37c5d6"),
-    div().absolute().left(0).top(0).w(1).h(1).children(map).loop("opacity", { from: 0.55, to: 1, period: 2200, easing: "ease-in-out" }),
-  );
+  if (w < 64) return o;
+  // A little desk on the baseboard: a slim modern desk, and on it a monitor (code editor with a gutter, minimap and status bar), a keyboard, a mouse and a mug.
+  const flick = (el, from, period) => el.loop("opacity", { from, to: 1, period, easing: "linear" });
+  const mx = x + rw + 6, mw = snap(w - rw - 6), deskY = base - 17;
+  const mh = Math.max(24, Math.min(deskY - top - 20, Math.round(mw * 0.8)));
+  const my = deskY - 11 - mh, sy = my + mh + 3;
+  o.push(r(mx - 4, my - 6, mw + 8, mh + 12, "#89b4fa0c"), // the screen's glow on the wall
+    r(mx - 6, base, mw + 12, 2, "#0a0c1a66"),
+    // a modern desk: a slim light top, thin dark legs with feet, a cable tray, a hanging white drawer and a glowing LED strip underneath
+    r(mx - 5, deskY, mw + 10, 3, "#dfe3f2"), r(mx - 5, deskY, mw + 10, 1, "#f4f6fc"), r(mx - 5, deskY + 3, mw + 10, 1, "#9aa1c2"),
+    r(mx - 5, base - 3, mw + 10, 3, "#6fe0f01a"), r(mx - 2, deskY + 4, 2, base - deskY - 4, "#2a2e4a"), r(mx + mw, deskY + 4, 2, base - deskY - 4, "#2a2e4a"),
+    r(mx - 4, base - 1, 6, 1, "#2a2e4a"), r(mx + mw - 2, base - 1, 6, 1, "#2a2e4a"), r(mx + 1, deskY + 5, mw - 2, 2, "#1c2038"),
+    r(mx + mw - 16, deskY + 7, 14, 8, "#c9cee4"), r(mx + mw - 16, deskY + 7, 14, 1, "#e6e9f5"), r(mx + mw - 13, deskY + 10, 8, 1, "#7e86ad"), r(mx + mw - 13, deskY + 13, 8, 1, "#7e86ad"),
+    r(mx - 2, deskY + 4, mw + 4, 1, "#6fe0f0").loop("opacity", { from: 0.3, to: 1, period: 2600, easing: "ease-in-out" }), r(mx - 2, deskY + 4, mw + 4, 1, "#c4a0ff").loop("opacity", { from: 1, to: 0.3, period: 2600, easing: "ease-in-out" }),
+    // the monitor: bezel with a light top edge, a neck and a foot
+    r(mx - 3, my - 6, mw + 6, 2, "#f5c2e7").loop("opacity", { from: 0.2, to: 1, period: 2600, easing: "ease-in-out" }), r(mx - 3, my - 6, mw + 6, 2, "#89dceb").loop("opacity", { from: 1, to: 0.2, period: 2600, easing: "ease-in-out" }),
+    r(mx - 3, my - 3, mw + 6, mh + 6, P.frame), r(mx + Math.floor(mw / 2) - 1, my - 2, 2, 1, "#4a5090"), r(mx - 3, my - 3, mw + 6, 1, P.foot), r(mx, my, mw, mh, "#10143a"), r(mx, my + Math.floor(mh / 2), mw, Math.ceil(mh / 2), "#0e1233"),
+    r(mx + Math.floor(mw / 2) - 2, sy, 4, deskY - sy, P.frame), r(mx + Math.floor(mw / 2) - 9, deskY - 3, 18, 3, P.frame), r(mx + Math.floor(mw / 2) - 9, deskY - 3, 18, 1, P.foot),
+    // title bar with three dots and a tab
+    r(mx, my, mw, 5, "#232a5c"), r(mx + 2, my + 1, 3, 3, "#f38ba8"), r(mx + 7, my + 1, 3, 3, "#f9e2af"), r(mx + 12, my + 1, 3, 3, "#a6e3a1"), r(mx + 18, my + 1, Math.min(14, mw - 40), 4, "#10143a"), flick(r(mx + mw - 12, my + 1, 9, 3, "#a6e3a1"), 0.35, 1000),
+    // status bar
+    r(mx, my + mh - 4, mw, 4, "#1d2250"), r(mx + 2, my + mh - 3, 8, 2, "#89b4fa"), flick(r(mx + 12, my + mh - 3, 6, 2, "#a6e3a1"), 0.3, 800), r(mx + mw - 9, my + mh - 3, 6, 2, "#f9e2af"),
+    // keyboard, mouse, mug with steam
+    r(mx + 3, deskY - 3, Math.min(mw - 16, 26), 3, "#2a2f4f"), r(mx + 3, deskY - 3, Math.min(mw - 16, 26), 1, "#f5c2e7").loop("opacity", { from: 0.3, to: 1, period: 2600, easing: "ease-in-out" }), r(mx + 3, deskY - 3, Math.min(mw - 16, 26), 1, "#89dceb").loop("opacity", { from: 1, to: 0.3, period: 2600, easing: "ease-in-out" }), r(mx + mw - 12, deskY - 2, 4, 2, "#aab4d6"),
+    r(mx + mw - 6, deskY - 5, 5, 5, "#e8e2d0"), r(mx + mw - 1, deskY - 4, 2, 3, "#e8e2d0"), r(mx + mw - 5, deskY - 5, 3, 1, "#6b4430"),
+    r(mx + mw - 5, deskY - 9, 1, 3, "#cdd6f4").loop("opacity", { from: 0, to: 0.7, period: 1600, easing: "ease-in-out" }), r(mx + mw - 3, deskY - 11, 1, 3, "#cdd6f4").loop("opacity", { from: 0.6, to: 0, period: 1900, easing: "ease-in-out" }));
+  // The monitor shows a worker processing data: code on top with the lines being run shimmering, and under it a live log (finished batches in green,
+  // the current one blinking amber, the text flickering as it streams), a progress bar with a blinking frontier and a throughput meter.
+  const edH = Math.floor((mh - 15) * 0.42), tY = my + 8 + edH + 2, tH = my + mh - 5 - tY;
+  if (tH >= 12) {
+    o.push(r(mx, tY, mw, tH, "#080b22"), r(mx, tY, mw, 1, "#2a3270"));
+    const logRows = Math.min(5, Math.floor((tH - 9) / 4));
+    for (let l = 0; l < logRows; l++) {
+      const y = tY + 3 + l * 4, cur = l === logRows - 1, wMax = Math.max(6, mw - 28), mwid = 5 + Math.floor(rnd(l * 5 + 2) * (wMax - 5));
+      o.push(cur ? flick(r(mx + 2, y, 2, 2, "#f9e2af"), 0.1, 520) : r(mx + 2, y, 2, 2, "#a6e3a1"), r(mx + 6, y, 5, 2, "#4a529a"),
+        flick(r(mx + 13, y, mwid, 2, cur ? "#e6e9f5" : "#7a84bd"), cur ? 0.25 : 0.55, cur ? 330 : 1100 + l * 370),
+        r(mx + mw - 8, y, 5, 2, cur ? "#f9e2af" : "#94e2d5"));
+    }
+    const py = tY + tH - 5, segs = Math.floor((mw - 6 - 14) / 3), lit = Math.max(1, segs - 2);
+    for (let q = 0; q < segs; q++) { const seg = r(mx + 3 + q * 3, py, 2, 2, q < lit ? "#a6e3a1" : "#1d2250"); o.push(q === lit - 1 ? flick(seg, 0.2, 600) : seg); }
+    for (let t = 0; t < 4; t++) { const h = 2 + Math.floor(rnd(t * 3 + 5) * 3); o.push(flick(r(mx + mw - 14 + t * 3, py + 2 - h, 2, h, "#89b4fa"), 0.25, 380 + t * 170)); }
+  }
+  const rows = Math.floor(edH / 4), indents = [0, 1, 1, 2, 2, 1, 2, 0, 1, 2, 1, 0], right = mx + mw - 9;
+  for (let row = 0; row < rows; row++) {
+    const ry = my + 8 + row * 4;
+    o.push(r(mx + 2, ry, 2, 2, "#3a3f66"));
+    if (row === 2) o.push(r(mx + 5, ry - 1, mw - 10, 4, "#ffffff0b"));
+    if (row % 5 === 4) continue;
+    let cx = mx + 7 + indents[row % indents.length] * 4;
+    for (let part = 0; part < 3; part++) {
+      const pw = 4 + Math.floor(rnd(row * 7 + part * 3) * 11);
+      if (cx + pw > right) break;
+      o.push(r(cx, ry, pw, 2, CODE[Math.floor(rnd(row * 11 + part * 5 + 2) * CODE.length)]));
+      cx += pw + 2;
+    }
+  }
+  for (const [rr, per] of [[1, 1100], [3, 1500]]) if (rr < rows) o.push(flick(r(mx + 5, my + 7 + rr * 4, mw - 10, 4, "#a6e3a122"), 0.15, per));
+  for (let m = 0; m < Math.floor(edH / 3); m++) o.push(r(mx + mw - 6, my + 8 + m * 3, 2 + Math.floor(rnd(m * 4 + 1) * 3), 1, "#4a529a"));
+  o.push(r(mx + 7 + 4, my + 8 + Math.min(rows - 1, 3) * 4, 2, 2, "#cdd6f4").loop("opacity", { from: 0, to: 1, period: 900, easing: "ease-in-out" }));
   return o;
 }
 
@@ -89,7 +151,7 @@ const DAY = {
   floor: "#d5d1e8", grout: "#bdb7d8", edge: "#a49cc8", pool: "#fff3b866",
 };
 
-export function scene(W, H) {
+export function scene(W, H, isMusicPlaying = false) {
   W = snap(W); H = snap(H);
   const p = isDay() ? DAY : NIGHT;
   const yH = yHorizon(H);
@@ -125,8 +187,8 @@ export function scene(W, H) {
     o.push(r(x + w / 2 - 2, y, 4, h, p.frame), r(x, y + h / 2 - 2, w, 4, p.frame), r(x - 8, y + h + 4, w + 16, 5, p.sill));
     return o;
   };
-  // Left to right: a plant, two windows with the clock between them, the water cooler, then the LED screens and hologram.
-  const rackW = Math.max(48, Math.min(96, snap(W * 0.2))), rackX = W - rackW - 10;
+  // Left to right: a plant, two windows with the clock between them, the water cooler, then the server rack and wall monitor.
+  const rackW = Math.max(64, Math.min(110, snap(W * 0.27))), rackX = W - rackW - 10;
   const cw = rackX - 30, x0 = 38, usable = cw - 10 - x0;
   const two = usable >= 100;
   const gap = two ? Math.max(32, snap(usable * 0.26)) : 0;
@@ -145,19 +207,19 @@ export function scene(W, H) {
       r(cx - 8, 54, 4, 4, p.sign), r(cx + 4, 54, 4, 4, p.sign), r(cx - 8, 70, 4, 4, p.sign), r(cx + 4, 70, 4, 4, p.sign));
   }
 
-  // The water cooler stands on the baseboard, left of the screens; its tank and tap glow.
+  // The water cooler stands on the baseboard, left of the server rack; its tank and tap glow.
   L.push(
     div().absolute().left(0).top(0).w(1).h(1).children([r(cw - 2, base - 58, 24, 30, "#89dceb2e")]).loop("opacity", { from: 0.5, to: 1, period: 2600, easing: "ease-in-out" }),
     r(cw + 2, base - 54, 16, 22, "#6fa8d6"), r(cw + 4, base - 52, 4, 10, "#a9d0ee"), r(cw, base - 32, 20, 32, "#b7bfd6"), r(cw, base - 32, 20, 4, "#d3d8ea"),
     r(cw + 6, base - 26, 8, 8, "#e8744f40"), r(cw + 8, base - 24, 4, 4, "#e8744f"),
   );
 
-  // A potted plant in the left corner and the LED wall in the right one.
+  // A potted plant in the left corner and the tech corner in the right one.
   const plant = (x) => [
     r(x, base - 44, 10, 26, "#2f6e3b"), r(x + 8, base - 54, 10, 36, "#3a8247"), r(x + 18, base - 42, 10, 24, "#2f6e3b"), r(x + 4, base - 34, 6, 6, "#52a35f"),
     r(x + 2, base - 18, 24, 18, "#8a5a3c"), r(x, base - 18, 28, 4, "#a06c48"),
   ];
-  L.push(...plant(6), ...ledWall(rackX, rackW, base));
+  L.push(...plant(6), ...ledWall(rackX, rackW, base, isMusicPlaying));
 
   // Tiled floor, a grid of 24px tiles, and a pool of window light under each window.
   L.push(r(0, yH, W, H - yH, p.floor));

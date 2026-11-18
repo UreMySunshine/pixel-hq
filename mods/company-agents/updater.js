@@ -1,9 +1,4 @@
-import { div, svg, image } from "gpui-kit";
-import { v_flex, h_flex } from "gpui-base";
-import { theme, run, appHome, readTextFile, writeTextFile, closeOverlay, props, spaces, agents, focused, knownAgents, shared, setShared } from "herdr";
-import { agentTaskArgv } from "./crew.js";
-
-const UPDATE_PROMPT = "Read ~/.config/herdr-app/AGENTS.md, then update my Pixel HQ layout to the latest version from github.com/UreMySunshine/pixel-hq (the light branch). Overwriting my installed pixel-hq files is intended; keep my other layouts and mods.";
+import { appHome, readTextFile, writeTextFile, shared, setShared, notify } from "herdr";
 
 const PIXEL_HQ_FILES = [
   "layouts/pixel-hq.json",
@@ -14,6 +9,15 @@ const PIXEL_HQ_FILES = [
   "mods/company-brand/mod.json",
   "mods/company-brand/search.svg",
   "mods/company-brand/sidebar.svg",
+  "mods/company-brand/keyboard.svg",
+  "mods/company-switcher/main.js",
+  "mods/company-switcher/mod.json",
+  "mods/company-hotkeys/main.js",
+  "mods/company-hotkeys/mod.json",
+  "mods/company-music/main.js",
+  "mods/company-music/mod.json",
+  "mods/company-music/player.py",
+  "mods/company-tabs/main.js",
   "mods/company-pane/close.svg",
   "mods/company-pane/duck.js",
   "mods/company-pane/main.js",
@@ -37,247 +41,183 @@ const PIXEL_HQ_FILES = [
   "mods/company-agents/palette.js",
   "mods/company-agents/scene.js",
   "mods/company-agents/sparkles.svg",
+  "mods/company-agents/agy-quota.py",
+  "mods/company-agents/codex-vitals.py",
+  "mods/company-agents/opencode-hp/server.ts",
+  "mods/company-agents/opencode-hp/tui.tsx",
   "mods/company-agents/updater.js",
   "mods/company-agents/mod.json",
   "mods/company-agents/version.json",
   "mods/company-agents/main.js",
 ];
 
-export class Updater {
-  constructor(cx) {
-    const p = props() ?? {};
-    this.version = String(p.version ?? "latest");
-    this.notes = String(p.notes ?? "");
-    this.overlay = p.overlay;
-    this.status = "updating";
-    this.step = 0;
-    this.total = 0;
-    this.message = "Contacting GitHub for release files...";
-    this.error = "";
-    this.busy = true;
-    this.handle = cx.focus_handle();
-    this.handle.focus();
-    const finished = shared("pixel-hq.updated");
-    if (finished && Date.now() - Number(finished.at ?? 0) < 60000) {
-      this.version = String(finished.version ?? this.version);
-      this.status = "done";
-      this.message = `Successfully updated to v${this.version}!`;
-      this.busy = false;
-      return;
-    }
-    cx.spawn(async (cx) => this.doAutoUpdate(cx));
-  }
+export function isUrgentUpdate(type) {
+  const t = String(type ?? "").toLowerCase().trim();
+  return t === "critical" || t === "urgent" || t === "important" || t === "hotfix" || t === "1" || t === "major";
+}
 
-  async doAutoUpdate(cx) {
-    this.busy = true;
-    this.status = "updating";
-    this.error = "";
-    this.message = "Contacting GitHub for release files...";
-    cx.notify();
-
+export async function checkPixelHqUpdate(notifyUser = true) {
+  try {
+    let mine = null;
     try {
-      const treeRes = await fetch("https://api.github.com/repos/UreMySunshine/pixel-hq/git/trees/light?recursive=1").catch(() => null);
-      let fileList = [];
-      if (treeRes && treeRes.ok) {
-        const treeData = await treeRes.json().catch(() => null);
-        if (Array.isArray(treeData?.tree)) {
-          fileList = treeData.tree
-            .filter((f) => f.type === "blob" && (f.path.startsWith("layouts/") || f.path.startsWith("mods/") || f.path.startsWith("themes/")) && !f.path.endsWith("README.md") && !/\.(png|gif|d\.ts)$/.test(f.path) && !f.path.endsWith("jsconfig.json"))
-            .map((f) => f.path);
+      mine = JSON.parse(await readTextFile(`${appHome()}/mods/company-agents/version.json`));
+    } catch {
+      mine = { version: "1.0.0" };
+    }
+
+    let latest = null;
+    try {
+      const commitRes = await fetch("https://api.github.com/repos/UreMySunshine/pixel-hq/commits/light", {
+        headers: { "User-Agent": "Pixel-HQ-Updater" },
+      }).catch(() => null);
+      if (commitRes && commitRes.ok) {
+        const commitData = await commitRes.json().catch(() => null);
+        const sha = commitData?.sha;
+        if (sha) {
+          const rawShaRes = await fetch(`https://raw.githubusercontent.com/UreMySunshine/pixel-hq/${sha}/mods/company-agents/version.json`);
+          if (rawShaRes.ok) latest = await rawShaRes.json().catch(() => null);
         }
       }
-      if (!fileList.length) {
-        fileList = PIXEL_HQ_FILES.filter((f) => !f.endsWith(".png"));
-      }
+    } catch {}
 
-      fileList.sort((a, b) => {
-        const order = (f) => {
-          if (f.includes("company-agents/main.js")) return 4;
-          if (f.includes("company-agents/updater.js")) return 3;
-          if (f.includes("company-agents/version.json")) return 2;
-          if (f.includes("layouts/pixel-hq.json")) return 1;
-          return 0;
-        };
-        return order(a) - order(b) || a.localeCompare(b);
-      });
-
-      this.total = fileList.length;
-      this.step = 0;
-      const changed = [];
-      cx.notify();
-
-      for (let i = 0; i < fileList.length; i++) {
-        const p = fileList[i];
-        this.step = i + 1;
-        this.message = `[${i + 1}/${fileList.length}] Downloading ${p}...`;
-        cx.notify();
-
-        const url = `https://raw.githubusercontent.com/UreMySunshine/pixel-hq/light/${p}?t=${Date.now()}`;
-        const res = await fetch(url);
-        if (res.status === 404) continue;
-        if (!res.ok) throw new Error(`HTTP ${res.status} while fetching ${p}`);
-        const content = await res.text();
-        if (p === "mods/company-agents/version.json") {
-          const latest = (() => { try { return JSON.parse(content).version; } catch { return null; } })();
-          if (latest) this.version = String(latest);
-        }
-        const targetPath = `${appHome()}/${p}`;
-        const current = await readTextFile(targetPath).catch(() => null);
-        if (current !== content) changed.push({ targetPath, content, current });
-      }
-
-      for (const f of changed) await writeTextFile(f.targetPath, f.content, f.current);
-      setShared("pixel-hq.updated", { version: this.version, at: Date.now() });
-
-      this.status = "done";
-      this.message = changed.length > 0 ? `Successfully updated to v${this.version}!` : `Pixel HQ is already up to date (v${this.version}).`;
-      if (this.version) {
-        localStorage.setItem("upd-dismissed", String(this.version));
-        setShared("pixel-hq.dismissed-version", String(this.version));
-      }
-    } catch (err) {
-      this.status = "error";
-      this.error = String(err?.message ?? err);
-      this.message = `Update failed: ${this.error}`;
-    } finally {
-      this.busy = false;
-      cx.notify();
+    if (!latest?.version) {
+      const res = await fetch(`https://raw.githubusercontent.com/UreMySunshine/pixel-hq/light/mods/company-agents/version.json?t=${Date.now()}`);
+      if (!res.ok) return null;
+      latest = await res.json().catch(() => null);
     }
-  }
+    if (!latest?.version) return null;
 
-  async doAgentUpdate(cx) {
-    this.busy = true;
-    this.status = "updating";
-    this.error = "";
-    this.message = "Discovering installed agent runtime...";
-    cx.notify();
-
-    try {
-      const sp = spaces().find((x) => x.active);
-      const installed = (await knownAgents({ on: sp?.machine ?? undefined }).catch(() => [])).filter((a) => a.installed);
-      const here = agents().find((a) => a.address === focused()?.agent);
-      const deskKey = String(here?.program?.key ?? "").toLowerCase();
-      const matched = installed.find((a) => a.key?.toLowerCase() === deskKey || deskKey.includes(a.key?.toLowerCase()));
-      const runningKey = agents().find((a) => a.program?.key)?.program?.key?.toLowerCase();
-      const runningMatched = installed.find((a) => a.key?.toLowerCase() === runningKey || runningKey?.includes(a.key?.toLowerCase()));
-      const pick = matched ?? runningMatched ?? installed[0];
-      const baseArgv = pick?.run ?? (deskKey.includes("codex") ? ["codex"] : deskKey.includes("opencode") ? ["opencode"] : (deskKey.includes("antigravity") || deskKey.includes("agy")) ? ["agy"] : ["claude"]);
-      const argv = agentTaskArgv(baseArgv, pick?.key ?? deskKey);
-      const folder = sp?.machine ? sp.folder || undefined : appHome();
-
-      this.message = `Launching ${pick?.name || deskKey || "agent"} in terminal tab...`;
-      cx.notify();
-
-      run("tab.new", { name: "update Pixel HQ", folder, argv, task: UPDATE_PROMPT, space: sp?.id });
-
-      this.status = "done";
-      this.message = `Update session started with ${pick?.name || deskKey || "agent"}! Track progress in the new tab.`;
-      if (this.version) {
-        localStorage.setItem("upd-dismissed", String(this.version));
-        setShared("pixel-hq.dismissed-version", String(this.version));
-      }
-    } catch (err) {
-      this.status = "error";
-      this.error = String(err?.message ?? err);
-      this.message = `Could not launch terminal tab: ${this.error}`;
-    } finally {
-      this.busy = false;
-      cx.notify();
+    const num = (v) => String(v).split(".").map((n) => parseInt(n, 10) || 0);
+    const [a, b] = [num(latest.version), num(mine?.version)];
+    const newer = [0, 1, 2].map((i) => (a[i] ?? 0) - (b[i] ?? 0)).find((d) => d !== 0) > 0;
+    if (!newer) {
+      setShared("pixel-hq.new-version", null);
+      return null;
     }
+
+    const curVer = mine?.version ? String(mine.version) : "";
+    const newVer = String(latest.version);
+    const versionLabel = curVer && curVer !== newVer ? `v${curVer} → v${newVer}` : `v${newVer}`;
+    const urgent = isUrgentUpdate(latest.type);
+    const upd = {
+      version: newVer,
+      currentVersion: curVer,
+      versionLabel,
+      type: latest.type ? String(latest.type) : (urgent ? "urgent" : "normal"),
+      isUrgent: urgent,
+      notes: latest.notes ? String(latest.notes) : "",
+    };
+    setShared("pixel-hq.new-version", upd);
+
+    const dismissed = shared("pixel-hq.dismissed-version");
+    if (notifyUser && dismissed !== upd.version) {
+      if (urgent) {
+        notify({
+          title: `⚠️ Urgent Pixel HQ update: ${versionLabel}`,
+          body: upd.notes ? `${upd.notes} · Click to update now` : `Critical update ${versionLabel} is out · Click to update now`,
+          level: "warning",
+          timeout: 30000,
+          action: { name: "company-agents.update" },
+        });
+      } else {
+        notify({
+          title: "Pixel HQ update available",
+          body: `Version ${versionLabel} is out · Click to update`,
+          level: "info",
+          timeout: 10000,
+          action: { name: "company-agents.update" },
+        });
+      }
+    }
+    return upd;
+  } catch {
+    return null;
   }
+}
 
-  render(cx) {
-    const mono = "JetBrains Mono";
-    const bc = this.status === "error" ? "#ff5370" : this.status === "done" ? "#a6e3a1" : "#89b4fa";
-    const pct = this.total > 0 ? Math.min(100, Math.round((this.step * 100) / this.total)) : 0;
-    const button = (id, label, bg, fg, onClick) =>
-      h_flex()
-        .id(id)
-        .h(28)
-        .px(12)
-        .items_center()
-        .rounded(6)
-        .border_1()
-        .border_color(bg)
-        .bg(bg)
-        .text_color(fg)
-        .cursor_pointer()
-        .hover((s) => s.opacity(0.88))
-        .on_click((_e, cx) => onClick(cx))
-        .child(label);
+let updating = false;
 
-    return v_flex()
-      .id("pixel-hq-updater")
-      .track_focus(this.handle)
-      .on_key_down((e, cx) => {
-        if (e.key === "escape" && !this.busy) closeOverlay(this.overlay);
-        cx.stop_propagation();
-      })
-      .size_full()
-      .min_h(0)
-      .p(16)
-      .gap(10)
-      .rounded(10)
-      .bg("#11111b")
-      .border_1()
-      .border_color(bc)
-      .text_size(12)
-      .text_color("#cdd6f4")
-      .child(
-        h_flex().items_center().justify_between()
-          .child(
-            h_flex().gap(8).items_center()
-              .child(image("mods/company-brand/logo.png").size(22).flex_none().rounded(4))
-              .child(div().font_family(mono).font_bold().text_size(13).text_color(bc).child(`PIXEL HQ UPDATE · v${this.version}`))
-          )
-          .when(!this.busy, (el) => el.child(
-            div().cursor_pointer().p(4).rounded(4).text_size(14).font_family(mono).text_color("#7f849c").hover((s) => s.text_color("#ffffff"))
-              .on_click(() => closeOverlay(this.overlay)).child("✕")
-          ))
-      )
-      .when(Boolean(this.notes), (el) => el.child(
-        div().px(10).py(6).rounded(6).bg("#181825").border_1().border_color("#313244").text_size(11).text_color("#a6adc8").child(this.notes)
-      ))
-      .child(
-        v_flex().flex_1().justify_center().gap(8)
-          .child(
-            div().font_family(mono).text_size(11.5)
-              .text_color(this.status === "error" ? "#ff5370" : this.status === "done" ? "#a6e3a1" : "#cdd6f4")
-              .child(this.message)
-          )
-          .when(this.status === "updating" && this.total > 0, (el) => el.child(
-            h_flex().items_center().gap(10)
-              .child(
-                div().flex_1().h(5).rounded(3).bg("#313244")
-                  .child(div().h_full().rounded(3).bg("#89b4fa").w(Math.max(4, Math.round((280 * pct) / 100))))
-              )
-              .child(div().flex_none().text_size(11).font_family(mono).text_color("#7f849c").child(`${pct}%`))
-          ))
-      )
-      .child(
-        h_flex().justify_end().gap(8).text_size(11).font_family(mono).font_bold()
-          .when(this.status === "error", (el) => el
-            .child(button("upd-retry", "Retry Auto-Update", "#89b4fa", "#11111b", (cx) => cx.spawn(async (cx) => this.doAutoUpdate(cx))))
-            .child(button("upd-agent", "Use Agent Tab", "#313244", "#cdd6f4", (cx) => cx.spawn(async (cx) => this.doAgentUpdate(cx))))
-            .child(button("upd-close", "Close", "#181825", "#7f849c", () => closeOverlay(this.overlay))))
-          .when(this.status === "done", (el) => el
-            .child(button("upd-reload", "Reload Layout", "#a6e3a1", "#11111b", () => {
-              if (this.version) {
-                localStorage.setItem("upd-dismissed", String(this.version));
-                setShared("pixel-hq.dismissed-version", String(this.version));
-              }
-              closeOverlay(this.overlay);
-              run("layout.switch", { name: "pixel-hq" });
-            }))
-            .child(button("upd-done", "Done", "#313244", "#cdd6f4", () => {
-              if (this.version) {
-                localStorage.setItem("upd-dismissed", String(this.version));
-                setShared("pixel-hq.dismissed-version", String(this.version));
-              }
-              closeOverlay(this.overlay);
-            })))
-          .when(this.status === "updating", (el) => el
-            .child(div().text_size(10.5).text_color("#7f849c").child("Please wait while updating files...")))
-      );
+export async function executePixelHqUpdate() {
+  if (updating) return;
+  updating = true;
+  setShared("pixel-hq.updating", true);
+  notify({
+    title: "Updating Pixel HQ...",
+    body: "Downloading release files from GitHub...",
+    level: "info",
+    timeout: 5000,
+  });
+
+  try {
+    let targetSha = "light";
+    const treeRes = await fetch("https://api.github.com/repos/UreMySunshine/pixel-hq/git/trees/light?recursive=1", {
+      headers: { "User-Agent": "Pixel-HQ-Updater" },
+    }).catch(() => null);
+    let fileList = [];
+    if (treeRes && treeRes.ok) {
+      const treeData = await treeRes.json().catch(() => null);
+      if (treeData?.sha) targetSha = treeData.sha;
+      if (Array.isArray(treeData?.tree)) {
+        fileList = treeData.tree
+          .filter((f) => f.type === "blob" && (f.path.startsWith("layouts/") || f.path.startsWith("mods/") || f.path.startsWith("themes/")) && !f.path.endsWith("README.md") && !/\.(png|gif|d\.ts)$/.test(f.path) && !f.path.endsWith("jsconfig.json") && !f.path.includes("company-brand/updater.js") && !f.path.includes("company-brand/sparkles.svg"))
+          .map((f) => f.path);
+      }
+    }
+    if (!fileList.length) {
+      fileList = PIXEL_HQ_FILES.filter((f) => !f.endsWith(".png") && !f.includes("company-brand/updater.js") && !f.includes("company-brand/sparkles.svg"));
+    }
+
+    fileList.sort((a, b) => {
+      const order = (f) => {
+        if (f.includes("company-brand/main.js")) return 5;
+        if (f.includes("company-agents/main.js")) return 4;
+        if (f.includes("company-agents/updater.js")) return 3;
+        if (f.includes("company-agents/version.json")) return 2;
+        if (f.includes("layouts/pixel-hq.json")) return 1;
+        return 0;
+      };
+      return order(a) - order(b) || a.localeCompare(b);
+    });
+
+    const changed = [];
+    let newVersion = "latest";
+
+    for (const p of fileList) {
+      const url = `https://raw.githubusercontent.com/UreMySunshine/pixel-hq/${targetSha}/${p}?t=${Date.now()}`;
+      const res = await fetch(url);
+      if (res.status === 404) continue;
+      if (!res.ok) throw new Error(`HTTP ${res.status} while fetching ${p}`);
+      const content = await res.text();
+      if (p === "mods/company-agents/version.json") {
+        try { newVersion = JSON.parse(content).version; } catch {}
+      }
+      const targetPath = `${appHome()}/${p}`;
+      const current = await readTextFile(targetPath).catch(() => null);
+      if (current !== content) changed.push({ targetPath, content, current });
+    }
+
+    for (const f of changed) await writeTextFile(f.targetPath, f.content, f.current);
+
+    setShared("pixel-hq.updated", { version: newVersion, at: Date.now() });
+    setShared("pixel-hq.new-version", null);
+    setShared("pixel-hq.dismissed-version", String(newVersion));
+    setShared("pixel-hq.updating", null);
+
+    notify({
+      title: "Pixel HQ updated!",
+      body: changed.length > 0 ? `Successfully updated to v${newVersion}!` : `Pixel HQ is already up to date (v${newVersion}).`,
+      level: "success",
+      timeout: 8000,
+    });
+  } catch (err) {
+    setShared("pixel-hq.updating", null);
+    notify({
+      title: "Update failed",
+      body: String(err?.message ?? err),
+      level: "error",
+      timeout: 8000,
+    });
+  } finally {
+    updating = false;
   }
 }

@@ -1,0 +1,9 @@
+{
+  "place": "none",
+  "title": "Floor Switcher",
+  "overlay": {
+    "kind": "dialog",
+    "width": 600,
+    "height": 430
+  }
+}

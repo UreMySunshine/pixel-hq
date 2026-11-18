@@ -42,6 +42,7 @@ export default class WorkspaceChrome extends View {
         .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded_full().bg(t.accent + "44").loop("opacity", { from: 0.4, to: 1, period: 1500, easing: "ease-in-out" }));
       return v_flex().size_full().bg(t.chrome).border_t(1).border_color(t.border).px(8).pt(4).pb(8).text_size(13)
         .when(collapsed, el => el.px(0).items_center())
+        .child(row("hotkeys", "keyboard", "Hotkeys", false, () => run("mod.open", { name: "company-hotkeys" })))
         .child(row("settings", "settings", "Settings", false, () => run("app.settings"))
           .when(Boolean(updates().app.ready), el => el.child(collapsed ? ready.absolute().top(5).right(6) : ready)))
         .child(row("machine", "plus", "Add machine", true, () => run("mod.open", { name: "machine-add" })));
@@ -53,6 +54,7 @@ export default class WorkspaceChrome extends View {
       .when(!collapsed, el => el.child(h_flex().flex_1().gap(9).items_center().child(logo)
         .child(v_flex().gap(0).child(div().font_semibold().text_size(14).text_color(t.foreground).child("Pixel HQ"))
           .child(div().text_size(10).text_color(t.dim).child("engineering floor")))))
+      .when(!collapsed, el => el.child(this.button("hotkeys", svg("mods/company-brand/keyboard.svg").size(15), () => run("mod.open", { name: "company-hotkeys" }))))
       .when(!collapsed, el => el.child(this.button("search", svg("mods/company-brand/search.svg").size(15), () => run("mod.open", { name: "picker" }))))
       // On the macOS rail the traffic lights fill the row; the agents list's » unfolds it.
       .when(!(collapsed && window()?.platform === "macos"), el => el.child(this.button("sidebar-toggle", svg("mods/company-brand/sidebar.svg").size(15), toggleSidebar)));

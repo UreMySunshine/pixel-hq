@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo "=========================================="
+echo "    Running Pixel HQ Agent Test Suite    "
+echo "=========================================="
+
+echo ""
+bash "$SCRIPT_DIR/test-syntax.test.sh"
+
+echo ""
+node "$SCRIPT_DIR/test-opencode-tabs.test.js"
+echo ""
+bash "$SCRIPT_DIR/test-statusline.test.sh"
+echo ""
+node "$SCRIPT_DIR/test-vitals-labels.test.js"
+echo ""
+node "$SCRIPT_DIR/test-codex-vitals.test.js"
+echo ""
+python3 "$SCRIPT_DIR/test-settings-atomic.test.py"
+echo ""
+node "$SCRIPT_DIR/test-busy-deferral.test.js"
+echo ""
+node "$SCRIPT_DIR/test-update-system.test.js"
+echo ""
+python3 "$SCRIPT_DIR/test-music-player.test.py"
+echo ""
+bash "$SCRIPT_DIR/test-live-e2e.test.sh"
+echo ""
+echo "=========================================="
+echo "    ALL TEST SUITES PASSED SUCCESSFULLY   "
+echo "=========================================="
