@@ -1,6 +1,6 @@
 import { View, div } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, focused, agents, theme, run, window, keys, settings, setBadge, openOverlay, shared } from "herdr";
+import { spaces, panes, focused, agents, theme, run, window, keys, settings, openOverlay, shared } from "herdr";
 
 const MONO = "JetBrains Mono";
 const R = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
@@ -57,11 +57,6 @@ export default class WorkspaceStatus extends View {
     const done = t.done ?? "#8ec07c";
     const idle = t.idle ?? t.dim;
     const n = (k) => list.filter(a => a.status === k).length;
-    const wants = n("blocked") > 0 ? String(n("blocked")) : null;
-    if (window()?.platform === "macos" && this.badge !== wants) {
-      this.badge = wants;
-      try { setBadge(wants); } catch { this.badge = undefined; }
-    }
     const rest = list.length - n("working") - n("blocked") - n("done");
     const plate = (color, text) => h_flex().relative().h(15).pl(6).pr(6).gap(4).items_center()
       .children(notch(color + "aa", soften(color)))
