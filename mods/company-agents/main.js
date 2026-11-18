@@ -1349,6 +1349,7 @@ export default class Agents extends View {
     const nAgents = list.length;
     const paneBy = new Map(panes().map((p) => [p.pane, p]));
     const withVitals = list.some((a) => contextOf.get(a.address));
+    const withModel = list.some((a) => { const c = contextOf.get(a.address); return c ? modelOf(c) !== "" : false; });
     const plan = (sc, extraVitals) => {
       // The chair back and headrest reach 17 units above the seat, so a cell reserves that too;
       // without it a desk's nameplate lands on the pet in the row below.
@@ -1359,7 +1360,8 @@ export default class Agents extends View {
     const scales = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42];
     const base = scales.map((s) => plan(s, 0));
     const vitalsOn = withVitals && (base.find((p) => p.cols * p.rows >= nAgents) ?? base[base.length - 1]).cw >= 90;
-    const P0 = scales.map((s) => plan(s, vitalsOn ? 11 : 0));
+    const modelOn = withModel;
+    const P0 = scales.map((s) => plan(s, (vitalsOn ? 11 : 0) + (modelOn ? 13 : 0)));
     const pick = P0.find((p) => p.cols * p.rows >= nAgents) ?? P0[P0.length - 1];
     const S = pick.sc, PET = pick.P, petW = pick.pw, cellW = pick.cw, cellH = pick.ch;
     const kk = (v) => Math.round(v * S);
@@ -1405,6 +1407,8 @@ export default class Agents extends View {
       posOf.set(a.address, { x: left + petW / 2, y: top + PET * 0.5 });
       const ctx = contextOf.get(a.address);
       const ctxPct = ctx?.pct ?? null;
+      // The desk line carries the model name alone; provider suffixes, effort and quota stay in the tooltip.
+      const modelLine = ctx ? ((ctx.model || "").split(" · ")[0] || (ctx.effort ? `effort ${ctx.effort}` : "")) : "";
       const more = detail.get(a.address);
       const text = more ?? a.space_name ?? label(a);
       // Every desk in a space sits on that space's branch, so the tooltip names it once, on the desk's hover.
@@ -1521,7 +1525,9 @@ export default class Agents extends View {
           .font_family(monoF).font_bold().text_size(9.5).text_color(this.hint?.addr === a.address ? "#1e1233" : cl ? "#2a0f16" : a.focused || (q && hitOf(a)) ? "#2a1a14" : isUrge ? "#1e1e2e" : isSnooze ? "#cdd6f4" : P.plateInk)
           // The ellipsis must sit on the element that holds the text; on the plate it never shows.
           .child(div().min_w(0).truncate().child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? (isUrge ? ` · idle ${duration(waited)} ⏰` : isSnooze ? ` · zzz ${duration(waited)}` : ` · ${duration(waited)}`) : ""}`)))
-        // The branch is a property of the space, so the floor card carries it, not every desk; the model stays in the tooltip.
+        // The branch is a property of the space, so the floor card carries it, not every desk; the model is per desk and sits under its nameplate.
+        .when(modelOn && modelLine !== "", (el) => el.child(div().mt(2).max_w(Math.max(petW + 22, cellW - 4)).min_w(0).truncate()
+          .font_family(monoF).text_size(9).text_color(t.dim).child(modelLine)))
         .when(ctx != null && cellW >= 90, (el) => el.child(div().mt(2).max_w(Math.max(petW + 22, cellW - 4)).child(vitalsBars(t, ctx, `farm-vitals-${a.address}`, Math.max(petW + 22, cellW - 4)))));
     });
     // A dotted line of sparks between two desks that are about to clash.
