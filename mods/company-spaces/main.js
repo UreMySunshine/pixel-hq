@@ -531,20 +531,22 @@ export default class Spaces extends View {
       const folded = this.folded.has(m);
       const line = connected ? LINES[n % LINES.length] : t.dim;
       const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t, line));
-      // The plate follows the station-sign reference: a pale line-colored panel inside a dark
-      // rule and a lit outer edge, a four-pin rivet at each corner, and a white rounded badge
-      // carrying the machine's initial.
+      // The plate follows the station-sign reference: four concentric rings — a dark outline,
+      // a band of the line's color, a lit white line and a dark inner rule — around a pale
+      // face, with one bolt head near each corner and a white rounded badge carrying the
+      // machine's initial.
       const plateFace = lighten(line, 0.22);
-      const plateFrame = deepen(line, 0.45);
+      const plateShell = deepen(line, 0.5);
       const plateEdge = "#e4ebff";
       const plateInk = "#ffffff";
       const plateDim = "#ffffffc0";
-      const pin = deepen(line, 0.55);
-      // Four pin-pricks in a square: a rivet seen from above.
-      const rivet = (side, v) => [0, 2].flatMap((a) => [0, 2].map((b) => {
-        let d = div().absolute().w(1).h(1).bg(pin);
-        d = side === "l" ? d.left(5 + a) : d.right(7 + a);
-        d = v === "t" ? d.top(4 + b) : d.bottom(6 + b);
+      const ring = (inset, color, radius) => div().absolute().left(inset).right(inset).top(inset).bottom(inset).rounded(radius).bg(color);
+      // A bolt head near a corner: a 3×3 dark block with one lit pixel on the upper outer corner.
+      const rivet = (side, v) => [0, 1, 2].flatMap((dx) => [0, 1, 2].map((dy) => {
+        const glint = dx === 0 && dy === (v === "t" ? 0 : 2);
+        let d = div().absolute().w(1).h(1).bg(glint ? plateEdge : plateShell);
+        d = side === "l" ? d.left(4 + dx) : d.right(4 + dx);
+        d = v === "t" ? d.top(4 + dy) : d.bottom(4 + dy);
         return d;
       }));
       const bullet = div().relative().w(20).h(20).flex_none()
@@ -565,14 +567,12 @@ export default class Spaces extends View {
         .child(div().absolute().left(23).top(-1).w(4).h(2).bg(metal))
         .child(div().absolute().right(23).top(-1).w(4).h(2).bg(metal))
         .children([
-          ...notch(plateEdge, [2, 0, 2, 0]),
-          ...notch(plateFrame, [0, 2, 0, 2]),
-          ...notch(plateFace, [2, 4, 2, 4]),
-          div().absolute().left(2).right(4).top(0).h(1).bg("#ffffff"),
-          div().absolute().left(2).right(4).bottom(2).h(1).bg("#00000033"),
-          // The panel's top lip is lit and its foot is shaded; a rivet sits at each corner.
-          div().absolute().left(4).right(6).top(3).h(1).bg("#ffffff"),
-          div().absolute().left(4).right(6).bottom(4).h(1).bg(deepen(line, 0.3)),
+          ring(0, plateShell, 3),
+          ring(1, line, 3),
+          ring(2, "#ffffff", 2),
+          ring(3, plateShell, 2),
+          ring(4, plateFace, 1),
+          div().absolute().left(5).right(5).top(4).h(1).bg("#ffffff55"),
           ...rivet("l", "t"), ...rivet("r", "t"), ...rivet("l", "b"), ...rivet("r", "b"),
         ])
         .child(bullet)
