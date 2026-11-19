@@ -168,27 +168,19 @@ function loco(blocked, color) {
     .child(T(4, 22, 4, 2, ink));
 }
 
-// The couplers between a repo's card and its worktree's below it: each card carries its own
-// plate, shank and hook, and the two hooks bite past each other across the row gap. Every part
-// is drawn in three passes: a dark outline, a metal body and a lit edge.
+// The coupler between a repo's card and its worktree's below it: two metal plates joined by a
+// shank, lit down one side and shaded down the other, as the hanging rods are.
 function coupler() {
   const metal = day() ? "#7a729e" : "#454a68";
   const lit = day() ? "#b3abd4" : "#5d6489";
-  const dark = day() ? "#4b4670" : "#22263c";
+  const dark = day() ? "#575080" : "#2a2e47";
   const T = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
-  return div().relative().w(16).h(26).flex_none()
-    // The repo card's plate, shank and hook.
-    .child(T(1, 0, 14, 5, dark)).child(T(3, 1, 10, 3, lit))
-    .child(T(4, 5, 8, 5, dark)).child(T(5, 6, 6, 3, metal)).child(T(5, 6, 1, 3, lit))
-    .child(T(1, 9, 12, 4, dark)).child(T(1, 13, 5, 7, dark)).child(T(1, 17, 9, 3, dark))
-    .child(T(2, 10, 10, 2, metal)).child(T(2, 14, 3, 5, metal)).child(T(2, 18, 7, 1, metal))
-    .child(T(2, 10, 10, 1, lit)).child(T(2, 14, 1, 5, lit))
-    // The worktree card's hook, turned half around, bites past the first.
-    .child(T(4, 17, 12, 4, dark)).child(T(11, 12, 5, 7, dark)).child(T(8, 11, 9, 3, dark))
-    .child(T(5, 18, 10, 2, metal)).child(T(12, 13, 3, 5, metal)).child(T(9, 13, 7, 1, metal))
-    .child(T(9, 12, 7, 1, lit)).child(T(5, 19, 10, 1, lit)).child(T(14, 13, 1, 5, lit))
-    .child(T(4, 20, 8, 6, dark)).child(T(5, 21, 6, 3, metal)).child(T(5, 21, 1, 3, lit))
-    .child(T(1, 21, 14, 5, dark)).child(T(3, 22, 10, 3, lit));
+  return div().relative().w(14).h(26).flex_none()
+    .child(T(2, 0, 10, 3, dark)).child(T(3, 0, 8, 2, metal)).child(T(3, 0, 8, 1, lit))
+    .child(T(5, 3, 4, 2, metal)).child(T(5, 3, 1, 2, lit)).child(T(8, 3, 1, 2, dark))
+    .child(T(6, 5, 3, 16, metal)).child(T(6, 5, 1, 16, lit)).child(T(8, 5, 1, 16, dark))
+    .child(T(5, 21, 4, 2, metal)).child(T(5, 21, 1, 2, lit)).child(T(8, 21, 1, 2, dark))
+    .child(T(2, 23, 10, 3, dark)).child(T(3, 23, 8, 2, metal)).child(T(3, 24, 8, 1, lit));
 }
 
 // A line's header as a station platform: a striped canopy in the line's color with a scalloped
@@ -874,7 +866,7 @@ const C = ROOMC();
       .child(
         h_flex().relative().size_full().items_center()
           // A worktree's card is coupled to its repo's card above it, across the row gap.
-          .when(Boolean(tree), (el) => el.child(div().absolute().left(45).top(-13).child(coupler())))
+          .when(Boolean(tree), (el) => el.child(div().absolute().left(46).top(-13).child(coupler())))
           .child(rail(t, line, CARD, { stop: "station", here: on, crew: tree ? [] : this.crew?.get(w.id) ?? [], tint: fill, tree: Boolean(tree) }))
           .child(div().flex_1().min_w(0).h_full().flex().items_center()
             .child(this.card({ w, g, fill, tree }, t)))
