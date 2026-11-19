@@ -166,6 +166,21 @@ function loco(blocked, color) {
     .child(T(4, 22, 4, 2, ink));
 }
 
+// The coupler between a repo's card and its worktree's below it: two metal plates joined by a
+// shank, lit down one side and shaded down the other, as the hanging rods are.
+function coupler() {
+  const metal = day() ? "#7a729e" : "#454a68";
+  const lit = day() ? "#b3abd4" : "#5d6489";
+  const dark = day() ? "#575080" : "#2a2e47";
+  const T = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
+  return div().relative().w(14).h(26).flex_none()
+    .child(T(1, 0, 12, 3, dark)).child(T(2, 0, 10, 2, metal)).child(T(2, 0, 10, 1, lit))
+    .child(T(4, 3, 6, 2, metal)).child(T(4, 3, 1, 2, lit)).child(T(9, 3, 1, 2, dark))
+    .child(T(5, 5, 4, 16, metal)).child(T(5, 5, 1, 16, lit)).child(T(8, 5, 1, 16, dark))
+    .child(T(4, 21, 6, 2, metal)).child(T(4, 21, 1, 2, lit)).child(T(9, 21, 1, 2, dark))
+    .child(T(1, 23, 12, 3, dark)).child(T(2, 23, 10, 2, metal)).child(T(2, 24, 10, 1, lit));
+}
+
 // A line's header as a station platform: a striped canopy in the line's color with a scalloped
 // hem, two posts, a hung name plate, a bench, and a slab with a safety line and a tactile strip.
 function platform(line) {
@@ -837,6 +852,8 @@ const C = ROOMC();
       .on_mouse_down("right", () => this.menu(w))
       .child(
         h_flex().relative().size_full().items_center()
+          // A worktree's card is coupled to its repo's card above it, across the row gap.
+          .when(Boolean(tree), (el) => el.child(div().absolute().left(46).top(-13).child(coupler())))
           .child(rail(t, line, CARD, { stop: "station", here: on, crew: tree ? [] : this.crew?.get(w.id) ?? [], tint: fill, tree: Boolean(tree) }))
           .child(div().flex_1().min_w(0).h_full().flex().items_center()
             .child(this.card({ w, g, fill, tree }, t)))
