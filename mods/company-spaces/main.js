@@ -31,9 +31,8 @@ function place(s, ps) {
   return ps.find((p) => tabs.has(p.tab) && p.cwd)?.cwd || s.folder;
 }
 // A space is one floor: a small pixel room, the name, the branch and who is aboard, and a status dot.
-// A worktree's card hangs off its repo's line, shifted right and marked by a station sign in its color.
+// A worktree's stop sits on its repo's line, on a second rail that branches from the main one.
 const CARD = 66;
-const TREE_INDENT = 10;
 const RAIL_CELL = 32;
 // The tile has three desks: the most urgent agents get them, the rest are counted.
 const RANK = { blocked: 3, working: 2, done: 1 };
@@ -99,20 +98,28 @@ const notch = (c, [l, r, t, b]) => [
 
 // The track: a thick line with dark sleepers, a square station with notched corners (pulsing where you are or where an agent needs you),
 // and a little locomotive that rides while someone works.
-function rail(t, line, h, { stop = null, here = false, last = false, crew = [], tint = line } = {}) {
+function rail(t, line, h, { stop = null, here = false, last = false, crew = [], tint = line, tree = false } = {}) {
   const c = Math.round(h / 2);
   const blocked = crew.some((a) => a.status === "blocked");
   const moving = blocked || crew.some((a) => a.status === "working");
   const end = last ? c : h;
   const sleepers = [];
   for (let y = 2; y < end; y += 8) sleepers.push(div().absolute().left(5).top(y).w(10).h(2).bg("#00000038"));
-  const node = div().absolute().left(3).top(c - 7).w(14).h(14).children(pix(line, 14, 14))
-    .child(div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : day() ? "#47445e" : "#ffffff"));
+  // A worktree's stop wears the branch glyph in its color instead of the state core.
+  const node = div().absolute().left(3).top(c - 7).w(14).h(14).children(pix(tree ? tint : line, 14, 14))
+    .child(tree
+      ? div().absolute().left(3).top(2).w(8).h(10).children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]]
+        .map(([x, y, w, h2]) => div().absolute().left(x).top(y).w(w).h(h2).bg(t.chrome)))
+      : div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : day() ? "#47445e" : "#ffffff"));
   return div().relative().w(GUTTER).h(h).flex_none()
     .child(div().absolute().left(6).top(0).w(8).h(end).bg(line + "66"))
     .child(div().absolute().left(8).top(0).w(4).h(end).bg(line))
     .child(div().absolute().left(8).top(0).w(1).h(end).bg("#ffffff66"))
     .children(sleepers)
+    // A worktree's track hangs off the main line: a second rail behind it, joined at the row's top.
+    .when(tree, (el) => el
+      .child(div().absolute().left(14).top(0).w(2).h(c - 7).bg(tint))
+      .child(div().absolute().left(8).top(0).w(8).h(2).bg(tint)))
     .when(stop === "station" && (here || blocked), (el) => el.child(div().absolute().left(0).top(c - 10).w(20).h(20).children(pix(blocked ? "#f38ba8" : "#f9e2af", 20, 20))
       .loop("opacity", { from: 0.4, to: 0.9, period: blocked ? 800 : 1800, easing: "ease-in-out" })))
     .when(stop === "station", (el) => el.child(node
@@ -202,18 +209,6 @@ function platform(line) {
     B(30, 59, 2, 3, benchDark), B(34, 59, 2, 3, benchDark),
     B(46, 59, 2, 3, benchDark), B(50, 59, 2, 3, benchDark),
   ];
-}
-
-// A worktree's stop: a sign on its card's left edge, in the space's color, with the branch glyph.
-// The shown worktree's sign wears the same warm halo as a station at the main line.
-function treeSign(fill, ink, here) {
-  return div().absolute().left(18).top(CARD / 2 - 7).w(16).h(14)
-    .when(here, (el) => el.child(div().absolute().left(-2).top(-2).w(20).h(18).children(pix("#f9e2af", 20, 18))
-      .loop("opacity", { from: 0.4, to: 0.9, period: 1800, easing: "ease-in-out" })))
-    .children(pix(fill, 16, 14))
-    .child(div().absolute().left(4).top(2).w(8).h(10).children(
-      [[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]]
-        .map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg(ink))));
 }
 
 // A space speaks up only when something in it needs you.
@@ -511,7 +506,6 @@ export default class Spaces extends View {
       const folded = this.folded.has(m);
       const line = connected ? LINES[n % LINES.length] : t.dim;
       const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t, line));
-      // The plate is a lit sign: a dark line-colored face with light lettering by day, the
       // The plate is a light sign by day and a dark one by night, so it stands off the wall in
       // either theme. A band of the line's color runs down its left edge and carries the
       // machine's initial; the rest of the face is left to the name and the stop count.
@@ -843,10 +837,8 @@ const C = ROOMC();
       .on_mouse_down("right", () => this.menu(w))
       .child(
         h_flex().relative().size_full().items_center()
-          .when(Boolean(tree), (el) => el.child(treeSign(fill, t.chrome, on)))
-          .child(rail(t, line, CARD, { stop: tree ? null : "station", here: on, crew: tree ? [] : this.crew?.get(w.id) ?? [], tint: fill }))
+          .child(rail(t, line, CARD, { stop: "station", here: on, crew: tree ? [] : this.crew?.get(w.id) ?? [], tint: fill, tree: Boolean(tree) }))
           .child(div().flex_1().min_w(0).h_full().flex().items_center()
-            .when(Boolean(tree), (el) => el.pl(TREE_INDENT))
             .child(this.card({ w, g, fill, tree }, t)))
       );
   }
