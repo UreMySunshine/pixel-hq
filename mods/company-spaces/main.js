@@ -520,22 +520,23 @@ export default class Spaces extends View {
       const folded = this.folded.has(m);
       const line = connected ? LINES[n % LINES.length] : t.dim;
       const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t, line));
-      // The plate is a light sign by day and a dark one by night, so it stands off the wall in
-      // either theme. A band of the line's color runs down its left edge and carries the
-      // machine's initial; the rest of the face is left to the name and the stop count.
-      const plateFace = day() ? "#faf9fc" : "#1c1e2b";
-      const plateFrame = day() ? deepen(line, 0.35) : line;
-      const plateInk = day() ? "#1d1e3e" : "#fdfcff";
-      const plateDim = day() ? "#1d1e3e99" : "#ffffffa6";
+      // The plate follows the station-sign reference: a pale line-colored panel inside a dark
+      // rule and a lit outer edge, a bolt at each corner, and a white badge carrying the
+      // machine's initial.
+      const plateFace = soften(line, 0.2);
+      const plateFrame = deepen(line, 0.45);
+      const plateEdge = "#d9e3fa";
+      const plateInk = "#ffffff";
+      const plateDim = "#ffffffc0";
       const bullet = div().relative().w(20).h(20).flex_none()
-        .child(div().absolute().left(-2).top(-2).children(pix("#ffffff2e", 24, 24)).loop("opacity", { from: 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
-        .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(10).text_color(day() ? "#ffffff" : "#11111b")
+        .child(div().absolute().left(-2).top(-2).children(pix("#ffffff33", 24, 24)).loop("opacity", { from: 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
+        .children(pix("#ffffff", 20, 20))
+        .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(10).text_color(deepen(line, 0.45))
           .child([...(m ?? "this computer")][0].toUpperCase()));
       const icon = svg(`mods/workspace-chrome/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
       const badge = div().absolute().right(-3).bottom(-2).size(6).rounded(3).border_1().border_color(t.chrome).bg(connected ? t.ansi2 : t.dim);
       // One plate spans the platform, hung from the canopy by two rods: the badge and the line's
-      // name at the left, the stop count and the fold mark at the right. A foot band in the
-      // opposite tone runs along the bottom, so the sign reads as a lit panel rather than a card.
+      // name at the left, the stop count and the fold mark at the right.
       const metal = day() ? "#8d86b4" : "#3a3f5c";
       const sign = h_flex().relative().absolute().left(20).right(20).top(15).h(34).pl(7).pr(8).gap(7).items_center()
         .child(div().absolute().left(24).top(-3).w(2).h(3).bg(metal))
@@ -543,15 +544,18 @@ export default class Spaces extends View {
         .child(div().absolute().left(23).top(-1).w(4).h(2).bg(metal))
         .child(div().absolute().right(23).top(-1).w(4).h(2).bg(metal))
         .children([
-          ...notch(day() ? "#00000026" : "#00000055", [2, 0, 2, 0]),
+          ...notch(plateEdge, [2, 0, 2, 0]),
           ...notch(plateFrame, [0, 2, 0, 2]),
           ...notch(plateFace, [2, 4, 2, 4]),
-          div().absolute().left(2).right(4).top(0).h(1).bg("#ffffff59"),
-          div().absolute().left(2).right(4).bottom(2).h(1).bg("#00000040"),
-          // The band follows the fill's notched left corner; a rule sets it off from the face.
-          div().absolute().left(4).top(2).bottom(4).w(28).bg(line),
-          div().absolute().left(2).top(4).bottom(6).w(30).bg(line),
-          div().absolute().left(32).top(2).bottom(4).w(1).bg(day() ? "#00000026" : "#ffffff33"),
+          div().absolute().left(2).right(4).top(0).h(1).bg("#ffffff8c"),
+          div().absolute().left(2).right(4).bottom(2).h(1).bg("#00000033"),
+          // The panel's top lip is lit and its foot is shaded; a bolt sits at each corner.
+          div().absolute().left(4).right(6).top(2).h(1).bg("#ffffff"),
+          div().absolute().left(4).right(6).bottom(4).h(1).bg(deepen(line, 0.3)),
+          div().absolute().left(5).top(4).w(2).h(2).bg(deepen(line, 0.55)),
+          div().absolute().right(7).top(4).w(2).h(2).bg(deepen(line, 0.55)),
+          div().absolute().left(5).bottom(6).w(2).h(2).bg(deepen(line, 0.55)),
+          div().absolute().right(7).bottom(6).w(2).h(2).bg(deepen(line, 0.55)),
         ])
         .child(bullet)
         .child(v_flex().flex_1().min_w(0).gap(1).justify_center()
