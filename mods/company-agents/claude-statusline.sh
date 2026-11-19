@@ -104,11 +104,14 @@ quota = str(max(0, min(100, q_pct))) if q_pct is not None else ""
 
 eff = d.get("effort") if isinstance(d.get("effort"), dict) else {}
 effort = clean(eff.get("level") or (m.get("effort") if isinstance(m, dict) else "") or "")
-print(pct + "|" + model + "|" + quota + "|" + effort)
+# Claude Code also calls the status line with an all-zero placeholder; keep the previous labels for it.
+cw = d.get("context_window") if isinstance(d.get("context_window"), dict) else None
+valid = "0" if (cw is not None and not cw.get("used_percentage") and not cw.get("total_input_tokens") and not cw.get("total_output_tokens")) else "1"
+print(pct + "|" + model + "|" + quota + "|" + effort + "|" + valid)
 ' 2>/dev/null)
-pct=${fields%%\|*}; rest=${fields#*\|}; model=${rest%%\|*}; rest=${rest#*\|}; quota=${rest%%\|*}; effort=${rest#*\|}
+pct=${fields%%\|*}; rest=${fields#*\|}; model=${rest%%\|*}; rest=${rest#*\|}; quota=${rest%%\|*}; rest=${rest#*\|}; effort=${rest%%\|*}; valid=${rest#*\|}
 
-if [ -n "$HC_TERMINAL_ID" ] && command -v hc >/dev/null 2>&1; then
+if [ "$valid" != "0" ] && [ -n "$HC_TERMINAL_ID" ] && command -v hc >/dev/null 2>&1; then
   hc label "$HC_TERMINAL_ID" \
     "agent.context=$pct" "claude.context=$pct" "agy.context=$pct" \
     "agent.model=$model" "claude.model=$model" "agy.model=$model" \
