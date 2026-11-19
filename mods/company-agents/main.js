@@ -1502,13 +1502,28 @@ export default class Agents extends View {
         .when(Boolean(ctxPct != null && ctxPct >= 5), (el) => {
           const n = Math.max(1, Math.min(10, Math.ceil(ctxPct / 10)));
           const sh = Math.max(2, kk(3)), hot = ctxPct >= 80, full = ctxPct >= 95;
-          const sheets = Array.from({ length: n }, (_, k) => div().absolute().left(kk(1) + ((k * 7) % 3 - 1) * kk(1)).top((n - 1 - k) * sh + kk(2)).w(kk(15)).h(sh)
-            .bg(k >= n - 2 && hot ? (k === n - 1 ? "#f5b8c0" : "#f0cbd0") : k % 2 ? "#e9e2d4" : "#f6f1e7").border_b(1).border_color("#8b8371"));
+          const sheetAt = (k) => ({ left: kk(1) + ((k * 7) % 3 - 1) * kk(1), top: (n - 1 - k) * sh + kk(2) });
+          // A dark 1px line along the pile's silhouette: the sides of every sheet, plus the top of the
+          // topmost and the bottom of the bottommost.
+          const edge = (l, t, w, h) => div().absolute().left(l).top(t).w(w).h(h).bg("#11111b");
+          const outline = [];
+          for (let k = 0; k < n; k++) {
+            const { left, top } = sheetAt(k);
+            outline.push(edge(left - 1, top, 1, sh), edge(left + kk(15), top, 1, sh));
+          }
+          const topSheet = sheetAt(n - 1), bottomSheet = sheetAt(0);
+          outline.push(edge(topSheet.left - 1, topSheet.top - 1, kk(15) + 2, 1));
+          outline.push(edge(bottomSheet.left - 1, bottomSheet.top + sh, kk(15) + 2, 1));
+          const sheets = Array.from({ length: n }, (_, k) => {
+            const { left, top } = sheetAt(k);
+            return div().absolute().left(left).top(top).w(kk(15)).h(sh)
+              .bg(k >= n - 2 && hot ? (k === n - 1 ? "#f5b8c0" : "#f0cbd0") : k % 2 ? "#e9e2d4" : "#f6f1e7").border_b(1).border_color("#8b8371");
+          });
           const pile = div().id(`pile-${a.address}`).absolute().left(petW - kk(25)).top(PET * 0.84 - n * sh - kk(4)).w(kk(18)).h(n * sh + kk(6)).cursor_pointer()
             .tooltip(`Context ${ctxPct}% used · click to /compact`)
             .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
             .on_click((_e, cx) => { cx.stop_propagation(); this.pileClick(a, cx); })
-            .child(div().absolute().left(-kk(1)).top(kk(1)).w(kk(19)).h(n * sh + kk(2)).bg("#3f4460"))
+            .children(outline)
             .children(sheets);
           return el.child(full ? pile.loop("top", { from: PET * 0.84 - n * sh - kk(4), to: PET * 0.84 - n * sh - kk(6), period: 600, easing: "ease-in-out" }) : pile);
         })
