@@ -535,7 +535,7 @@ export default class Agents extends View {
       .bg(t.popover)
       .overflow_y_scrollbar()
       .child(h_flex().px(6).pt(2).pb(6).gap(8).items_center()
-        .child(div().font_family(mono).font_bold().text_size(10).text_color("#f9e2af").child("NEEDS YOU"))
+        .child(div().font_family(mono).font_bold().text_size(10).text_color(t.blocked).child("NEEDS YOU"))
         .when(waiting.length > 0, (el) => el.child(div().text_size(10).text_color(t.dim).child(`${waiting.length} waiting · longest first`))))
       .when(waiting.length === 0, (el) => el.child(div().px(10).py(18).text_size(12).text_color(t.dim).child("All hands on deck. Nobody needs you right now.")))
       .children(waiting.map((a) => {
