@@ -1,5 +1,5 @@
 {
-  "version": "1.7.3",
+  "version": "1.7.8",
   "type": "normal",
-  "notes": "Add Pixel MusicBox: headless audio-only player for YouTube, SoundCloud, and radio streams"
+  "notes": "Fix audio premature cutoff, add reconnect flags, and keep status bar in sync"
 }

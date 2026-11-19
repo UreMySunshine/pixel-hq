@@ -667,7 +667,7 @@ export default class Spaces extends View {
     const R = (x, y, w, h, c) => div().absolute().left(x).top(y).w(w).h(h).bg(c);
     const lit = working > 0, any = crew.length > 0;
 const C = ROOMC();
-    const skin = (a) => { const k = String(a.program?.key ?? a.program?.name ?? a.agent ?? a.report?.app ?? a.status?.app ?? a.app ?? a.name ?? a.title ?? "").toLowerCase(); return k.includes("claude") ? ["#D97757", "#D97757"] : k.includes("codex") ? ["#5B6CF0", "#5B6CF0"] : k.includes("opencode") ? ["#4A5B80", "#F7F4EC"] : (k.includes("antigravity") || k === "agy") ? ["#F6A03A", "#3186FF"] : (k.includes("deepseek") || k.includes("dsh")) ? ["#4D6BFE", "#EDEFF7"] : (k === "pi" || k.startsWith("pi-")) ? ["#4D9ABF", "#F1BE58"] : ["#F1E7D3", "#F1E7D3"]; };
+    const skin = (a) => { const k = String(a.program?.key ?? a.program?.name ?? a.agent ?? a.report?.app ?? a.status?.app ?? a.app ?? a.name ?? a.title ?? "").toLowerCase(); return k.includes("hermes") ? ["#E8B04A", "#2F3346"] : k.includes("claude") ? ["#D97757", "#D97757"] : k.includes("codex") ? ["#5B6CF0", "#5B6CF0"] : k.includes("opencode") ? ["#4A5B80", "#F7F4EC"] : (k.includes("antigravity") || k === "agy") ? ["#F6A03A", "#3186FF"] : (k.includes("deepseek") || k.includes("dsh")) ? ["#4D6BFE", "#EDEFF7"] : (k === "pi" || k.startsWith("pi-")) ? ["#4D9ABF", "#F1BE58"] : ["#F1E7D3", "#F1E7D3"]; };
     const room = div().relative().w(54).h(40).flex_none().overflow_hidden()
       .child(R(0, 0, 54, 24, any ? C.wallOn : C.wallOff)).child(R(0, 0, 54, 3, soften(fill))).child(R(0, 3, 54, 1, C.trim))
       .child(R(0, 0, 54, 5, "#89dceb2e").loop("opacity", { from: lit ? 0.5 : 0.2, to: lit ? 1 : 0.4, period: 2600, easing: "ease-in-out" }))

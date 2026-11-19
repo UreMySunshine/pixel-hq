@@ -4,9 +4,52 @@ import { theme, run, shared, setShared, closeOverlay, checking, appHome, exec, w
 
 const MONO = "JetBrains Mono, Menlo, monospace";
 
+let detectedPythonBin = null;
+
+async function getPythonBin() {
+  if (detectedPythonBin) return detectedPythonBin;
+  const script = `${appHome()}/mods/company-music/player.py`;
+  const isWin = window()?.platform === "windows" || appHome().includes(":") || appHome().includes("\\");
+  const candidates = isWin ? ["python", "py", "python3"] : ["python3", "python"];
+  for (const bin of candidates) {
+    const r = await exec(bin, [script, "check"], { timeout: 4000 }).catch(() => null);
+    if (r?.stdout && r.stdout.includes('"status"')) {
+      detectedPythonBin = bin;
+      return bin;
+    }
+  }
+  detectedPythonBin = candidates[0];
+  return detectedPythonBin;
+}
+
+async function runPlayer(args, timeout = 15000) {
+  const bin = await getPythonBin();
+  const script = `${appHome()}/mods/company-music/player.py`;
+  const r = await exec(bin, [script, ...args], { timeout }).catch(() => null);
+  if (!r?.stdout) return null;
+  try {
+    return JSON.parse(r.stdout.trim().split("\n").pop());
+  } catch {
+    return null;
+  }
+}
+
+function formatTime(seconds) {
+  if (!seconds || isNaN(seconds) || seconds < 0) return "00:00";
+  const s = Math.floor(seconds);
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return `${h}:${remM.toString().padStart(2, "0")}:${rem.toString().padStart(2, "0")}`;
+  }
+  return `${m.toString().padStart(2, "0")}:${rem.toString().padStart(2, "0")}`;
+}
+
 const PRESETS = [
   { id: "somafm-chill", title: "SomaFM Groove Salad", desc: "Ambient & Downtempo", url: "https://ice2.somafm.com/groovesalad-128-mp3", tag: "Direct MP3" },
-  { id: "nightwave", title: "Nightwave Plaza", desc: "Vaporwave & City Pop", url: "https://stream.plaza.one/mp3", tag: "Direct MP3" },
+  { id: "nightwave", title: "Nightwave Plaza", desc: "Vaporwave & City Pop", url: "https://radio.plaza.one/mp3", tag: "Direct MP3" },
   { id: "defcon", title: "SomaFM DEF CON", desc: "Hacker Chiptune & Beats", url: "https://ice1.somafm.com/defcon-128-mp3", tag: "Direct MP3" },
   { id: "dronezone", title: "SomaFM Drone Zone", desc: "Ambient Space & Focus", url: "https://ice6.somafm.com/dronezone-128-mp3", tag: "Direct MP3" },
 ];
@@ -20,6 +63,12 @@ export default class CompanyMusic extends View {
     this.guideTab = window()?.platform === "windows" ? "windows" : window()?.platform === "macos" ? "macos" : "linux";
     this.installing = false;
     this.installMsg = null;
+    this.installSuccess = null;
+    this.history = shared("pixel-hq.music")?.history || [];
+    const curMusic = shared("pixel-hq.music");
+    if (curMusic?.error && curMusic.status !== "error") {
+      setShared("pixel-hq.music", { ...curMusic, error: null });
+    }
 
     this.urlInput = InputState.new({ placeholder: "Paste YouTube, SoundCloud, or direct audio stream URL..." });
     this.urlInput.on("submit", (_e, cx) => this.play(this.urlInput.value(), null, cx));
@@ -29,55 +78,74 @@ export default class CompanyMusic extends View {
     this.urlInput.focus();
 
     const setup = shared("pixel-hq.music-setup");
-    if (setup?.installing && (!setup.startedAt || Date.now() - setup.startedAt > 180000)) {
-      setShared("pixel-hq.music-setup", { installing: false, msg: null });
+    if (setup?.installing) {
+      if (!setup.startedAt || Date.now() - setup.startedAt > 180000) {
+        setShared("pixel-hq.music-setup", { installing: false, msg: null });
+      } else {
+        this.installing = true;
+        this.installMsg = setup.msg;
+      }
     }
 
     if (checking()) return;
 
     cx.timer.after(150, () => this.urlInput.focus());
     this.checkDeps(cx);
+    this.loadHistory(cx);
+    this.syncStatus(cx);
 
-    cx.timer.every(1500, async (cx) => {
+    cx.timer.every(1000, (cx) => {
       const music = shared("pixel-hq.music");
-      if (music?.status !== "buffering") return;
-      const script = `${appHome()}/mods/company-music/player.py`;
-      const candidates = window()?.platform === "windows" ? ["python", "python3", "py"] : ["python3", "python"];
-      for (const bin of candidates) {
-        const r = await exec(bin, [script, "status"], { timeout: 2500 }).catch(() => null);
-        if (!r?.stdout) continue;
-        try {
-          const res = JSON.parse(r.stdout.trim().split("\n").pop());
-          if (res.status === "playing" || res.status === "error") {
-            this.busy = false;
-            setShared("pixel-hq.music", res);
-            cx.notify();
-          }
-          break;
-        } catch {}
-      }
+      if (music?.playing) cx.notify();
+    });
+
+    cx.timer.every(2000, (cx) => {
+      const music = shared("pixel-hq.music");
+      if (music?.status !== "buffering" && !music?.playing) return;
+      this.syncStatus(cx);
     });
   }
 
-  async checkDeps(cx) {
-    const script = `${appHome()}/mods/company-music/player.py`;
-    const candidates = window()?.platform === "windows" ? ["python", "python3", "py"] : ["python3", "python"];
-    for (const bin of candidates) {
-      const r = await exec(bin, [script, "check"], { timeout: 4000 }).catch(() => null);
-      if (!r?.stdout) continue;
-      try {
-        const res = JSON.parse(r.stdout.trim().split("\n").pop());
-        this.depStatus = res;
-        this.showGuide = !res.has_player;
-        if (res.has_player) {
-          this.installing = false;
-          this.installMsg = null;
-          setShared("pixel-hq.music-setup", { installing: false, msg: null });
-        }
-        if (cx) cx.notify();
-        break;
-      } catch {}
+  async syncStatus(cx) {
+    const res = await runPlayer(["status"], 15000);
+    if (!res) return;
+    if (Array.isArray(res.history)) {
+      this.history = res.history;
     }
+    if (res.status === "playing" || res.status === "error" || res.status === "idle") {
+      this.busy = false;
+    }
+    setShared("pixel-hq.music", res);
+    if (cx) cx.notify();
+  }
+
+  async checkDeps(cx) {
+    const res = await runPlayer(["check"], 4000);
+    if (!res) return;
+    this.depStatus = res;
+    this.showGuide = !res.has_player;
+    if (res.has_player) {
+      this.installing = false;
+      this.installMsg = null;
+      setShared("pixel-hq.music-setup", { installing: false, msg: null });
+    }
+    if (cx) cx.notify();
+  }
+
+  async loadHistory(cx) {
+    const res = await runPlayer(["history"], 4000);
+    if (Array.isArray(res?.history)) {
+      this.history = res.history;
+      if (cx) cx.notify();
+    }
+  }
+
+  async clearHistory(cx) {
+    this.history = [];
+    const cur = shared("pixel-hq.music") || {};
+    setShared("pixel-hq.music", { ...cur, history: [] });
+    if (cx) cx.notify();
+    await runPlayer(["clear-history"], 4000);
   }
 
   async openTerminal(targetOs, cx) {
@@ -102,25 +170,102 @@ export default class CompanyMusic extends View {
     }
   }
 
+  async installYtDlpOnly(cx) {
+    if (this.installing) return;
+    this.installing = true;
+    this.installMsg = "Installing yt-dlp via pip (~3s)...";
+    this.installSuccess = null;
+    setShared("pixel-hq.music-setup", {
+      installing: true,
+      msg: this.installMsg,
+      startedAt: Date.now()
+    });
+    if (cx) cx.notify();
+
+    const isWin = window()?.platform === "windows" || this.depStatus?.platform === "win32";
+    const isMac = window()?.platform === "macos" || this.depStatus?.platform === "darwin";
+
+    let ok = false;
+    const pyCandidates = isWin ? ["python", "python3", "py"] : ["python3", "python"];
+    for (const py of pyCandidates) {
+      this.installMsg = `Running ${py} -m pip install yt-dlp...`;
+      if (cx) cx.notify();
+      const r = await exec(py, ["-m", "pip", "install", "--upgrade", "yt-dlp"], { timeout: 45000 }).catch(() => null);
+      if (r?.code === 0) {
+        ok = true;
+        break;
+      }
+    }
+
+    if (!ok) {
+      const pipCandidates = isWin ? ["pip", "pip3"] : ["pip3", "pip"];
+      for (const pip of pipCandidates) {
+        this.installMsg = `Running ${pip} install yt-dlp...`;
+        if (cx) cx.notify();
+        const r = await exec(pip, ["install", "--upgrade", "yt-dlp"], { timeout: 45000 }).catch(() => null);
+        if (r?.code === 0) {
+          ok = true;
+          break;
+        }
+      }
+    }
+
+    if (!ok && isMac) {
+      this.installMsg = "Running brew install yt-dlp...";
+      if (cx) cx.notify();
+      const r = await exec("brew", ["install", "yt-dlp"], { timeout: 90000 }).catch(() => null);
+      if (r?.code === 0) ok = true;
+    } else if (!ok && isWin) {
+      this.installMsg = "Running winget install yt-dlp...";
+      if (cx) cx.notify();
+      const r = await exec("winget", ["install", "yt-dlp.yt-dlp", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"], { timeout: 90000 }).catch(() => null);
+      if (r?.code === 0) ok = true;
+    }
+
+    this.installMsg = "Verifying yt-dlp installation...";
+    if (cx) cx.notify();
+    await this.checkDeps(cx);
+
+    this.installing = false;
+    setShared("pixel-hq.music-setup", { installing: false, msg: null });
+
+    if (this.depStatus?.has_ytdlp) {
+      this.error = null;
+      this.installSuccess = "yt-dlp installed successfully! Starting playback...";
+      if (cx) cx.notify();
+      const val = this.urlInput.value()?.trim();
+      if (val) {
+        cx.timer.after(600, () => this.play(val, null, cx));
+      }
+      cx.timer.after(4000, () => {
+        this.installSuccess = null;
+        if (cx) cx.notify();
+      });
+    } else {
+      this.error = "Could not install yt-dlp automatically. Click Open Terminal below to install manually.";
+      if (cx) cx.notify();
+    }
+  }
+
   async runAutoInstall(targetOs, cx) {
     if (this.installing) return;
 
     const detectedPlatform = window()?.platform || (this.depStatus?.platform === "win32" ? "windows" : this.depStatus?.platform === "darwin" ? "macos" : "linux");
     if (targetOs !== detectedPlatform) {
       this.installMsg = `Cannot run ${targetOs} package manager on ${detectedPlatform}. Switch to ${detectedPlatform} tab.`;
-      cx.notify();
+      if (cx) cx.notify();
       return;
     }
 
     this.installing = true;
-    this.installMsg = `Installing full dependencies (${targetOs === "windows" ? "FFmpeg + yt-dlp" : "ffmpeg + yt-dlp"})... Please wait`;
+    this.installMsg = "Installing dependencies... Please wait";
     setShared("pixel-hq.music-setup", {
       installing: true,
       msg: this.installMsg,
       targetOs,
       startedAt: Date.now()
     });
-    cx.notify();
+    if (cx) cx.notify();
 
     if (targetOs === "windows") {
       try {
@@ -130,15 +275,17 @@ export default class CompanyMusic extends View {
           await exec("winget", ["install", "Gyan.FFmpeg", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"], { timeout: 180000 }).catch(() => null);
         }
         if (!this.depStatus?.has_ytdlp) {
-          this.installMsg = "Installing yt-dlp (YouTube extractor)... Please wait";
+          this.installMsg = "Installing yt-dlp via pip...";
           if (cx) cx.notify();
-          await exec("winget", ["install", "yt-dlp.yt-dlp", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"], { timeout: 180000 }).catch(async () => {
-            const pyCandidates = ["python", "python3", "py"];
-            for (const py of pyCandidates) {
-              const r = await exec(py, ["-m", "pip", "install", "yt-dlp"], { timeout: 180000 }).catch(() => null);
-              if (r?.code === 0) break;
-            }
-          });
+          let ytdlpOk = false;
+          const pyCandidates = ["python", "python3", "py"];
+          for (const py of pyCandidates) {
+            const r = await exec(py, ["-m", "pip", "install", "--upgrade", "yt-dlp"], { timeout: 45000 }).catch(() => null);
+            if (r?.code === 0) { ytdlpOk = true; break; }
+          }
+          if (!ytdlpOk) {
+            await exec("winget", ["install", "yt-dlp.yt-dlp", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"], { timeout: 90000 }).catch(() => null);
+          }
         }
         this.installMsg = "Installation completed! Verifying dependencies...";
         await this.checkDeps(cx);
@@ -147,18 +294,40 @@ export default class CompanyMusic extends View {
       }
     } else if (targetOs === "macos") {
       try {
-        this.installMsg = "Installing ffmpeg and yt-dlp via Homebrew...";
-        if (cx) cx.notify();
-        await exec("brew", ["install", "ffmpeg", "yt-dlp"], { timeout: 180000 }).catch(() => null);
+        if (!this.depStatus?.has_player) {
+          this.installMsg = "Installing ffmpeg via Homebrew...";
+          if (cx) cx.notify();
+          await exec("brew", ["install", "ffmpeg"], { timeout: 180000 }).catch(() => null);
+        }
+        if (!this.depStatus?.has_ytdlp) {
+          this.installMsg = "Installing yt-dlp via pip...";
+          if (cx) cx.notify();
+          const r = await exec("python3", ["-m", "pip", "install", "--upgrade", "yt-dlp"], { timeout: 45000 }).catch(() => null);
+          if (r?.code !== 0) {
+            await exec("brew", ["install", "yt-dlp"], { timeout: 90000 }).catch(() => null);
+          }
+        }
+        this.installMsg = "Installation completed! Verifying dependencies...";
         await this.checkDeps(cx);
       } catch {
         this.installMsg = "Brew failed. Please use Open Terminal.";
       }
     } else if (targetOs === "linux") {
       try {
-        this.installMsg = "Installing ffmpeg and yt-dlp...";
-        if (cx) cx.notify();
-        await exec("sh", ["-c", "which apt-get && sudo apt-get update && sudo apt-get install -y ffmpeg yt-dlp || sudo dnf install -y ffmpeg yt-dlp || sudo pacman -S --noconfirm ffmpeg yt-dlp || python3 -m pip install yt-dlp"], { timeout: 180000 }).catch(() => null);
+        if (!this.depStatus?.has_player) {
+          this.installMsg = "Installing ffmpeg...";
+          if (cx) cx.notify();
+          await exec("sh", ["-c", "which apt-get && sudo apt-get update && sudo apt-get install -y ffmpeg || sudo dnf install -y ffmpeg || sudo pacman -S --noconfirm ffmpeg"], { timeout: 180000 }).catch(() => null);
+        }
+        if (!this.depStatus?.has_ytdlp) {
+          this.installMsg = "Installing yt-dlp via pip...";
+          if (cx) cx.notify();
+          const r = await exec("python3", ["-m", "pip", "install", "--upgrade", "yt-dlp"], { timeout: 45000 }).catch(() => null);
+          if (r?.code !== 0) {
+            await exec("sh", ["-c", "sudo apt-get install -y yt-dlp || sudo dnf install -y yt-dlp || sudo pacman -S --noconfirm yt-dlp"], { timeout: 90000 }).catch(() => null);
+          }
+        }
+        this.installMsg = "Installation completed! Verifying dependencies...";
         await this.checkDeps(cx);
       } catch {
         this.installMsg = "Install failed. Run in Terminal (sudo required).";
@@ -170,7 +339,7 @@ export default class CompanyMusic extends View {
       installing: false,
       msg: this.installMsg
     });
-    cx.notify();
+    if (cx) cx.notify();
   }
 
   async play(url, presetTitle, cx) {
@@ -179,104 +348,120 @@ export default class CompanyMusic extends View {
     this.busy = true;
     this.error = null;
 
+    const curMusic = shared("pixel-hq.music") || {};
+    const safeTitle = presetTitle ? presetTitle.replace(/["\r\n\\|]/g, " ").trim() : null;
+    const isExt = cleanUrl.includes("youtu") || cleanUrl.includes("soundcloud") || cleanUrl.includes("list=");
+    const finalTitle = isExt ? null : safeTitle;
+
     setShared("pixel-hq.music", {
+      ...curMusic,
       playing: false,
       status: "buffering",
-      title: presetTitle || "Buffering stream...",
+      title: safeTitle || "Buffering stream...",
       url: cleanUrl,
-      source: "direct"
+      error: null,
+      history: this.history && this.history.length > 0 ? this.history : (curMusic.history || [])
     });
     cx.notify();
 
-    const script = `${appHome()}/mods/company-music/player.py`;
-    const candidates = window()?.platform === "windows" ? ["python", "python3", "py"] : ["python3", "python"];
-    const args = presetTitle ? [script, "play", cleanUrl, presetTitle] : [script, "play", cleanUrl];
+    const args = finalTitle ? ["play", cleanUrl, finalTitle] : ["play", cleanUrl];
 
     let res = null;
-    for (const bin of candidates) {
-      const r = await exec(bin, args, { timeout: 35000 }).catch(() => null);
-      if (!r?.stdout) continue;
-      try {
-        res = JSON.parse(r.stdout.trim().split("\n").pop());
-        break;
-      } catch {}
-    }
+    try {
+      res = await runPlayer(args, 35000);
 
-    this.busy = false;
-    if (res?.status === "error") {
-      this.error = res.error;
-      setShared("pixel-hq.music", {
-        playing: false,
-        status: "error",
-        title: "",
-        url: cleanUrl,
-        error: res.error,
-        source: "direct"
-      });
-      if (res.error.includes("Neither ffplay nor mpv found")) {
-        this.showGuide = true;
+      if (res?.status === "error") {
+        this.error = res.error;
+        setShared("pixel-hq.music", {
+          ...curMusic,
+          playing: false,
+          status: "error",
+          title: "",
+          url: cleanUrl,
+          error: res.error,
+          source: "direct",
+          history: this.history && this.history.length > 0 ? this.history : (curMusic.history || [])
+        });
+        if (res.error.includes("Neither ffplay nor mpv found")) {
+          this.showGuide = true;
+        }
+      } else if (res) {
+        this.error = null;
+        if (Array.isArray(res.history)) {
+          this.history = res.history;
+        } else {
+          this.loadHistory(cx);
+        }
+        setShared("pixel-hq.music", {
+          ...res,
+          history: Array.isArray(res.history) ? res.history : (this.history || curMusic.history || [])
+        });
+      } else {
+        this.error = "Could not start audio player. Verify Python, ffplay or mpv is installed.";
+        setShared("pixel-hq.music", {
+          ...curMusic,
+          playing: false,
+          status: "error",
+          title: "",
+          url: cleanUrl,
+          error: this.error,
+          source: "direct",
+          history: this.history && this.history.length > 0 ? this.history : (curMusic.history || [])
+        });
       }
-    } else if (res) {
-      this.error = null;
-      setShared("pixel-hq.music", res);
-    } else {
-      this.error = "Could not start audio player. Verify Python, ffplay or mpv is installed.";
-      setShared("pixel-hq.music", {
-        playing: false,
-        status: "error",
-        title: "",
-        url: cleanUrl,
-        error: this.error,
-        source: "direct"
-      });
+    } finally {
+      this.busy = false;
+      if (cx) cx.notify();
     }
-    cx.notify();
   }
 
   async pause(cx) {
-    const script = `${appHome()}/mods/company-music/player.py`;
-    const candidates = window()?.platform === "windows" ? ["python", "python3", "py"] : ["python3", "python"];
-    for (const bin of candidates) {
-      const r = await exec(bin, [script, "pause"], { timeout: 4000 }).catch(() => null);
-      if (!r?.stdout) continue;
-      try {
-        const res = JSON.parse(r.stdout.trim().split("\n").pop());
-        setShared("pixel-hq.music", res);
-        break;
-      } catch {}
-    }
+    const res = await runPlayer(["pause"], 4000);
+    if (res) setShared("pixel-hq.music", res);
     cx.notify();
   }
 
   async resume(cx) {
-    const script = `${appHome()}/mods/company-music/player.py`;
-    const candidates = window()?.platform === "windows" ? ["python", "python3", "py"] : ["python3", "python"];
-    for (const bin of candidates) {
-      const r = await exec(bin, [script, "resume"], { timeout: 4000 }).catch(() => null);
-      if (!r?.stdout) continue;
-      try {
-        const res = JSON.parse(r.stdout.trim().split("\n").pop());
-        setShared("pixel-hq.music", res);
-        break;
-      } catch {}
-    }
+    const res = await runPlayer(["resume"], 4000);
+    if (res) setShared("pixel-hq.music", res);
     cx.notify();
   }
 
   async stop(cx) {
-    const script = `${appHome()}/mods/company-music/player.py`;
-    const candidates = window()?.platform === "windows" ? ["python", "python3", "py"] : ["python3", "python"];
-    for (const bin of candidates) {
-      const r = await exec(bin, [script, "stop"], { timeout: 4000 }).catch(() => null);
-      if (!r?.stdout) continue;
-      try {
-        const res = JSON.parse(r.stdout.trim().split("\n").pop());
-        setShared("pixel-hq.music", res);
-        break;
-      } catch {}
+    if (this.actionBusy) return;
+    this.actionBusy = true;
+    try {
+      const res = await runPlayer(["stop"], 4000);
+      if (res) setShared("pixel-hq.music", res);
+      this.error = null;
+      if (cx) cx.notify();
+    } finally {
+      this.actionBusy = false;
     }
-    this.error = null;
-    cx.notify();
+  }
+
+  async next(cx) {
+    if (this.actionBusy) return;
+    this.actionBusy = true;
+    try {
+      const res = await runPlayer(["next"], 20000);
+      if (res) setShared("pixel-hq.music", res);
+      if (cx) cx.notify();
+    } finally {
+      this.actionBusy = false;
+    }
+  }
+
+  async prev(cx) {
+    if (this.actionBusy) return;
+    this.actionBusy = true;
+    try {
+      const res = await runPlayer(["prev"], 20000);
+      if (res) setShared("pixel-hq.music", res);
+      if (cx) cx.notify();
+    } finally {
+      this.actionBusy = false;
+    }
   }
 
   renderSetupGuide(t) {
@@ -644,6 +829,15 @@ export default class CompanyMusic extends View {
     const isBuffering = music.status === "buffering" || this.busy;
     const isPaused = music.status === "paused";
     const currentTitle = music.title || (isPlaying ? "Audio Stream" : "No stream playing");
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const pauseElapsed = Number(music.elapsed || 0);
+    const liveElapsed = isPlaying && music.startTime
+      ? pauseElapsed + Math.max(0, nowSec - music.startTime)
+      : Number(music.currentElapsed || pauseElapsed);
+    const dur = Number(music.duration || 0);
+    const percent = dur > 0 ? Math.min(100, Math.max(0, Math.round((liveElapsed / dur) * 100))) : 0;
+
     const missingPlayer = Boolean(this.depStatus && !this.depStatus.has_player);
     const missingYtDlp = Boolean(this.depStatus && !this.depStatus.has_ytdlp);
     const rawError = this.error || music.error;
@@ -765,43 +959,75 @@ export default class CompanyMusic extends View {
               )
           )
       )
-      .when(Boolean(activeError), (el) =>
+      .when(Boolean(this.installSuccess), (el) =>
+        el.child(
+          h_flex()
+            .w_full()
+            .px(10)
+            .py(7)
+            .rounded(6)
+            .bg("#a6e3a122")
+            .border_1()
+            .border_color("#a6e3a155")
+            .gap(6)
+            .items_center()
+            .child(div().text_size(11).child("✓"))
+            .child(div().font_bold().text_size(10.5).text_color("#a6e3a1").child(this.installSuccess))
+        )
+      )
+      .when(Boolean(activeError || this.installing), (el) =>
         el.child(
           v_flex()
             .w_full()
             .px(10)
             .py(8)
             .rounded(6)
-            .bg("#f38ba822")
+            .bg(this.installing ? "#f9e2af1a" : "#f38ba822")
             .border_1()
-            .border_color("#f38ba855")
+            .border_color(this.installing ? "#f9e2af44" : "#f38ba855")
             .gap(4)
             .child(
               h_flex()
                 .gap(6)
                 .items_center()
-                .child(div().text_size(11).child("⚠️"))
-                .child(div().font_bold().text_size(11).text_color("#f38ba8").child("Audio Player Error"))
+                .child(div().text_size(11).child(this.installing ? "⏳" : "⚠️"))
+                .child(div().font_bold().text_size(11).text_color(this.installing ? "#f9e2af" : "#f38ba8").child(this.installing ? "Installing Audio Extractor..." : "Audio Player Error"))
                 .child(div().flex_1())
-                .when(Boolean(activeError && activeError.includes("yt-dlp")), (headEl) =>
+                .when(Boolean((activeError && activeError.includes("yt-dlp")) || this.installing), (headEl) =>
                   headEl.child(
                     div()
-                      .cursor_pointer()
-                      .px(6)
-                      .py(1)
-                      .rounded(3)
-                      .bg("#89b4fa22")
-                      .border_1()
-                      .border_color("#89b4fa55")
-                      .text_size(10)
-                      .font_semibold()
-                      .text_color("#89b4fa")
-                      .hover((s) => s.bg("#89b4fa44"))
-                      .on_click((_e, cx) => this.runAutoInstall(this.guideTab, cx))
-                      .child("⚡ Install yt-dlp")
+                      .when(this.installing, (b) =>
+                        b
+                          .px(7)
+                          .py(2)
+                          .rounded(3)
+                          .bg("#313244")
+                          .border_1()
+                          .border_color("#45475a")
+                          .text_size(10)
+                          .font_semibold()
+                          .text_color("#f9e2af")
+                          .child("⏳ Installing yt-dlp...")
+                      )
+                      .when(!this.installing, (b) =>
+                        b
+                          .cursor_pointer()
+                          .px(6)
+                          .py(1)
+                          .rounded(3)
+                          .bg("#89b4fa22")
+                          .border_1()
+                          .border_color("#89b4fa55")
+                          .text_size(10)
+                          .font_semibold()
+                          .text_color("#89b4fa")
+                          .hover((s) => s.bg("#89b4fa44"))
+                          .on_click((_e, cx) => this.installYtDlpOnly(cx))
+                          .child("⚡ Install yt-dlp")
+                      )
                   )
                 )
-                .when(missingPlayer, (headEl) =>
+                .when(missingPlayer && !this.installing, (headEl) =>
                   headEl.child(
                     div()
                       .cursor_pointer()
@@ -821,7 +1047,17 @@ export default class CompanyMusic extends View {
                   )
                 )
             )
-            .child(div().text_size(10.5).text_color("#eba0ac").child(activeError))
+            .when(this.installing, (bodyEl) =>
+              bodyEl.child(
+                h_flex()
+                  .gap(6)
+                  .items_center()
+                  .child(div().text_size(10.5).font_medium().text_color("#f9e2af").child(this.installMsg || "Installing yt-dlp via pip (~3s)... Please wait"))
+              )
+            )
+            .when(!this.installing, (bodyEl) =>
+              bodyEl.child(div().text_size(10.5).text_color("#eba0ac").child(activeError || ""))
+            )
         )
       )
       .child(
@@ -887,10 +1123,101 @@ export default class CompanyMusic extends View {
                   )
               )
           )
+          .when(isPlaying || isPaused || isBuffering, (el) =>
+            el.child(
+              v_flex()
+                .w_full()
+                .gap(5)
+                .when(dur > 0, (bar) =>
+                  bar.child(
+                    div()
+                      .w_full()
+                      .h(4)
+                      .rounded(2)
+                      .bg("#1e1e2e")
+                      .overflow_hidden()
+                      .child(
+                        div()
+                          .h_full()
+                          .rounded(2)
+                          .bg(isPlaying ? "#89b4fa" : "#585b70")
+                          .w(`${Math.max(1, percent)}%`)
+                      )
+                  )
+                )
+                .child(
+                  h_flex()
+                    .w_full()
+                    .items_center()
+                    .justify_between()
+                    .child(
+                      h_flex()
+                        .gap(5)
+                        .items_center()
+                        .child(div().text_size(9.5).child("⏱"))
+                        .child(
+                          div()
+                            .text_size(10)
+                            .font_family(MONO)
+                            .font_semibold()
+                            .text_color(isPlaying ? "#cdd6f4" : t.dim)
+                            .child(
+                              dur > 0
+                                ? `${formatTime(liveElapsed)} / ${formatTime(dur)}`
+                                : `${formatTime(liveElapsed)} (Streaming)`
+                            )
+                        )
+                    )
+                    .when(dur > 0, (pct) =>
+                      pct.child(
+                        div()
+                          .text_size(9.5)
+                          .font_family(MONO)
+                          .font_semibold()
+                          .text_color(isPlaying ? "#89b4fa" : t.dim)
+                          .child(`${percent}%`)
+                      )
+                    )
+                    .when(dur <= 0, (tag) =>
+                      tag.child(
+                        div()
+                          .px(4)
+                          .py(1)
+                          .rounded(2)
+                          .bg("#313244")
+                          .text_size(8.5)
+                          .font_family(MONO)
+                          .text_color("#89b4fa")
+                          .child("LIVE")
+                      )
+                    )
+                )
+            )
+          )
           .child(
             h_flex()
               .gap(8)
               .items_center()
+              .when(isPlaying || isPaused, (el) =>
+                el.child(
+                  div()
+                    .h(26)
+                    .px(8)
+                    .rounded(4)
+                    .bg("#313244")
+                    .cursor_pointer()
+                    .flex()
+                    .items_center()
+                    .text_size(11)
+                    .font_family(MONO)
+                    .font_semibold()
+                    .text_color("#cdd6f4")
+                    .hover((s) => s.bg("#45475a"))
+                    .tooltip("Bài trước / Đài trước (Previous)")
+                    .on_click((_e, cx) => this.prev(cx))
+                    .child("⏮ Prev")
+                )
+              )
               .when(isPlaying, (el) =>
                 el.child(
                   div()
@@ -950,7 +1277,148 @@ export default class CompanyMusic extends View {
                     .child("⏹ Stop")
                 )
               )
+              .when(isPlaying || isPaused, (el) =>
+                el.child(
+                  div()
+                    .h(26)
+                    .px(8)
+                    .rounded(4)
+                    .bg("#313244")
+                    .cursor_pointer()
+                    .flex()
+                    .items_center()
+                    .text_size(11)
+                    .font_family(MONO)
+                    .font_semibold()
+                    .text_color("#cdd6f4")
+                    .hover((s) => s.bg("#45475a"))
+                    .tooltip("Bài kế tiếp / Đài kế tiếp (Next)")
+                    .on_click((_e, cx) => this.next(cx))
+                    .child("⏭ Next")
+                )
+              )
           )
+      )
+      .when(Boolean(this.history && this.history.length > 0), (el) =>
+        el.child(
+          v_flex()
+            .gap(4)
+            .w_full()
+            .child(
+              h_flex()
+                .w_full()
+                .items_center()
+                .justify_between()
+                .child(
+                  div()
+                    .font_family(MONO)
+                    .text_size(10)
+                    .font_bold()
+                    .text_color(t.dim)
+                    .child(`RECENTLY PLAYED (${this.history.length})`)
+                )
+                .child(
+                  div()
+                    .cursor_pointer()
+                    .px(6)
+                    .py(1)
+                    .rounded(3)
+                    .text_size(9.5)
+                    .font_family(MONO)
+                    .text_color(t.dim)
+                    .hover((s) => s.text_color("#f38ba8"))
+                    .on_click((_e, cx) => this.clearHistory(cx))
+                    .child("✕ Clear")
+                )
+            )
+            .children(
+              this.history.map((h, i) => {
+                const active = music.url === h.url;
+                const isPl = h.type === "playlist";
+                const isYt = h.type === "youtube";
+                const badgeColor = isPl ? "#cba6f7" : isYt ? "#f38ba8" : "#89b4fa";
+                const badgeText = isPl ? "PLAYLIST" : isYt ? "YOUTUBE" : "STREAM";
+                const icon = isPl ? "📻" : isYt ? "🎬" : "🎵";
+
+                return h_flex()
+                  .id(`history-item-${i}`)
+                  .w_full()
+                  .h(34)
+                  .px(8)
+                  .gap(8)
+                  .items_center()
+                  .justify_between()
+                  .rounded(6)
+                  .bg(active ? "#313244" : "#11111b")
+                  .border_1()
+                  .border_color(active ? "#89b4fa" : "#313244")
+                  .cursor_pointer()
+                  .hover((s) => s.border_color("#89b4fa"))
+                  .on_click((_e, cx) => {
+                    this.urlInput.set_value(h.url);
+                    const isMedia = h.type === "playlist" || h.type === "youtube" || h.type === "soundcloud";
+                    this.play(h.url, isMedia ? null : h.title, cx);
+                  })
+                  .child(
+                    h_flex()
+                      .gap(6)
+                      .items_center()
+                      .min_w(0)
+                      .flex_1()
+                      .child(
+                        div()
+                          .px(5)
+                          .py(1)
+                          .rounded(3)
+                          .bg(`${badgeColor}22`)
+                          .border_1()
+                          .border_color(`${badgeColor}55`)
+                          .text_size(8.5)
+                          .font_family(MONO)
+                          .font_bold()
+                          .text_color(badgeColor)
+                          .child(`${icon} ${badgeText}`)
+                      )
+                      .child(
+                        v_flex()
+                          .gap(1)
+                          .min_w(0)
+                          .flex_1()
+                          .child(
+                            div()
+                              .font_semibold()
+                              .text_size(11)
+                              .text_color(active ? "#89b4fa" : t.foreground)
+                              .truncate()
+                              .child(h.title || h.url)
+                          )
+                          .child(
+                            div()
+                              .text_size(9)
+                              .font_family(MONO)
+                              .text_color(t.dim)
+                              .truncate()
+                              .child(h.url)
+                          )
+                      )
+                  )
+                  .child(
+                    div()
+                      .px(6)
+                      .py(2)
+                      .rounded(3)
+                      .bg(active && isPlaying ? "#a6e3a122" : "#181825")
+                      .border_1()
+                      .border_color(active && isPlaying ? "#a6e3a155" : "#313244")
+                      .text_size(9)
+                      .font_family(MONO)
+                      .font_semibold()
+                      .text_color(active && isPlaying ? "#a6e3a1" : "#cdd6f4")
+                      .child(active && isPlaying ? "● PLAYING" : "▶ Play")
+                  );
+              })
+            )
+        )
       )
       .child(
         v_flex()

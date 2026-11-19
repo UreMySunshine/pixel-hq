@@ -22225,6 +22225,9 @@ declare module "herdr" {
   export function home(): string;
   /** The app's folder (`~/.config/herdr-app`, or `$HERDR_APP_HOME`): settings.json, keys.json, layouts/. */
   export function appHome(): string;
+  /** True while `herdr-app check` loads this mod: `init()` runs for real there
+   *  (exec and writeTextFile included), so guard process side effects. */
+  export function checking(): boolean;
 
   /** Reads UTF-8 text (up to 1 MiB), or null if absent. Runs off the UI thread.
    *  `on`: from that machine (a space's `machine`). */
