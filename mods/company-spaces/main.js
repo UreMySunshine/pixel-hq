@@ -31,7 +31,7 @@ function place(s, ps) {
   return ps.find((p) => tabs.has(p.tab) && p.cwd)?.cwd || s.folder;
 }
 // A space is one floor: a small pixel room, the name, the branch and who is aboard, and a status dot.
-// A worktree's stop sits on its repo's line, on a second rail that branches from the main one.
+// A worktree's stop sits on its repo's line, wearing the branch glyph in its own color.
 const CARD = 66;
 const RAIL_CELL = 32;
 // The tile has three desks: the most urgent agents get them, the rest are counted.
@@ -116,10 +116,6 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [], 
     .child(div().absolute().left(8).top(0).w(4).h(end).bg(line))
     .child(div().absolute().left(8).top(0).w(1).h(end).bg("#ffffff66"))
     .children(sleepers)
-    // A worktree's track hangs off the main line: a second rail behind it, joined at the row's top.
-    .when(tree, (el) => el
-      .child(div().absolute().left(14).top(0).w(2).h(c - 7).bg(tint))
-      .child(div().absolute().left(8).top(0).w(8).h(2).bg(tint)))
     .when(stop === "station" && (here || blocked), (el) => el.child(div().absolute().left(0).top(c - 10).w(20).h(20).children(pix(blocked ? "#f38ba8" : "#f9e2af", 20, 20))
       .loop("opacity", { from: 0.4, to: 0.9, period: blocked ? 800 : 1800, easing: "ease-in-out" })))
     .when(stop === "station", (el) => el.child(node
