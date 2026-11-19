@@ -62,6 +62,11 @@ export default class WorkspaceStatus extends View {
       .children(notch(color + "aa", soften(color)))
       .child(div().flex_none().size(4).bg(color))
       .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(deepen(color)).child(text));
+    // A count that opens the matching list of agents, as the needs-you chip does.
+    const listPill = (status, color, text, count, what) => div().id(`status-${status}`).cursor_pointer().rounded(6).px(4).hover(s => s.bg(t.hover))
+      .tooltip(`Open the ${what} agents`)
+      .on_click(() => openOverlay({ mod: "company-agents", kind: "popup", width: 340, height: Math.min(440, Math.max(150, 52 + count * 56)), props: { agentList: status } }))
+      .child(plate(color, text));
     const mark = (icon, text) => h_flex().gap(5).items_center().child(icon)
       .child(div().font_family(MONO).text_size(9.5).child(text));
     const sep = () => div().flex_none().w(1).h(11).bg(t.surface);
@@ -96,13 +101,13 @@ export default class WorkspaceStatus extends View {
             .child(div().font_bold().text_size(11).child(pillText))
         );
       })
-      .when(n("working") > 0, el => el.child(plate(working, `${n("working")} typing`)))
+      .when(n("working") > 0, el => el.child(listPill("working", working, `${n("working")} typing`, n("working"), "typing")))
       .when(n("blocked") > 0, el => el.child(div().id("needs-you-pill").cursor_pointer().rounded(6).px(4).hover(s => s.bg(t.hover))
         .tooltip("Open the needs-you list")
         .on_click(() => openOverlay({ mod: "company-agents", kind: "popup", width: 340, height: Math.min(440, Math.max(150, 52 + n("blocked") * 56)), props: { needsYou: true } }))
         .child(plate(blocked, `${n("blocked")} ${n("blocked") === 1 ? "needs" : "need"} you`))))
-      .when(n("done") > 0, el => el.child(plate(done, `${n("done")} shipped`)))
-      .when(rest > 0, el => el.child(plate(idle, `${rest} on break`)))
+      .when(n("done") > 0, el => el.child(listPill("done", done, `${n("done")} shipped`, n("done"), "shipped")))
+      .when(rest > 0, el => el.child(listPill("idle", idle, `${rest} on break`, rest, "on break")))
       .child(div().flex_1())
       .child(h_flex().id("palette").relative().h(15).pl(5).pr(5).items_center().cursor_pointer()
         .children(notch(t.raised, soften(t.raised)))

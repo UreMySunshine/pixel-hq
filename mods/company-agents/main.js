@@ -69,6 +69,20 @@ function title(tab, l) {
   const telling = live && live !== prog && !/^[~/]|^[A-Za-z]:\\/.test(live) && !live.includes("@") && live.toLowerCase() !== l?.program?.key;
   return (tab.name === prog || !tab.named) && telling ? live : tab.name;
 }
+
+// A row's name: the tab's title, or the agent's own word when several share a tab.
+function namerFor(rows) {
+  const leads = leadPanes(panes());
+  const tabs = new Map(spaces().flatMap((s) => s.tabs).map((tab) => [tab.id, tab]));
+  const tabCounts = new Map();
+  for (const a of rows) tabCounts.set(a.tab, (tabCounts.get(a.tab) ?? 0) + 1);
+  return (a) => {
+    const tab = tabs.get(a.tab);
+    const many = (tabCounts.get(a.tab) ?? 0) > 1;
+    const label = tab ? title(many ? { ...tab, named: false } : tab, many ? a : leads.get(a.tab)) : (clean(a.title) || a.program?.name || a.tab_name || a.address);
+    return /^\d+$/.test(label) ? (a.program?.name || label) : label;
+  };
+}
 const RANK = { blocked: 4, done: 3, working: 2, idle: 1 };
 // A sub-agent without a pane isn't in agents(): its raw word, error counting as
 // blocked. It's never done: it reports to its parent, and the parent's done is the news.
@@ -514,17 +528,7 @@ export default class Agents extends View {
         return a.seq - b.seq;
       });
     const mono = "JetBrains Mono";
-    const paneList = panes();
-    const leads = leadPanes(paneList);
-    const tabs = new Map(spaces().flatMap((s) => s.tabs).map((tab) => [tab.id, tab]));
-    const tabCounts = new Map();
-    for (const a of waiting) tabCounts.set(a.tab, (tabCounts.get(a.tab) ?? 0) + 1);
-    const nameOf = (a) => {
-      const tab = tabs.get(a.tab);
-      const many = (tabCounts.get(a.tab) ?? 0) > 1;
-      const label = tab ? title(many ? { ...tab, named: false } : tab, many ? a : leads.get(a.tab)) : (clean(a.title) || a.program?.name || a.tab_name || a.address);
-      return /^\d+$/.test(label) ? (a.program?.name || label) : label;
-    };
+    const nameOf = namerFor(waiting);
     return v_flex()
       .w_full()
       .p(6)
@@ -557,6 +561,46 @@ export default class Agents extends View {
             .child(div().truncate().text_size(10.5).text_color(t.muted).child(sub)))
           .child(div().flex_none().text_size(14).text_color("#89b4fa").child("→"));
       }));
+  }
+
+  // The status chips open the same kind of list for the states other than "needs you".
+  agentList(t, status) {
+    const mono = "JetBrains Mono";
+    const rows = agents().filter((a) => a.status === status).sort((a, b) => a.seq - b.seq);
+    const nameOf = namerFor(rows);
+    const HEADS = {
+      working: ["TYPING", t.working ?? "#89b4fa", "typing"],
+      done: ["SHIPPED", t.done ?? "#8ec07c", "shipped"],
+      idle: ["ON BREAK", t.idle ?? t.dim, "on break"],
+    };
+    const [head, color, word] = HEADS[status] ?? [status.toUpperCase(), t.dim, status];
+    return v_flex()
+      .w_full()
+      .p(6)
+      .bg(t.popover)
+      .overflow_y_scrollbar()
+      .child(h_flex().px(6).pt(2).pb(6).gap(8).items_center()
+        .child(div().font_family(mono).font_bold().text_size(10).text_color(color).child(head))
+        .when(rows.length > 0, (el) => el.child(div().text_size(10).text_color(t.dim).child(`${rows.length} ${word}`))))
+      .when(rows.length === 0, (el) => el.child(div().px(10).py(18).text_size(12).text_color(t.dim).child("Nobody is in this state right now.")))
+      .children(rows.map((a) => h_flex()
+        .id(`al-${a.address}`)
+        .h(52)
+        .px(6)
+        .gap(8)
+        .rounded(8)
+        .items_center()
+        .cursor_pointer()
+        .hover((s) => s.bg(t.hover))
+        .on_click(() => {
+          run("pane.focus", { pane: a.pane });
+          closeOverlay(props().overlay);
+        })
+        .child(div().flex_none().child(figureFor(a.space_name, status, 34, 0, speciesOf(progOf(a)))))
+        .child(v_flex().flex_1().min_w(0).gap(1)
+          .child(div().truncate().text_size(12.5).text_color(t.foreground).child(nameOf(a)))
+          .child(div().truncate().text_size(10.5).text_color(t.muted).child([a.space_name, a.program?.name].filter(Boolean).join(" · "))))
+        .child(div().flex_none().text_size(14).text_color("#89b4fa").child("→"))));
   }
 
   peek(addr) {
@@ -1129,6 +1173,7 @@ export default class Agents extends View {
     const t = theme();
     if (props()?.sortMenu) return this.sortMenu(t);
     if (props()?.needsYou) return this.needsYou(t);
+    if (props()?.agentList) return this.agentList(t, props().agentList);
     if (this.editor) return this.editor.render(cx);
     const dismissed = shared("pixel-hq.dismissed-version") || localStorage.getItem("upd-dismissed");
     if (this.update && dismissed === String(this.update.version)) {
