@@ -59,6 +59,13 @@ const soften = (c, k = 0.3) => {
   const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
   return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
 };
+// A strong color pushed toward ink: keeps the hue, reads as a dark solid.
+const deepen = (c, k = 0.65) => {
+  const to = "#1d1e3e";
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
+};
 // The line head is a platform: a dark canopy by night, a pale one by day.
 const HEADBAR = () => (day() ? "#d6d1ea" : "#181825");
 // One floor of the building, cut away: the room's wall, windows, moon or sun, LED screen and floor, by time of day.
@@ -504,38 +511,55 @@ export default class Spaces extends View {
       const folded = this.folded.has(m);
       const line = connected ? LINES[n % LINES.length] : t.dim;
       const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t, line));
+      // The plate is a lit sign: a dark line-colored face with light lettering by day, the
+      // The plate is a light sign by day and a dark one by night, so it stands off the wall in
+      // either theme. A band of the line's color runs down its left edge and carries the
+      // machine's initial; the rest of the face is left to the name and the stop count.
+      const plateFace = day() ? "#faf9fc" : "#1c1e2b";
+      const plateFrame = day() ? deepen(line, 0.35) : line;
+      const plateInk = day() ? "#1d1e3e" : "#fdfcff";
+      const plateDim = day() ? "#1d1e3e99" : "#ffffffa6";
       const bullet = div().relative().w(20).h(20).flex_none()
-        .child(div().absolute().left(-2).top(-2).children(pix(line + "3d", 24, 24)).loop("opacity", { from: 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
-        .children(pix(line, 20, 20))
+        .child(div().absolute().left(-2).top(-2).children(pix("#ffffff2e", 24, 24)).loop("opacity", { from: 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
         .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(10).text_color(day() ? "#ffffff" : "#11111b")
           .child([...(m ?? "this computer")][0].toUpperCase()));
       const icon = svg(`mods/workspace-chrome/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
       const badge = div().absolute().right(-3).bottom(-2).size(6).rounded(3).border_1().border_color(t.chrome).bg(connected ? t.ansi2 : t.dim);
       // One plate spans the platform, hung from the canopy by two rods: the badge and the line's
-      // name at the left, the stop count and the fold mark at the right.
+      // name at the left, the stop count and the fold mark at the right. A foot band in the
+      // opposite tone runs along the bottom, so the sign reads as a lit panel rather than a card.
+      const metal = day() ? "#8d86b4" : "#3a3f5c";
       const sign = h_flex().relative().absolute().left(20).right(20).top(15).h(34).pl(7).pr(8).gap(7).items_center()
-        .child(div().absolute().left(24).top(-3).w(2).h(3).bg(day() ? "#8d86b4" : "#3a3f5c"))
-        .child(div().absolute().right(24).top(-3).w(2).h(3).bg(day() ? "#8d86b4" : "#3a3f5c"))
+        .child(div().absolute().left(24).top(-3).w(2).h(3).bg(metal))
+        .child(div().absolute().right(24).top(-3).w(2).h(3).bg(metal))
+        .child(div().absolute().left(23).top(-1).w(4).h(2).bg(metal))
+        .child(div().absolute().right(23).top(-1).w(4).h(2).bg(metal))
         .children([
           ...notch(day() ? "#00000026" : "#00000055", [2, 0, 2, 0]),
-          ...notch(line, [0, 2, 0, 2]),
-          ...notch(day() ? "#faf9fc" : "#1c1e2b", [2, 4, 2, 4]),
+          ...notch(plateFrame, [0, 2, 0, 2]),
+          ...notch(plateFace, [2, 4, 2, 4]),
+          div().absolute().left(2).right(4).top(0).h(1).bg("#ffffff59"),
+          div().absolute().left(2).right(4).bottom(2).h(1).bg("#00000040"),
+          // The band follows the fill's notched left corner; a rule sets it off from the face.
+          div().absolute().left(4).top(2).bottom(4).w(28).bg(line),
+          div().absolute().left(2).top(4).bottom(6).w(30).bg(line),
+          div().absolute().left(32).top(2).bottom(4).w(1).bg(day() ? "#00000026" : "#ffffff33"),
         ])
         .child(bullet)
         .child(v_flex().flex_1().min_w(0).gap(1).justify_center()
-          .child(div().min_w(0).truncate().font_family(MONO).font_bold().text_size(9.5).text_color(connected ? t.foreground : t.dim)
+          .child(div().min_w(0).truncate().font_family(MONO).font_bold().text_size(9.5).text_color(connected ? plateInk : plateDim)
             .when(!renaming, el => el.child(`${(m ?? "this computer").toUpperCase()} LINE`))
-            .when(renaming, el => el.child(Input.new(this.renaming.input).h(18).text_size(10).font_family(MONO).text_color(t.foreground))))
-          .when(!connected && !rebuilt && !login, el => el.child(div().flex_none().font_family(MONO).text_size(8.5).text_color(t.dim).child((machine?.state ?? "asleep").replace(/_/g, " "))))
+            .when(renaming, el => el.child(Input.new(this.renaming.input).h(18).text_size(10).font_family(MONO).text_color(plateInk))))
+          .when(!connected && !rebuilt && !login, el => el.child(div().flex_none().font_family(MONO).text_size(8.5).text_color(plateDim).child((machine?.state ?? "asleep").replace(/_/g, " "))))
           .when(rebuilt, el => el.child(h_flex().gap(3).items_center().font_family(MONO).text_size(8.5)
-            .child(div().max_w(90).truncate().text_color(t.dim).child(repair?.error || "rebuilt ·"))
-            .child(div().id(`machine-connect-${m}`).flex_none().text_color(repair?.error ? t.blocked : t.muted)
-              .hover(s => s.text_color(t.foreground))
+            .child(div().max_w(90).truncate().text_color(repair?.error ? t.blocked : plateDim).child(repair?.error || "rebuilt ·"))
+            .child(div().id(`machine-connect-${m}`).flex_none().text_color(repair?.error ? t.blocked : plateDim)
+              .hover(s => s.text_color(plateInk))
               .tooltip(repair?.error || "This machine was rebuilt or replaced. Click to connect to the new one.")
               .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(machine, cx); })
               .child(repair?.busy ? "Connecting…" : "Connect")))))
-        .child(div().flex_none().font_family(MONO).font_bold().text_size(9).text_color(t.dim).child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
-        .child(svg(`mods/workspace-chrome/chevron-${folded ? "right" : "down"}.svg`).size(10).flex_none());
+        .child(div().flex_none().font_family(MONO).font_bold().text_size(9).text_color(plateDim).child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
+        .child(svg(`mods/workspace-chrome/chevron-${folded ? "right" : "down"}.svg`).size(10).flex_none().text_color(plateDim));
       const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 72).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
         .when(collapsed, el => el.mt(4).w(RAIL_CELL).justify_center().rounded(6).tooltip(login ? `${m} needs a login: run ${login}. Click for Copy.` : m ? `${m} · ${connected ? "connected" : (machine?.state ?? "asleep").replace(/_/g, " ")}` : "This computer"))
         .when(collapsed, el => el.cursor_pointer())
