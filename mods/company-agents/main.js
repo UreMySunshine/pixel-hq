@@ -95,7 +95,7 @@ function duration(ms) {
 const modelOf = (ctx) => (ctx.model ? [ctx.model, ctx.effort].filter(Boolean).join(" · ") : ctx.effort ? `effort ${ctx.effort}` : "");
 const vitalsTip = (ctx) => [ctx.pct != null ? `Context ${ctx.pct}% used` : null, ctx.quota != null ? `${ctx.quota}% of the quota window left` : null, modelOf(ctx)].filter(Boolean).join(" · ");
 
-// HP is the context fill, SP the quota window left; both read the labels the status line writes.
+// The HP bar is the context fill, read from the label the status line writes.
 function thinBar(t, pct, color, width) {
   const fill = pct > 0 ? Math.max(2, Math.round((width * pct) / 100)) : 0;
   const halo = (c) => div().absolute().left(-1).right(-1).top(-2).bottom(-2).rounded(3).bg(c);
@@ -104,10 +104,8 @@ function thinBar(t, pct, color, width) {
       .when(fill > 0, (el) => el.child(halo(color + "40"))));
 }
 const hpColor = (t, pct) => (pct >= 80 ? t.ansi1 : pct >= 60 ? t.ansi3 : t.ansi2);
-const spColor = (t, left) => (left <= 10 ? t.ansi1 : left <= 30 ? t.ansi3 : "#89b4fa");
 const vitalsBars = (t, ctx, id, width) => v_flex().id(id).gap(2)
-  .when(ctx.pct != null, (el) => el.child(thinBar(t, ctx.pct, hpColor(t, ctx.pct), width)))
-  .when(ctx.quota != null, (el) => el.child(thinBar(t, ctx.quota, spColor(t, ctx.quota), width)));
+  .when(ctx.pct != null, (el) => el.child(thinBar(t, ctx.pct, hpColor(t, ctx.pct), width)));
 
 // Reads the Antigravity transcript for a workspace: the last conversation the CLI logged for it, then the last
 // usage line with token counts. Pure file reads through the mod's own file API, so it behaves the same on every
@@ -1401,10 +1399,10 @@ export default class Agents extends View {
     };
     const scales = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42];
     const base = scales.map((s) => plan(s, 0));
-    // The bars draw only on desks wide enough for them; reserve their height so the row below stays clear.
+    // The bar draws only on desks wide enough for it; reserve its height so the row below stays clear.
     const withVitals = list.some((a) => contextOf.get(a.address));
     const vitalsOn = withVitals && (base.find((p) => p.cols * p.rows >= nAgents) ?? base[base.length - 1]).cw >= 90;
-    const P0 = scales.map((s) => plan(s, vitalsOn ? 11 : 0));
+    const P0 = scales.map((s) => plan(s, vitalsOn ? 6 : 0));
     const pick = P0.find((p) => p.cols * p.rows >= nAgents) ?? P0[P0.length - 1];
     const S = pick.sc, PET = pick.P, petW = pick.pw, cellW = pick.cw, cellH = pick.ch;
     const kk = (v) => Math.round(v * S);
@@ -1573,7 +1571,7 @@ export default class Agents extends View {
         .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); openFigures(a.space_name); })
         .tooltip(`${a.program?.name ?? ""} · ${isUrge ? `idle for ${duration(waited)} · click to focus` : isSnooze ? `snoozing (${duration(waited)}) · click to focus` : a.status} · ${text}${branch ? ` · ${branch}` : ""}${clTip ? ` · ${clTip}` : ""}${ctx ? ` · ${vitalsTip(ctx)}` : ""} · drag to move`)
         .child(seat)
-        // HP and SP sit between the desk and its nameplate.
+        // The context bar sits between the desk and its nameplate.
         .when(ctx != null && cellW >= 90, (el) => el.child(div().mt(2).max_w(Math.max(petW + 22, cellW - 4)).child(vitalsBars(t, ctx, `farm-vitals-${a.address}`, Math.max(petW + 22, cellW - 4)))))
         // Fixed height, so a desk never grows past the band `ch` reserves for its nameplate.
         .child(div().relative().mt(4).h(18).max_w(Math.max(petW + 22, cellW - 4)).pl(6).pr(8).flex().items_center()
