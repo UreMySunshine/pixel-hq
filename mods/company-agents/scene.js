@@ -22,7 +22,7 @@ function ellipse(cx, cy, rx, ry, c) {
 const LIGHTS = ["#f4723a", "#f9d23c", "#8fcb4f", "#37c5d6", "#c678dd", "#f38ba8"];
 const LIGHTS_DAY = ["#fab387", "#f9e2af", "#a6e3a1", "#89dceb", "#cba6f7", "#f38ba8"]; // Catppuccin Mocha pastels
 const CODE = ["#cba6f7", "#89b4fa", "#a6e3a1", "#f9e2af", "#f5c2e7", "#94e2d5"]; // keyword, function, string, class, tag, type
-function ledWall(x, w, base, isMusicPlaying = false) {
+function ledWall(x, w, base) {
   // The cabinet follows the theme — pale mauve frame and slate panels by day — while the screens stay dark so the
   // code and the status lights read as glowing LEDs on the sunlit wall.
   const P = isDay()
@@ -49,28 +49,20 @@ function ledWall(x, w, base, isMusicPlaying = false) {
     const led = r(ux + 2, uy + 3, 3, 3, ledC);
     o.push(k % 3 === 1 ? led.loop("opacity", { from: 0.25, to: 1, period: 700 + k * 230, easing: "ease-in-out" }) : led);
   }
+  // A retro boombox on top of the rack, drawn in its idle state.
   if (w >= 64) {
     const rx = x + 3, ry = rt - 11;
     o.push(
       r(rx, ry + 2, 18, 9, "#313244"),
       r(rx + 4, ry, 10, 2, "#45475a"),
       r(rx + 2, ry + 4, 4, 5, "#181825"),
-      r(rx + 3, ry + 5, 2, 3, isMusicPlaying ? "#89b4fa" : "#45475a"),
+      r(rx + 3, ry + 5, 2, 3, "#45475a"),
       r(rx + 12, ry + 4, 4, 5, "#181825"),
-      r(rx + 13, ry + 5, 2, 3, isMusicPlaying ? "#89b4fa" : "#45475a"),
+      r(rx + 13, ry + 5, 2, 3, "#45475a"),
       r(rx + 7, ry + 4, 4, 4, "#11111b"),
       r(rx + 15, ry - 3, 1, 3, "#89b4fa"),
-      r(rx + 8, ry + 2, 2, 1, isMusicPlaying ? "#a6e3a1" : "#585b70")
+      r(rx + 8, ry + 2, 2, 1, "#585b70")
     );
-    if (isMusicPlaying) {
-      o.push(
-        r(rx + 4, ry - 6, 2, 2, "#cba6f7").loop("opacity", { from: 0.1, to: 1, period: 1400, easing: "ease-in-out" }),
-        r(rx + 5, ry - 9, 1, 4, "#cba6f7").loop("opacity", { from: 0.1, to: 1, period: 1400, easing: "ease-in-out" }),
-        r(rx + 11, ry - 9, 2, 2, "#89b4fa").loop("opacity", { from: 0.8, to: 0.1, period: 1700, easing: "ease-in-out" }),
-        r(rx + 12, ry - 12, 1, 4, "#89b4fa").loop("opacity", { from: 0.8, to: 0.1, period: 1700, easing: "ease-in-out" }),
-        r(rx + 17, ry - 5, 2, 2, "#f5c2e7").loop("opacity", { from: 0.2, to: 0.9, period: 1200, easing: "ease-in-out" })
-      );
-    }
   }
   if (w < 64) return o;
   // A little desk on the baseboard: a slim modern desk, and on it a monitor (code editor with a gutter, minimap and status bar), a keyboard, a mouse and a mug.
@@ -151,7 +143,7 @@ const DAY = {
   floor: "#d9dde9", grout: "#c3c8d8", edge: "#8f93ab", pool: "#fff3c9b3",
 };
 
-export function scene(W, H, isMusicPlaying = false) {
+export function scene(W, H) {
   W = snap(W); H = snap(H);
   const p = isDay() ? DAY : NIGHT;
   const yH = yHorizon(H);
@@ -219,7 +211,7 @@ export function scene(W, H, isMusicPlaying = false) {
     r(x, base - 44, 10, 26, "#2f6e3b"), r(x + 8, base - 54, 10, 36, "#3a8247"), r(x + 18, base - 42, 10, 24, "#2f6e3b"), r(x + 4, base - 34, 6, 6, "#52a35f"),
     r(x + 2, base - 18, 24, 18, "#8a5a3c"), r(x, base - 18, 28, 4, "#a06c48"),
   ];
-  L.push(...plant(6), ...ledWall(rackX, rackW, base, isMusicPlaying));
+  L.push(...plant(6), ...ledWall(rackX, rackW, base));
 
   // Tiled floor, a grid of 24px tiles, and a pool of window light under each window.
   L.push(r(0, yH, W, H - yH, p.floor));
