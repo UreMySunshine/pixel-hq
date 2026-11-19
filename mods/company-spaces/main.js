@@ -58,6 +58,12 @@ const soften = (c, k = 0.3) => {
   const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
   return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
 };
+// A strong color lifted toward white: keeps the hue, reads as a pale solid.
+const lighten = (c, k = 0.3) => {
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const a = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  return "#" + a.map((v) => Math.round(v + (255 - v) * k).toString(16).padStart(2, "0")).join("");
+};
 // A strong color pushed toward ink: keeps the hue, reads as a dark solid.
 const deepen = (c, k = 0.65) => {
   const to = "#1d1e3e";
@@ -521,17 +527,25 @@ export default class Spaces extends View {
       const line = connected ? LINES[n % LINES.length] : t.dim;
       const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t, line));
       // The plate follows the station-sign reference: a pale line-colored panel inside a dark
-      // rule and a lit outer edge, a bolt at each corner, and a white badge carrying the
-      // machine's initial.
-      const plateFace = soften(line, 0.2);
+      // rule and a lit outer edge, a four-pin rivet at each corner, and a white rounded badge
+      // carrying the machine's initial.
+      const plateFace = lighten(line, 0.22);
       const plateFrame = deepen(line, 0.45);
-      const plateEdge = "#d9e3fa";
+      const plateEdge = "#e4ebff";
       const plateInk = "#ffffff";
       const plateDim = "#ffffffc0";
+      const pin = deepen(line, 0.55);
+      // Four pin-pricks in a square: a rivet seen from above.
+      const rivet = (side, v) => [0, 2].flatMap((a) => [0, 2].map((b) => {
+        let d = div().absolute().w(1).h(1).bg(pin);
+        d = side === "l" ? d.left(5 + a) : d.right(7 + a);
+        d = v === "t" ? d.top(4 + b) : d.bottom(6 + b);
+        return d;
+      }));
       const bullet = div().relative().w(20).h(20).flex_none()
         .child(div().absolute().left(-2).top(-2).children(pix("#ffffff33", 24, 24)).loop("opacity", { from: 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
-        .children(pix("#ffffff", 20, 20))
-        .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(10).text_color(deepen(line, 0.45))
+        .child(div().absolute().left(0).top(0).size(20).rounded(3).bg("#ffffff"))
+        .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(11).text_color(deepen(line, 0.45))
           .child([...(m ?? "this computer")][0].toUpperCase()));
       const icon = svg(`mods/workspace-chrome/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
       const badge = div().absolute().right(-3).bottom(-2).size(6).rounded(3).border_1().border_color(t.chrome).bg(connected ? t.ansi2 : t.dim);
@@ -539,6 +553,8 @@ export default class Spaces extends View {
       // name at the left, the stop count and the fold mark at the right.
       const metal = day() ? "#8d86b4" : "#3a3f5c";
       const sign = h_flex().relative().absolute().left(20).right(20).top(15).h(34).pl(7).pr(8).gap(7).items_center()
+        .child(div().absolute().left(21).top(-4).w(8).h(2).bg(metal))
+        .child(div().absolute().right(21).top(-4).w(8).h(2).bg(metal))
         .child(div().absolute().left(24).top(-3).w(2).h(3).bg(metal))
         .child(div().absolute().right(24).top(-3).w(2).h(3).bg(metal))
         .child(div().absolute().left(23).top(-1).w(4).h(2).bg(metal))
@@ -547,19 +563,16 @@ export default class Spaces extends View {
           ...notch(plateEdge, [2, 0, 2, 0]),
           ...notch(plateFrame, [0, 2, 0, 2]),
           ...notch(plateFace, [2, 4, 2, 4]),
-          div().absolute().left(2).right(4).top(0).h(1).bg("#ffffff8c"),
+          div().absolute().left(2).right(4).top(0).h(1).bg("#ffffff"),
           div().absolute().left(2).right(4).bottom(2).h(1).bg("#00000033"),
-          // The panel's top lip is lit and its foot is shaded; a bolt sits at each corner.
-          div().absolute().left(4).right(6).top(2).h(1).bg("#ffffff"),
+          // The panel's top lip is lit and its foot is shaded; a rivet sits at each corner.
+          div().absolute().left(4).right(6).top(3).h(1).bg("#ffffff"),
           div().absolute().left(4).right(6).bottom(4).h(1).bg(deepen(line, 0.3)),
-          div().absolute().left(5).top(4).w(2).h(2).bg(deepen(line, 0.55)),
-          div().absolute().right(7).top(4).w(2).h(2).bg(deepen(line, 0.55)),
-          div().absolute().left(5).bottom(6).w(2).h(2).bg(deepen(line, 0.55)),
-          div().absolute().right(7).bottom(6).w(2).h(2).bg(deepen(line, 0.55)),
+          ...rivet("l", "t"), ...rivet("r", "t"), ...rivet("l", "b"), ...rivet("r", "b"),
         ])
         .child(bullet)
         .child(v_flex().flex_1().min_w(0).gap(1).justify_center()
-          .child(div().min_w(0).truncate().font_family(MONO).font_bold().text_size(9.5).text_color(connected ? plateInk : plateDim)
+          .child(div().min_w(0).truncate().font_family(MONO).font_bold().text_size(10.5).text_color(connected ? plateInk : plateDim)
             .when(!renaming, el => el.child(`${(m ?? "this computer").toUpperCase()} LINE`))
             .when(renaming, el => el.child(Input.new(this.renaming.input).h(18).text_size(10).font_family(MONO).text_color(plateInk))))
           .when(!connected && !rebuilt && !login, el => el.child(div().flex_none().font_family(MONO).text_size(8.5).text_color(plateDim).child((machine?.state ?? "asleep").replace(/_/g, " "))))
@@ -570,8 +583,8 @@ export default class Spaces extends View {
               .tooltip(repair?.error || "This machine was rebuilt or replaced. Click to connect to the new one.")
               .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(machine, cx); })
               .child(repair?.busy ? "Connecting…" : "Connect")))))
-        .child(div().flex_none().font_family(MONO).font_bold().text_size(9).text_color(plateDim).child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
-        .child(svg(`mods/workspace-chrome/chevron-${folded ? "right" : "down"}.svg`).size(10).flex_none().text_color(plateDim));
+        .child(div().flex_none().font_family(MONO).font_bold().text_size(10).text_color(plateInk).child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
+        .child(svg(`mods/workspace-chrome/chevron-${folded ? "right" : "down"}.svg`).size(10).flex_none().text_color(plateInk));
       const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 72).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
         .when(collapsed, el => el.mt(4).w(RAIL_CELL).justify_center().rounded(6).tooltip(login ? `${m} needs a login: run ${login}. Click for Copy.` : m ? `${m} · ${connected ? "connected" : (machine?.state ?? "asleep").replace(/_/g, " ")}` : "This computer"))
         .when(collapsed, el => el.cursor_pointer())
