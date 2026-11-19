@@ -122,7 +122,9 @@ export default class Tabs extends View {
       if (active >= 0) this.scroll.scroll_to_item(active);
     }
     const stop = (_e, cx) => cx.stop_propagation();
-    const button = (id, glyph, action) => div().id(id).relative().size(24).flex_none().flex().items_center().justify_center()
+    // The box's fill sits 2px in from the top-left and 4px from the bottom-right: pad the same way
+    // so the glyph lands in the middle of the fill, not of the cell.
+    const button = (id, glyph, action) => div().id(id).relative().size(24).pl(2).pr(4).pt(2).pb(4).flex_none().flex().items_center().justify_center()
       .children(box(t.raised, t.chrome, t.surface)).font_family(MONO).font_bold().text_size(11).text_color(t.dim)
       .hover(s => s.text_color(t.foreground))
       .on_mouse_down("left", stop).on_click(action).child(glyph);
