@@ -621,14 +621,8 @@ export default class Spaces extends View {
           .child(h_flex().size(18).rounded(5).border_1().border_color(t.dim).items_center().justify_center()
             .child(svg("mods/workspace-chrome/plus.svg").size(10))))
         .when(!collapsed, el => el.h(26).gap(6).text_size(11.5).child(rail(t, line, 26, { stop: "end", last: true }))
-          // A vacant platform: four dashed corners and a plus where the station will stand.
-          .child(div().relative().w(12).h(12).flex_none()
-            .children([[0, 0], [9, 0], [0, 9], [9, 9]].flatMap(([x, y]) => [
-              div().absolute().left(x).top(y).w(3).h(1).bg(t.dim),
-              div().absolute().left(x).top(y).w(1).h(3).bg(t.dim),
-            ]))
-            .child(div().absolute().left(5).top(3).w(2).h(6).bg(t.dim))
-            .child(div().absolute().left(3).top(5).w(6).h(2).bg(t.dim)))
+          // A vacant platform: the rail ends in a dashed stop, and a plus marks where the station will stand.
+          .child(svg("mods/workspace-chrome/plus.svg").size(12).flex_none())
           .child("new station"));
       if (!collapsed && rebuilt) return [head];
       const cell = collapsed ? railCell : (el) => el;
