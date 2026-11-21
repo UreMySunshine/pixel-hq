@@ -1,4 +1,4 @@
-# pixel-hq-hermes v4
+# pixel-hq-hermes v8
 """Hermes plugin for the Herdr app: makes Hermes Agent show up as staff in Pixel HQ.
 
 Herdr only counts a terminal as an agent when its program reports a status (an OSC 7501 escape
@@ -22,6 +22,14 @@ Two ways Hermes runs, both covered:
 Delegated sub-agents never mark their parent idle, but their approvals mark it blocked (they wait on
 you too). After each model call the terminal is labelled with how full the context is
 (agent.context, 0-100) and the model (agent.model), for the paper pile on the desk.
+
+How much is going on, for the interns and the server rack at the desk (labels, at most every 2 s, only
+when a number changes):
+
+  agent.threads    sub-agents running (subagent_start until subagent_stop)
+  agent.jobs       shell work running: `terminal` / `execute_code` calls in flight, plus background
+                   processes in Hermes' process registry for the desk's sessions
+  agent.jobs_long  how many of those have run for over a minute
 
 Hermes run outside Herdr is untouched: with no HC_TERMINAL_ID anywhere, nothing is written.
 
@@ -59,6 +67,14 @@ class _Desk:
         self.waiting = 0      # approvals or questions outstanding
         self.label_at = 0.0
         self.label_last = None
+        self.threads: dict[str, float] = {}  # running sub-agent session id -> when it started
+        self.jobs: dict[str, float] = {}     # in-flight shell tool call id -> when it started
+        self.activity = None                 # the last (threads, jobs, long) published
+        self.worked = False                  # set by the first work hook: only the process running the agent publishes
+        # True between a turn's start and end, False after a turn ended, None before any turn was seen. Once a turn has
+        # ended, only the next turn start makes the desk work again: Hermes' background review after a turn (memory and
+        # skills, thread bg-review) makes model and tool calls in the same session, with no turn end of its own.
+        self.turn_open = None
 
 
 def _desk(term: str) -> _Desk:
@@ -274,7 +290,9 @@ def _turn_start(**kwargs) -> None:
     desk = _desk(term)
     parent = kwargs.get("parent_session_id")
     with _lock:
-        if not parent or desk.main is None or (sid != desk.main and parent == desk.main):
+        desk.worked = True
+    desk.turn_open = True
+    if not parent or desk.main is None or (sid != desk.main and parent == desk.main):
             desk.main = sid  # a new conversation, or a compressed one continuing under a new id
     _report(desk, "working")
 
@@ -290,6 +308,8 @@ def _turn_end(**kwargs) -> None:
     if desk.main is not None and sid != desk.main:
         return
     desk.waiting = 0
+    desk.jobs.clear()
+    desk.turn_open = False
     _report(desk, "idle")
 
 
@@ -298,6 +318,8 @@ def _stopped(**kwargs) -> None:
     if term:
         desk = _desk(term)
         desk.waiting = 0
+        desk.jobs.clear()
+        desk.turn_open = False
         _report(desk, "idle")
 
 
@@ -325,6 +347,94 @@ def _subagent(**kwargs) -> None:
             _children[child] = parent if isinstance(parent, str) else ""
             if parent in _term_of:
                 _term_of[child] = _term_of[parent]
+        term = _terminal({"session_id": parent}) if isinstance(parent, str) and parent else None
+        if term:
+            desk = _desk(term)
+            desk.worked = True
+            desk.threads[child] = time.monotonic()
+
+
+def _subagent_done(**kwargs) -> None:
+    child = kwargs.get("child_session_id")
+    if isinstance(child, str) and child:
+        with _lock:
+            for desk in _desks.values():
+                desk.threads.pop(child, None)
+
+
+_SHELL_TOOLS = {"terminal", "execute_code"}
+
+
+def _tool_id(kwargs) -> str:
+    return str(kwargs.get("tool_call_id") or f"{kwargs.get('session_id')}:{kwargs.get('tool_name')}")
+
+
+def _tool_start(**kwargs) -> None:
+    _busy(**kwargs)
+    if kwargs.get("tool_name") in _SHELL_TOOLS:
+        term = _terminal(kwargs)
+        if term:
+            desk = _desk(term)
+            # After the main turn ended, only a sub-agent's shell work counts (it runs on in the background); the main
+            # session's calls then come from Hermes' post-turn review.
+            if desk.turn_open is False and kwargs.get("session_id") not in _children:
+                return
+            desk.worked = True
+            desk.jobs[_tool_id(kwargs)] = time.monotonic()
+
+
+def _tool_end(**kwargs) -> None:
+    if kwargs.get("tool_name") in _SHELL_TOOLS:
+        term = _terminal(kwargs)
+        if term:
+            _desk(term).jobs.pop(_tool_id(kwargs), None)
+
+
+def _background(desk: "_Desk") -> tuple[int, int]:
+    """Running background processes for this desk's sessions (all of them in the classic CLI, whose process is the
+    desk's own), and how many of those have run over a minute. Read straight from Hermes' registry; 0 if unavailable."""
+    try:
+        from tools.process_registry import process_registry as reg
+        with reg._lock:
+            running = list(reg._running.values())
+    except Exception:
+        return 0, 0
+    if _OWN and desk.term == _OWN:
+        mine = running
+    else:
+        with _lock:
+            keys = {name for name, term in _term_of.items() if term == desk.term}
+        mine = [s for s in running if getattr(s, "session_key", "") in keys]
+    now = time.time()
+    live = [s for s in mine if not getattr(s, "exited", False)]
+    return len(live), sum(1 for s in live if now - (getattr(s, "started_at", 0) or now) > 60)
+
+
+def _publish_activity() -> None:
+    """Every 2 s: label each desk's terminal with its activity when it changed. Sub-agents older than 2 h are dropped
+    (a lost subagent_stop must not keep an intern forever)."""
+    while True:
+        time.sleep(2)
+        try:
+            now = time.monotonic()
+            with _lock:
+                desks = list(_desks.values())
+            for desk in desks:
+                # The CLI or TUI process only announces the desk; its agent runs in the gateway (Hermes' canonical
+                # sessions), whose copy of this plugin sees the work. Publishing zeros from here would race it.
+                if not desk.worked:
+                    continue
+                for child, at in list(desk.threads.items()):
+                    if now - at > 7200:
+                        desk.threads.pop(child, None)
+                bg, bg_long = _background(desk)
+                jobs = list(desk.jobs.values())
+                state = (len(desk.threads), len(jobs) + bg, sum(1 for at in jobs if now - at > 60) + bg_long)
+                if state != desk.activity:
+                    desk.activity = state
+                    _queue("label", desk.term, [f"agent.threads={state[0]}", f"agent.jobs={state[1]}", f"agent.jobs_long={state[2]}"])
+        except Exception:
+            pass
 
 
 def _busy(**kwargs) -> None:
@@ -333,6 +443,9 @@ def _busy(**kwargs) -> None:
     term = _terminal(kwargs)
     if term:
         desk = _desk(term)
+        if desk.turn_open is False:
+            return  # after the turn: a background review, not the person's task
+        desk.worked = True
         if desk.last != "blocked":
             _report(desk, "working")
 
@@ -345,7 +458,7 @@ def _api_done(**kwargs) -> None:
     term = _terminal(kwargs)
     if not term:
         return
-    if _desk(term).last != "blocked":
+    if _desk(term).last != "blocked" and _desk(term).turn_open is not False:
         _report(_desk(term), "working")
     usage = kwargs.get("usage") or {}
     try:
@@ -401,5 +514,8 @@ def register(ctx) -> None:
     ctx.register_hook("on_human_input_request", _ask)
     ctx.register_hook("on_human_input_resolved", _answered)
     ctx.register_hook("subagent_start", _subagent)
+    ctx.register_hook("subagent_stop", _subagent_done)
     ctx.register_hook("post_api_request", _api_done)
-    ctx.register_hook("pre_tool_call", _busy)
+    ctx.register_hook("pre_tool_call", _tool_start)
+    ctx.register_hook("post_tool_call", _tool_end)
+    threading.Thread(target=_publish_activity, name="pixel-hq-status-activity", daemon=True).start()

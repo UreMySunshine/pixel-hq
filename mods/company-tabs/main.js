@@ -50,9 +50,23 @@ const cross = (c, size) => {
   ]);
 };
 
+// Status marks, drawn in 2px pixels so they read at a glance.
+// A pixel ring: eight 4px cells around a 12px square, a bright head and a fading tail.
+const RING = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]];
+const spinner = (c, f) => div().relative().flex_none().size(14)
+  .children(RING.map(([x, y], i) => div().absolute().left(x * 5).top(y * 5).size(4).bg(c).opacity([1, 0.8, 0.55, 0.35, 0.2, 0.12, 0.12, 0.12][(f - i + 8) % 8])));
+const tick = (c) => div().relative().flex_none().w(10).h(10)
+  .children([[0, 6], [2, 8], [4, 6], [6, 4], [8, 2]].map(([x, y]) => div().absolute().left(x).top(y - 2).w(2).h(4).bg(c)));
+const bang = (c) => div().relative().flex_none().w(4).h(10)
+  .children([div().absolute().left(1).top(0).w(2).h(6).bg(c), div().absolute().left(1).top(8).w(2).h(2).bg(c)]);
+const plus = (c) => div().relative().flex_none().w(10).h(10)
+  .children([div().absolute().left(4).top(0).w(2).h(10).bg(c), div().absolute().left(0).top(4).w(10).h(2).bg(c)]);
+
 export default class Tabs extends View {
-  init() {
+  init(_props, cx) {
     this.pressed = null;
+    this.frame = 0; this.spin = false;
+    cx.timer.every(110, (cx) => { if (this.spin) { this.frame = (this.frame + 1) % 8; cx.notify(); } });
     this.scroll = ScrollHandle.new();
     try { this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}"); } catch { this.panels = {}; }
     if (!this.panels || typeof this.panels !== "object" || Array.isArray(this.panels)) this.panels = {};
@@ -116,6 +130,7 @@ export default class Tabs extends View {
     const shown = space?.tabs ?? [];
     const active = shown.findIndex(tab => tab.active);
     const selected = shown[active]?.id;
+    this.spin = shown.some(tab => tab.status === "working");
     if (selected !== this.selected || active !== this.selectedIndex) {
       this.selected = selected;
       this.selectedIndex = active;
@@ -124,16 +139,16 @@ export default class Tabs extends View {
     const stop = (_e, cx) => cx.stop_propagation();
     // The box's fill sits 2px in from the top-left and 4px from the bottom-right: pad the same way
     // so the glyph lands in the middle of the fill, not of the cell.
-    const button = (id, glyph, action) => div().id(id).relative().size(24).pl(2).pr(4).pt(2).pb(4).flex_none().flex().items_center().justify_center()
-      .children(box(t.raised, t.chrome, t.surface)).font_family(MONO).font_bold().text_size(11).text_color(t.dim)
+    const button = (id, glyph, action) => div().id(id).relative().size(28).pl(2).pr(4).pt(2).pb(4).flex_none().flex().items_center().justify_center()
+      .children(box(t.raised, t.chrome, t.surface)).font_family(MONO).font_bold().text_size(11).text_color(t.muted)
       .hover(s => s.text_color(t.foreground))
-      .on_mouse_down("left", stop).on_click(action).child(glyph);
+      .on_mouse_down("left", stop).on_click(action).child(glyph === "+" ? plus(t.accent) : glyph);
     const item = (c, i) => {
       const lead = panes().find(p => p.tab === c.id && p.program?.agent) ?? panes().find(p => p.tab === c.id);
       const program = lead?.program;
       const name = label(c, lead);
-      return h_flex().id(`tab-${c.id}`).relative().h(28).pl(7).pr(9).pt(4).pb(6).gap(6).items_center().flex_none()
-        .children(box(c.active ? t.accent : t.raised, c.active ? t.accent : t.chrome, t.surface))
+      return h_flex().id(`tab-${c.id}`).relative().h(32).pl(9).pr(11).pt(4).pb(6).gap(7).items_center().flex_none()
+        .children([...box(c.active ? t.muted : t.raised, c.active ? t.raised : t.chrome, t.surface), ...(c.active ? [div().absolute().left(8).right(10).bottom(4).h(2).bg(t.accent)] : [])])
         // A rename or status dot on this or an earlier tab can push the active one out.
         .when(i <= active, el => el.on_size_change((_size, cx) => { this.scroll.scroll_to_item(active); cx.notify(); }))
         .on_mouse_down("left", (e, cx) => { cx.stop_propagation(); this.pressed = i; if (e.click_count === 2) run("tab.rename", { id: c.id }); })
@@ -143,13 +158,14 @@ export default class Tabs extends View {
           else run("tab.select", { id: c.id });
         })
         .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); openOverlay({ mod: "menu", kind: "popup", width: 200, props: { tab: "tab", target: { id: c.id, space: space.id } } }); })
-        .when(Boolean(program?.icon), el => el.child(program.tint ? svg(program.icon).size(13).text_color(c.active ? t.accent_foreground : t.muted) : image(program.icon).size(13)))
-        .child(div().max_w(170).truncate().font_family(MONO).font_bold().text_size(10.5).text_color(c.active ? t.accent_foreground : t.muted).child(c.zoomed ? `${name} Z` : name))
-        .when(c.status === "working", el => el.child(div().flex_none().size(4).bg(c.active ? t.accent_foreground : t.working).loop("opacity", { from: 0.3, to: 1, period: 900, easing: "linear" })))
-        .when(c.status === "blocked" || c.status === "done", el => el.child(div().flex_none().size(4).bg(c.active ? t.accent_foreground : t[c.status])))
+        .when(Boolean(program?.icon), el => el.child(program.tint ? svg(program.icon).size(14).text_color(c.active ? t.accent : t.muted) : image(program.icon).size(14)))
+        .child(div().max_w(170).truncate().font_family(MONO).font_bold().text_size(11).text_color(c.active ? t.foreground : t.muted).child(c.zoomed ? `${name} Z` : name))
+        .when(c.status === "working", el => el.child(spinner(t.working, this.frame)))
+        .when(c.status === "blocked", el => el.child(bang(t.blocked)))
+        .when(c.status === "done", el => el.child(tick(t.done)))
         .when(c.active, el => el.child(div().id(`close-${c.id}`).flex_none().relative().w(8).h(8).cursor_pointer().on_mouse_down("left", stop)
           .on_click((_e, cx) => { cx.stop_propagation(); run("tab.close", { id: c.id }); })
-          .children(cross(t.accent_foreground, 8))));
+          .children(cross(t.muted, 8))));
     };
     const root = layout(), sidebar = find(root, "sidebar"), w = window();
     // Old saved rails and a dragged-narrow sidebar can be smaller than the window buttons.
@@ -161,9 +177,9 @@ export default class Tabs extends View {
     this.syncPanel(space, panel, body, enabled);
     const panelButton = (id, text) => {
       const on = panel && !panel.hidden && body?.active === id;
-      return h_flex().id(`panel-${id}`).relative().h(24).pl(6).pr(8).pt(4).pb(6).flex_none().items_center()
-        .children(box(on ? t.accent : t.raised, on ? t.accent : t.chrome, t.surface))
-        .font_family(MONO).font_bold().text_size(9).text_color(on ? t.accent_foreground : t.muted)
+      return h_flex().id(`panel-${id}`).relative().h(28).pl(9).pr(11).pt(4).pb(6).flex_none().items_center()
+        .children([...box(on ? t.muted : t.raised, on ? t.raised : t.chrome, t.surface), ...(on ? [div().absolute().left(8).right(10).bottom(4).h(2).bg(t.accent)] : [])])
+        .font_family(MONO).font_bold().text_size(10).text_color(on ? t.foreground : t.muted).hover(s => s.text_color(t.foreground))
         .on_mouse_down("left", stop)
         .on_click(() => {
           if (on) run("layout.hide", { id: "panel" });

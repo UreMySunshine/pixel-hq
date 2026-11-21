@@ -18,7 +18,7 @@
 ## Ảnh chụp thật
 
 <p align="center">
-  <img src="screenshot.png?v=7" alt="Pixel HQ đang làm việc: đường tàu các tầng, văn phòng với sáu agent (Claude Code, Codex, OpenCode, Antigravity) đang làm việc trong lưới pane, bảng tên trên mọi pane và thanh trạng thái của team" width="900"><br>
+  <img src="screenshot.png?v=8" alt="Pixel HQ đang làm việc: đường tàu các tầng, văn phòng với sáu agent (Claude Code, Codex, OpenCode, Antigravity) đang làm việc trong lưới pane, bảng tên trên mọi pane và thanh trạng thái của team" width="900"><br>
   <sub>Cả văn phòng đang làm việc: hai Claude Code, hai Codex (một con đang chờ bạn), một OpenCode và một Antigravity, mỗi agent một git worktree, giấy tờ chất dần trên bàn (dữ liệu demo).</sub>
 </p>
 
@@ -39,7 +39,10 @@
 - **Chỉ số HP và SP.** Dưới bảng tên của mỗi bàn là hai thanh mỏng. **HP** là mức context đã dùng, tô màu như status line của Claude: xanh lá, vàng từ 60%, đỏ từ 80%. **SP** là phần quota window còn lại: xanh dương khi còn nhiều, hổ phách từ 30%, đỏ từ 10%. Di chuột lên bàn để xem con số chính xác. Model và mức effort của nó hiện trên dòng branch (`main · Opus 5.5 · high`). Codex không có nguồn quota, nên bàn của Codex chỉ có thanh HP và chồng giấy; SP của Antigravity đọc từ usage API của agy (cục bộ, tự refresh token).
 - **Cần bạn, chỉ một danh sách.** Ngay khi có agent ở bất kỳ tầng hay máy nào chờ bạn, một chiếc chuông pixel hiện lên trong header kèm số đếm (pill `N need you` trên thanh trạng thái cũng mở danh sách đó, và trên macOS badge Dock hiển thị con số). Click vào: hộp "needs-you" liệt kê mọi agent đang chờ trên mọi space và máy, lâu nhất trước — thú cưng, tiêu đề terminal, tầng làm việc, chương trình và đã chờ bao lâu. Click một dòng là nhảy thẳng tới pane của nó.
 - **Nhân viên đã ship có thể "clock out".** Mỗi bàn ship xong được một nút `✓` xanh lá ở góc trên-trái. Click vào, pet sẽ được "settle" tới khi nhận task tiếp theo: bàn biến mất khỏi tầng và pháo giấy dừng rơi. Nó tự quay lại ngay khi nó hoạt động hoặc cần bạn, và một chip `✓ N settled` trong văn phòng mang mọi người trở lại cùng lúc.
+- **Tường văn phòng sống động và hoạt động ở từng bàn.** Cửa sổ đổi theo theme của layout (ban ngày: trời sáng, mặt trời và sàn ngập nắng; ban đêm: thành phố tối dưới mặt trăng); mặt trời hoặc mặt trăng đi ngang qua các cửa sổ theo giờ, mỗi tòa nhà là một space sáng lên khi agent làm việc, có biển đếm số agent đang chờ bạn, bảng pixel hiện nhiên liệu quota và sự kiện gần đây, cây lớn thêm theo số task xong trong ngày. Sub-agent hiện thành intern nhỏ trước bàn, lệnh shell thành đèn LED trên server rack và bot chạy giao gói hàng. Hermes báo qua plugin, Claude Code qua hook tùy chọn: chạy `python3 ~/.config/herdr-app/mods/company-agents/claude-activity.py install` để bật (giữ nguyên hook cũ, có file backup `settings.json.pixel-hq.bak`) và `uninstall` để gỡ. Hook tốn khoảng 40 ms mỗi lệnh Bash và không đếm lệnh `run_in_background`.
 - **Tìm nhân viên.** Ô tìm kiếm phía trên văn phòng: gõ tên, chức danh (`reviewer`, `engineer`), trạng thái (`typing`, `break`) hoặc tên space, ai không khớp sẽ mờ đi còn ai khớp sẽ có bảng tên màu vàng. Nhấn Enter để nhảy tới kết quả đầu tiên.
+- **Thanh tab pixel.** Các tab, nút `+` và nút `FILES` / `CHANGES` đều vẽ kiểu hộp pixel có bóng đổ cứng. Tab đang chọn có khung nhẹ và vạch xanh bên dưới. Agent đang chạy hiện vòng xoay pixel ngay trên tab, agent xong hoặc bị chặn hiện dấu tick hoặc `!`. Lăn chuột trên thanh để đổi tab, kéo tab để di chuyển.
+- **Thanh trạng thái của team.** "Pixel HQ", team có bao nhiêu agent, và bao nhiêu agent đang gõ, đang chờ bạn, đã ship hoặc đang nghỉ giải lao; mỗi con số là một tấm biển pixel mở danh sách agent tương ứng. Bảng lệnh nằm ở đầu phải.
 - **Thanh trạng thái của team.** "Pixel HQ", team có bao nhiêu agent, và bao nhiêu agent đang gõ, đang chờ bạn, đã ship hoặc đang nghỉ giải lao.
 - **Biển hiệu công ty.** Logo chú corgi của Pixel HQ cùng dòng "Pixel HQ / engineering floor" ở đầu sidebar.
 - **Bảng màu Catppuccin Mocha** với điểm nhấn xanh dương dịu, đi kèm một theme terminal cùng tông.
@@ -94,7 +97,7 @@ Nhờ agent của bạn:
 > Read ~/.config/herdr-app/AGENTS.md, then add this layout: herdr.dev/layouts/bnhan2710/pixel-hq
 
 Hoặc làm tay: chép `layouts/`, `mods/` và `themes/` vào `~/.config/herdr-app/`, thoát rồi mở lại Herdr một lần,
-sau đó chọn **pixel-hq** trong Settings > Look. Layout tự mang theme **pixel-hq**, luôn tối kể cả khi hệ thống đang ở chế độ sáng.
+sau đó chọn **pixel-hq** trong Settings > Look. Layout tự mang theme **pixel-hq** cho chế độ tối và **pixel-hq-light** cho chế độ sáng, theo cài đặt giao diện của hệ thống.
 
 Mod là code được tin cậy và Herdr không chạy chúng trong sandbox. Repo này có khoảng 4.200 dòng JavaScript. Các chương trình duy nhất nó chạy là các công cụ cục bộ
 (`mkdir`, `cp`, `open`, `git` để xem mỗi bàn đã sửa gì và tạo worktree khi bạn thuê staff, và Chrome/ImageMagick khi bạn chuyển đổi ảnh động trong trình chỉnh figures). Điều duy nhất nó ghi ra ngoài thư mục của mình là plugin trạng thái OpenCode ở mục bên dưới (chỉ khi máy có OpenCode, một lần, không ghi đè). Nó chỉ kết nối tới GitHub: phần kiểm tra cập nhật đọc một file công khai rất nhỏ, còn khi bạn bấm **Update now** thì nó tải các file của repo này (xem "Cập nhật"). Nó không gửi gì về bạn. Hãy đọc code trước khi cài.

@@ -1,6 +1,3 @@
-// Pixel HQ Hotkeys Reference (View-Only Cheat Sheet)
-// Clean, read-only system hotkey inspection and cheat sheet for all workspace commands.
-
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { run, props, closeOverlay, keys, appHome, readTextFile } from "herdr";
@@ -9,49 +6,49 @@ const MONO = "JetBrains Mono, Menlo, monospace";
 
 const HOTKEY_CATEGORIES = [
   {
-    category: "Workspace Floors (Chuyển đổi sàn làm việc)",
+    category: "Workspace Floors",
     items: [
-      { action: "mod.open:company-switcher", name: "Floor Switcher", desc: "Mở menu chuyển đổi sàn (hỗ trợ giữ Ctrl ấn P liên tục)" },
-      { action: "space.next", name: "Next Floor", desc: "Chuyển sang sàn làm việc kế tiếp" },
-      { action: "space.prev", name: "Previous Floor", desc: "Chuyển về sàn làm việc trước đó" },
-      { action: "space.new", name: "New Floor", desc: "Tạo một sàn làm việc mới" },
-      { action: "space.select:1", name: "Jump to Floor 1–9", desc: "Chuyển trực tiếp tới sàn số 1 đến 9", customKeys: ["alt-1 … alt-9"] },
-      { action: "space.rename", name: "Rename Floor", desc: "Đổi tên sàn làm việc hiện tại" },
+      { action: "mod.open:company-switcher", name: "Floor Switcher", desc: "Open floor switcher (hold Ctrl and press P repeatedly to cycle)" },
+      { action: "space.next", name: "Next Floor", desc: "Switch to next workspace floor" },
+      { action: "space.prev", name: "Previous Floor", desc: "Switch to previous workspace floor" },
+      { action: "space.new", name: "New Floor", desc: "Create a new workspace floor" },
+      { action: "space.select:1", name: "Jump to Floor 1–9", desc: "Jump directly to floor 1–9", customKeys: ["alt-1 … alt-9"] },
+      { action: "space.rename", name: "Rename Floor", desc: "Rename current workspace floor" },
     ],
   },
   {
-    category: "Split Panes (Chia khung làm việc)",
+    category: "Split Panes",
     items: [
-      { action: "pane.split:right", name: "Split Right", desc: "Chia đôi khung theo chiều dọc sang bên phải" },
-      { action: "pane.split:down", name: "Split Down", desc: "Chia đôi khung theo chiều ngang xuống dưới" },
-      { action: "pane.close", name: "Close Pane", desc: "Đóng khung làm việc đang chọn" },
-      { action: "pane.zoom", name: "Toggle Zoom", desc: "Phóng to / khôi phục kích thước khung đang chọn" },
-      { action: "layout.switch", name: "Switch Layout", desc: "Chuyển đổi giao diện layout hiển thị" },
-      { action: "pane.go:left", name: "Focus Navigation", desc: "Di chuyển tiêu điểm giữa các khung lân cận", customKeys: ["alt-h / j / k / l", "alt-left / right"] },
+      { action: "pane.split:right", name: "Split Right", desc: "Split active pane vertically to the right" },
+      { action: "pane.split:down", name: "Split Down", desc: "Split active pane horizontally downward" },
+      { action: "pane.close", name: "Close Pane", desc: "Close active workspace pane" },
+      { action: "pane.zoom", name: "Toggle Zoom", desc: "Toggle maximize / restore active pane" },
+      { action: "layout.switch", name: "Switch Layout", desc: "Switch active display layout" },
+      { action: "pane.go:left", name: "Focus Navigation", desc: "Navigate focus between adjacent panes", customKeys: ["alt-h / j / k / l", "alt-left / right"] },
     ],
   },
   {
-    category: "Tabs & Terminals (Tab & Dòng lệnh)",
+    category: "Tabs & Terminals",
     items: [
-      { action: "tab.new", name: "New Tab", desc: "Mở tab terminal mới trong khung" },
-      { action: "tab.close", name: "Close Tab", desc: "Đóng tab terminal hiện tại" },
-      { action: "tab.next", name: "Next Tab", desc: "Chuyển sang tab kế tiếp" },
-      { action: "tab.prev", name: "Previous Tab", desc: "Chuyển về tab trước đó" },
-      { action: "tab.select:1", name: "Jump to Tab 1–9", desc: "Chuyển trực tiếp tới tab 1 đến 9", customKeys: ["ctrl-1 … ctrl-9"] },
-      { action: "tab.rename", name: "Rename Tab", desc: "Đổi tên tab terminal hiện tại" },
-      { action: "terminal.copy", name: "Copy Selection", desc: "Sao chép đoạn văn bản đã chọn trong terminal" },
-      { action: "terminal.paste", name: "Paste", desc: "Dán văn bản từ clipboard vào terminal" },
-      { action: "terminal.search", name: "Search Terminal", desc: "Tìm kiếm văn bản trong bộ đệm terminal" },
+      { action: "tab.new", name: "New Tab", desc: "Open a new terminal tab in active pane" },
+      { action: "tab.close", name: "Close Tab", desc: "Close current terminal tab" },
+      { action: "tab.next", name: "Next Tab", desc: "Switch to next tab" },
+      { action: "tab.prev", name: "Previous Tab", desc: "Switch to previous tab" },
+      { action: "tab.select:1", name: "Jump to Tab 1–9", desc: "Jump directly to tab 1–9", customKeys: ["ctrl-1 … ctrl-9"] },
+      { action: "tab.rename", name: "Rename Tab", desc: "Rename current terminal tab" },
+      { action: "terminal.copy", name: "Copy Selection", desc: "Copy selection from terminal" },
+      { action: "terminal.paste", name: "Paste", desc: "Paste clipboard text into terminal" },
+      { action: "terminal.search", name: "Search Terminal", desc: "Search scrollback buffer in terminal" },
     ],
   },
   {
-    category: "System & Palette (Hệ thống & Lệnh nhanh)",
+    category: "System & Palette",
     items: [
-      { action: "app.palette", name: "Command Palette", desc: "Mở thanh tìm kiếm lệnh toàn cục" },
-      { action: "app.settings", name: "Settings", desc: "Mở cửa sổ cài đặt ứng dụng" },
-      { action: "app.help", name: "Help", desc: "Mở tài liệu hướng dẫn và trợ giúp" },
-      { action: "layout.toggle:sidebar", name: "Toggle Sidebar", desc: "Ẩn / hiện thanh danh sách sàn bên trái" },
-      { action: "app.zoom_in", name: "Zoom In / Out / Reset", desc: "Điều chỉnh tỷ lệ thu phóng giao diện", customKeys: ["ctrl-+", "ctrl--", "ctrl-0"] },
+      { action: "app.palette", name: "Command Palette", desc: "Open global command palette" },
+      { action: "app.settings", name: "Settings", desc: "Open application settings" },
+      { action: "app.help", name: "Help", desc: "Open help and documentation" },
+      { action: "layout.toggle:sidebar", name: "Toggle Sidebar", desc: "Toggle left sidebar" },
+      { action: "app.zoom_in", name: "Zoom In / Out / Reset", desc: "Adjust UI zoom scale", customKeys: ["ctrl-+", "ctrl--", "ctrl-0"] },
     ],
   },
 ];
@@ -199,7 +196,7 @@ export default class CompanyHotkeys extends View {
                     div()
                       .text_size(10.5)
                       .text_color("#6c7086")
-                      .child("Bảng tra cứu phím tắt hệ thống đang kích hoạt"),
+                      .child("Active system keybindings cheat sheet"),
                   ),
               ),
           )
@@ -217,7 +214,6 @@ export default class CompanyHotkeys extends View {
               .child("Esc close"),
           ),
       )
-      // Scrollable Reference List
       .child(
         v_flex()
           .id("hotkeys-scroll-area")
@@ -316,13 +312,12 @@ export default class CompanyHotkeys extends View {
             ),
           ),
       )
-      // Footer
       .child(
         h_flex()
           .justify_between()
           .text_size(10.5)
           .text_color("#6c7086")
-          .child("💡 Tip: Giữ Ctrl ấn P nhiều lần để đổi sàn nhanh · Alt+[ / Alt+] chuyển sàn kế tiếp")
+          .child("💡 Tip: Hold Ctrl and tap P to cycle floors · Alt+[ / Alt+] switch floors")
           .child("Esc close"),
       );
   }

@@ -1,7 +1,7 @@
 // A desk nameplate as the pane header: the agent's pixel pet, its job title, status and folder.
 import { View, div, svg, image } from "gpui-kit";
-import { h_flex } from "gpui-base";
-import { panes, props, run, theme, home, layout } from "herdr";
+import { h_flex, InputState, Input } from "gpui-base";
+import { panes, props, run, theme, home, layout, shared, setShared, appHome, readTextFile, writeTextFile } from "herdr";
 import { agentOf, duckMood, duckWidth, mood } from "./duck.js";
 
 const ROLE = (p) => agentOf(p.program?.key)?.role ?? (p.program?.shell ? "Terminal" : (p.program?.name ?? "Contractor"));
@@ -25,7 +25,44 @@ function folder(cwd) {
 }
 
 export default class CompanyPane extends View {
-  init() { this.hovered = false; }
+  init(_props, cx) {
+    this.hovered = false;
+    this.editing = null;
+    this.file = `${appHome()}/pixel-hq-names.json`;
+    // Shared with the office list, so a new name shows there too; the file keeps it across restarts.
+    cx.spawn(async (cx) => {
+      if (shared("pixel-hq.names")) return;
+      const raw = await readTextFile(this.file).catch(() => null);
+      try { const v = JSON.parse(raw ?? "{}"); if (v && typeof v === "object" && !shared("pixel-hq.names")) { setShared("pixel-hq.names", v); cx.notify(); } } catch {}
+    });
+    this.input = InputState.new({ placeholder: "" });
+    this.input.on("submit", (_e, cx) => this.commit(cx));
+    this.input.on("blur", (_e, cx) => { if (this.editing) { this.editing = null; cx.notify(); } });
+  }
+
+  // Click the name or the job title to rename it; an empty name restores the default.
+  start(field, pane, current, cx) {
+    this.editing = { field, pane };
+    this.input.set_value(current);
+    cx.notify();
+    cx.timer.after(40, () => this.input.focus());
+  }
+
+  commit(cx) {
+    const e = this.editing;
+    if (!e) return;
+    const v = this.input.value().trim().slice(0, 40);
+    const names = { ...(shared("pixel-hq.names") ?? {}) };
+    const mine = { ...(names[e.pane] ?? {}) };
+    if (v) mine[e.field] = v; else delete mine[e.field];
+    if (Object.keys(mine).length) names[e.pane] = mine; else delete names[e.pane];
+    setShared("pixel-hq.names", names);
+    const text = JSON.stringify(names, null, 2);
+    cx.spawn(async () => { const raw = await readTextFile(this.file).catch(() => null); await writeTextFile(this.file, text, raw).catch(() => {}); });
+    this.editing = null;
+    cx.notify();
+  }
+
   me() { return panes().find((p) => p.pane === props()?.pane); }
 
   button(t, id, icon, command, args) {
@@ -47,7 +84,8 @@ export default class CompanyPane extends View {
     const avatar = species
       ? div().flex_none().w(duckWidth(H)).h(H).child(duckMood(mood(st ?? "idle"), H, { species }))
       : div().flex_none().size(24).rounded(6).bg(t.raised).flex().items_center().justify_center().text_size(12).text_color(t.muted).child(">_");
-    const title = ((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name || "shell";
+    const custom = (shared("pixel-hq.names") ?? {})[pane] ?? {};
+    const title = custom.name ?? ((((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name) || "shell");
     const chip = (text, color, spin) => h_flex().relative().flex_none().gap(5).px(8).h(20).items_center().rounded(10).bg(color + "26").border_1().border_color(color + "59").text_size(10.5).font_semibold().text_color(color)
       .child(div().absolute().left(1).right(1).top(1).bottom(1).rounded(9).border_1().border_color(color + "33").loop("opacity", { from: 0.3, to: 1, period: st === "blocked" ? 900 : 2000, easing: "ease-in-out" }))
       .when(Boolean(spin), el => el.child(svg("mods/workspace-chrome/spinner.svg").size(11).flex_none().text_color(color).spin(900)))
@@ -56,6 +94,11 @@ export default class CompanyPane extends View {
       : st === "blocked" ? chip("needs you", t.blocked ?? "#e8744f")
       : st === "done" ? chip("shipped", t.done ?? "#8ec07c")
       : species ? chip("on break", t.idle ?? t.dim) : null;
+    const edit = (field, el, width) => this.editing?.pane === pane && this.editing.field === field
+      ? div().id(`pe-${pane}-${field}`).flex_none().w(width).h(22).px(7).flex().items_center().rounded(5).border_1().border_color(t.accent)
+          .on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Input.new(this.input).h_full().text_size(11.5).text_color(t.foreground))
+      : el.cursor_text().hover((s) => s.bg(t.hover)).tooltip("Click to rename")
+          .on_click((_e, cx) => { cx.stop_propagation(); this.start(field, pane, field === "role" ? (custom.role ?? ROLE(p)) : title, cx); });
     return h_flex()
       .id(`pane-head-${pane}`)
       .size_full()
@@ -71,8 +114,8 @@ export default class CompanyPane extends View {
       .on_click(() => run("pane.focus", { pane }))
       .child(avatar)
       .child(h_flex().flex_none().gap(7).items_center()
-        .child(div().truncate().max_w(220).font_semibold().text_color(t.foreground).child(title))
-        .child(div().flex_none().px(7).h(19).flex().items_center().rounded(5).bg(t.accent + "1f").text_size(10.5).text_color(t.accent).child(ROLE(p))))
+        .child(edit("name", div().id(`pn-${pane}`).truncate().max_w(220).px(3).rounded(4).font_semibold().text_color(t.foreground).child(title), 170))
+        .child(edit("role", div().id(`pr-${pane}`).flex_none().px(7).h(19).flex().items_center().rounded(5).bg(t.accent + "1f").text_size(10.5).text_color(t.accent).child(custom.role ?? ROLE(p)), 120)))
       .child(div().flex_1().truncate().text_color(t.dim).child(folder(p.cwd)))
       .when(Boolean(status), el => el.child(status))
       .when(this.hovered, el => el

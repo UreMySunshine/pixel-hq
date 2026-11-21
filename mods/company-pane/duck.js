@@ -138,7 +138,7 @@ const PI = [
 // Hermes: a gold helmet across the top of the head and a white wing on each side of it, flapping (fast when cheering or alarmed).
 // The wings stay inside the body group's 250 units so nothing is clipped.
 const GOLD = "#E8B04A", GOLD_DARK = "#B8862E", FEATHER = "#F5F1E6", FEATHER_SHADE = "#C9C3B4";
-function heraldHelmet(rect, motion, px, { cheer, typing, urging }) {
+function heraldHelmet(rect, motion, px, { cheer, typing, urging, fast = (ms) => ms }) {
   const wing = (side) => {
     const x = (v, w) => (side < 0 ? v : 250 - v - w);
     return div().absolute().left(0).top(0).w(px(1)).h(px(1))
@@ -146,7 +146,7 @@ function heraldHelmet(rect, motion, px, { cheer, typing, urging }) {
       .child(rect(x(5, 20), 12, 20, 10, FEATHER))
       .child(rect(x(11, 14), 22, 14, 8, FEATHER_SHADE));
   };
-  const period = cheer || urging ? 240 : typing ? 520 : 1100;
+  const period = cheer || urging ? 240 : typing ? fast(520) : 1100;
   const flap = (el) => motion(el, "top", { from: px(0), to: px(-5), period, easing: "ease-in-out" });
   return [
     rect(25, 0, 200, 24, GOLD),
@@ -197,7 +197,9 @@ export function duck(status, height, waited = 0) {
 }
 
 // One mood; `still` draws it without any motion.
-export function duckMood(m, height, { still = false, species = "crab" } = {}) {
+// `pace` (1 to 2) speeds the typing up when more is going on at the desk (sub-agents, shell jobs).
+export function duckMood(m, height, { still = false, species = "crab", pace = 1 } = {}) {
+  const fast = (ms) => Math.round(ms / Math.max(1, Math.min(2, pace)));
   const sp = SPECIES[species] ?? SPECIES.crab;
   if (sp.whale) {
     const s = height / HEIGHT;
@@ -271,8 +273,8 @@ export function duckMood(m, height, { still = false, species = "crab" } = {}) {
   let leftClaw = rect(LX, 122, CW, 40, SHADE);
   let rightClaw = rect(RX, 122, CW, 40, SHADE);
   if (typing) {
-    leftClaw = motion(rect(LX, 122, CW, 40, SHADE), "top", { from: px(122), to: px(110), period: 240, easing: "ease-in-out" });
-    rightClaw = motion(rect(RX, 122, CW, 40, SHADE), "top", { from: px(110), to: px(122), period: 240, easing: "ease-in-out" });
+    leftClaw = motion(rect(LX, 122, CW, 40, SHADE), "top", { from: px(122), to: px(110), period: fast(240), easing: "ease-in-out" });
+    rightClaw = motion(rect(RX, 122, CW, 40, SHADE), "top", { from: px(110), to: px(122), period: fast(240), easing: "ease-in-out" });
   } else if (waving) {
     rightClaw = motion(rect(RX, 55, CW, 85, SHADE), "top", { from: px(48), to: px(66), period: urgent ? 260 : 480, easing: "ease-in-out" });
   } else if (cheer) {
@@ -288,7 +290,7 @@ export function duckMood(m, height, { still = false, species = "crab" } = {}) {
   if (typing) {
     // Sitting behind a MacBook: we see the silver lid with its glowing apple, the screen's light on the face.
     const SILVER = "#c9ced6", EDGE = "#a7adb8", DECK = "#aeb4c0";
-    const glow = motion(rect(40, 56, 170, 44, "#8fd0ff"), "opacity", { from: 0.06, to: 0.2, period: 900, easing: "ease-in-out" });
+    const glow = motion(rect(40, 56, 170, 44, "#8fd0ff"), "opacity", { from: 0.06, to: 0.2, period: fast(900), easing: "ease-in-out" });
     // The lid shows the maker's logo: the white apple, or for Antigravity its rainbow arch.
     const lid = sp.arch
       ? div().absolute().left(0).top(0).w(1).h(1)
@@ -387,7 +389,7 @@ export function duckMood(m, height, { still = false, species = "crab" } = {}) {
     .when(Boolean(sp.ears), (el) => el.child(rect(25, 0, 42, 38, SHADE)).child(rect(183, 0, 42, 38, SHADE)))
     .when(Boolean(sp.patch), (el) => el.child(rect(40, 32, 56, 60, sp.patch)).child(rect(146, 32, 56, 60, sp.patch)))
     .when(Boolean(sp.face), (el) => el.child(rect(64, 22, 112, 88, sp.face)).child(rect(14, 40, 26, 18, sp.face)).child(rect(200, 40, 26, 18, sp.face)))
-    .when(Boolean(sp.wings), (el) => el.children(heraldHelmet(rect, motion, px, { cheer, typing, urging })))
+    .when(Boolean(sp.wings), (el) => el.children(heraldHelmet(rect, motion, px, { cheer, typing, urging, fast })))
     .children(eyes2)
     // company badge on a lanyard, hanging at the right side of the chest
     .when(!sp.bot && !sp.arch && !sp.round && !sp.pi, (el) => el.child(rect(181, 82, 6, 38, BADGE_TOP)).child(rect(163, 120, 42, 56, BADGE)).child(rect(163, 120, 42, 12, BADGE_TOP)).child(rect(174, 140, 20, 16, SHADE)).child(rect(170, 162, 28, 6, SHADE)))
@@ -398,7 +400,7 @@ export function duckMood(m, height, { still = false, species = "crab" } = {}) {
       ? motion(group, "top", { from: 0, to: px(3), period: 160, easing: "linear" })
       : snoozing
         ? motion(group, "top", { from: 0, to: px(8), period: 1800, easing: "ease-in-out" })
-        : motion(group, "top", { from: 0, to: px(typing ? 3 : 7), ...(typing ? { period: 480, easing: "ease-in-out" } : BOB) });
+        : motion(group, "top", { from: 0, to: px(typing ? 3 : 7), ...(typing ? { period: fast(480), easing: "ease-in-out" } : BOB) });
 
   // Four little legs.
   let legs = sp.round
