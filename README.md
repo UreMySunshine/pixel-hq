@@ -131,9 +131,14 @@ Herdr does not know how full an agent's context is, so each agent has its own wa
 
 > Set my Claude Code status line (`statusLine` in `~/.claude/settings.json`) to `sh ~/.config/herdr-app/mods/company-agents/claude-statusline.sh`, keeping the rest of my settings. If I already have a status line, tell me first.
 
-- **Claude Code's shell commands and sub-agents** (runners, rack LEDs and interns): a hook has to tell Herdr. [`claude-activity.py`](mods/company-agents/claude-activity.py) counts Bash commands in flight and running sub-agents and labels the terminal with them (`agent.jobs`, `agent.jobs_started`, `agent.threads`); it needs `python3` and does nothing outside Herdr. Background commands (`run_in_background`) are not counted, since Claude Code reports no end for them. Ask your agent:
+- **Claude Code's shell commands and sub-agents** (runners, rack LEDs and interns): a hook has to tell Herdr. [`claude-activity.py`](mods/company-agents/claude-activity.py) counts Bash commands in flight and running sub-agents and labels the terminal with them (`agent.jobs`, `agent.jobs_started`, `agent.threads`). It is opt-in and needs `python3`. One command adds the hooks to `~/.claude/settings.json`, keeping your own hooks and saving the original as `settings.json.pixel-hq.bak` (run it again any time, it never duplicates):
 
-> Copy `~/.config/herdr-app/mods/company-agents/claude-activity.py` to `~/.claude/hooks/` and add hooks to `~/.claude/settings.json` that run it with `python3 -I`, keeping my existing hooks: `job-start` on PreToolUse (matcher `Bash`), `job-end` on PostToolUse and PostToolUseFailure (matcher `Bash`), `sub-start` on SubagentStart, `sub-end` on SubagentStop, `turn-end` on UserPromptSubmit and Stop, `reset` on SessionStart (matcher `^(startup|resume|clear)$`) and SessionEnd.
+  ```sh
+  python3 ~/.config/herdr-app/mods/company-agents/claude-activity.py install
+  python3 ~/.config/herdr-app/mods/company-agents/claude-activity.py uninstall   # removes only its own hooks
+  ```
+
+  It does nothing outside Herdr and costs about 40 ms per Bash command. Background commands (`run_in_background`) are not counted, since Claude Code reports no end for them.
 
 - **Antigravity (`agy`):** nothing to set up. Pixel HQ finds the conversation transcript in `~/.gemini/antigravity-cli/brain/` (from the CLI's `history.jsonl` workspace match) and reads token usage (`input_tokens + cache_read_tokens`) against its 1M token context window every few seconds — that feeds HP. SP reads the plan's remaining quota from the same usage API the `agy` CLI talks to (token in `~/.gemini/antigravity-cli/antigravity-oauth-token`, refreshed automatically; `AGY_HOME` honored for non-standard installs) and shows the tightest model bucket ([`agy-quota.py`](mods/company-agents/agy-quota.py)). macOS, Linux and Windows (SP needs `python3` or `python`; the script carries no credentials of its own — it reads the public OAuth pair from the installed `agy` binary and caches it under `~/.cache/pixel-hq/`).
 

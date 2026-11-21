@@ -11,6 +11,10 @@ runners and LEDs for shell commands and interns for sub-agents:
 Usage (from Claude Code hooks, JSON on stdin):
   claude-activity.py job-start | job-end | sub-start | sub-end | turn-end | reset
 Does nothing outside a Herdr terminal (no HC_TERMINAL_ID) and never fails the hook.
+
+Setup (merges into ~/.claude/settings.json, keeps your other hooks, backs it up first):
+  python3 claude-activity.py install      add the hooks (safe to run again)
+  python3 claude-activity.py uninstall    remove only the hooks this script added
 """
 import fcntl
 import json
@@ -25,8 +29,58 @@ STALE_SUB_MS = 6 * 3600 * 1000       # a sub-agent missing its stop event after 
 MAX_STARTED = 20
 
 
+HOOKS = [  # (event, matcher, action)
+    ("PreToolUse", "Bash", "job-start"),
+    ("PostToolUse", "Bash", "job-end"),
+    ("PostToolUseFailure", "Bash", "job-end"),
+    ("SubagentStart", None, "sub-start"),
+    ("SubagentStop", None, "sub-end"),
+    ("UserPromptSubmit", None, "turn-end"),
+    ("Stop", None, "turn-end"),
+    ("SessionStart", "^(startup|resume|clear)$", "reset"),
+    ("SessionEnd", None, "reset"),
+]
+
+
+def setup(remove: bool) -> None:
+    path = os.path.expanduser("~/.claude/settings.json")
+    try:
+        with open(path) as fh:
+            cfg = json.load(fh)
+    except FileNotFoundError:
+        cfg = {}
+    if not isinstance(cfg, dict):
+        sys.exit(f"{path} is not a JSON object; left untouched")
+    if os.path.exists(path) and not os.path.exists(path + ".pixel-hq.bak"):
+        shutil.copy2(path, path + ".pixel-hq.bak")  # keeps the very first original
+    me = os.path.abspath(__file__)
+    mark = "claude-activity.py"
+    hooks = cfg.setdefault("hooks", {})
+    for event, matcher, action in HOOKS:
+        groups = hooks.setdefault(event, [])
+        for g in groups:  # drop our earlier entries (also makes install idempotent)
+            g["hooks"] = [h for h in g.get("hooks", []) if mark not in h.get("command", "")]
+        groups[:] = [g for g in groups if g.get("hooks")]
+        if not remove:
+            group = {"hooks": [{"type": "command", "command": f'python3 -I "{me}" {action}'}]}
+            if matcher:
+                group["matcher"] = matcher
+            groups.append(group)
+        if not groups:
+            del hooks[event]
+    if not hooks:
+        del cfg["hooks"]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as fh:
+        json.dump(cfg, fh, indent=2)
+        fh.write("\n")
+    print(("Removed" if remove else "Installed") + f" Pixel HQ hooks in {path} (backup: {path}.pixel-hq.bak)")
+
+
 def main() -> None:
     action = sys.argv[1] if len(sys.argv) > 1 else ""
+    if action in ("install", "uninstall"):
+        return setup(action == "uninstall")
     term = os.environ.get("HC_TERMINAL_ID", "")
     if not action or not term or not term.replace("-", "").isalnum():
         return
@@ -83,8 +137,10 @@ def main() -> None:
         }
         if labels != last:
             try:
-                subprocess.run([hc, "label", term, *(f"{k}={v}" for k, v in labels.items())],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2, check=False)
+                # fire and forget: the hook must not wait on Herdr (a later event fixes any lost label)
+                subprocess.Popen([hc, "label", term, *(f"{k}={v}" for k, v in labels.items())],
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL, start_new_session=True)
                 last = labels
             except Exception:
                 pass
