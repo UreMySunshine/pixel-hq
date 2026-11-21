@@ -31,6 +31,7 @@ const PIXEL_HQ_FILES = [
   "mods/company-status/mod.json",
   "mods/company-agents/animate.js",
   "mods/company-agents/claude-statusline.sh",
+  "mods/company-agents/claude-activity.py",
   "mods/company-agents/crew.js",
   "mods/company-agents/duck-icon.svg",
   "mods/company-agents/duck.js",
