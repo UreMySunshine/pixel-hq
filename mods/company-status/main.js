@@ -208,7 +208,7 @@ export default class WorkspaceStatus extends View {
       this.badge = wants;
       try { setBadge(wants); } catch { this.badge = undefined; }
     }
-    const label = (icon, text) => h_flex().gap(6).items_center().child(svg(`mods/workspace-chrome/${icon}.svg`).size(13)).child(text.toUpperCase());
+    const label = (icon, text) => h_flex().gap(6).items_center().child(svg(`mods/company-status/${icon}.svg`).size(13)).child(text.toUpperCase());
     const pill = (color, text) => h_flex().gap(6).items_center().child(div().size(6).bg(color)).child(text.toUpperCase());
     return h_flex().size_full().px(14).gap(14).items_center().bg(t.chrome).border_t(1).border_color(t.surface).font_family(MONO).text_size(11).text_color(t.muted)
       .child(div().font_bold().text_size(11).text_color("#b4befe").child("PIXEL HQ"))
@@ -241,7 +241,7 @@ export default class WorkspaceStatus extends View {
       .when(n("working") > 0, el => el.child(pill("#89b4fa", `${n("working")} typing`)))
       .when(n("blocked") > 0, el => el.child(div().id("needs-you-pill").cursor_pointer().px(4).hover(s => s.bg(t.hover))
         .tooltip("Open the needs-you list")
-        .on_click(() => openOverlay({ mod: "company-agents", kind: "popup", width: 340, height: Math.min(440, Math.max(150, 52 + n("blocked") * 56)), props: { needsYou: true } }))
+        .on_click(() => openOverlay({ mod: "company-agents", kind: "popup", frame: "none", width: 340, height: Math.min(440, Math.max(150, 52 + n("blocked") * 56)), props: { needsYou: true } }))
         .child(pill(t.blocked ?? "#e8744f", `${n("blocked")} ${n("blocked") === 1 ? "needs" : "need"} you`))))
       .when(n("done") > 0, el => el.child(pill(t.done ?? "#8ec07c", `${n("done")} shipped`)))
       .when(list.length - n("working") - n("blocked") - n("done") > 0, el => el.child(pill(t.dim ?? "#9a8f86", `${list.length - n("working") - n("blocked") - n("done")} on break`)))
@@ -377,7 +377,7 @@ export default class WorkspaceStatus extends View {
                     .hover((s) => s.bg(t.hover))
                     .tooltip(`Pixel MusicBox: ${title} (${timeText}) · Open controls · Right-click to hide from status bar`)
                     .on_click(() => run("mod.open", { name: "company-music" }))
-                    .child(div().text_size(12).child("📻"))
+                    .child(svg("mods/company-status/boombox.svg").size(14).flex_none())
                     .child(div().truncate().text_size(11.5).font_semibold().text_color(t.foreground).child(title))
                     .child(
                       div()
@@ -414,6 +414,10 @@ export default class WorkspaceStatus extends View {
           .on_click(() => run("mod.open", { name: "company-hotkeys" }))
           .child("HOTKEYS")
       )
-      .child(chip(h_flex().id("palette"), t).on_click(() => run("app.palette")).child(this.hint(t).replace("  commands", " COMMANDS").replace(/^commands$/, "COMMANDS")));
+      .child(
+        chip(h_flex().id("palette"), t)
+          .on_click(() => run("app.palette"))
+          .child(this.hint(t).replace("  commands", " COMMANDS").replace(/^commands$/, "COMMANDS"))
+      );
   }
 }

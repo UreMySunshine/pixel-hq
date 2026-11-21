@@ -1,8 +1,18 @@
-import { View, div } from "gpui-kit";
+import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, run, shared, setShared, closeOverlay, checking, appHome, exec, window, props, readTextFile, writeTextFile, settings } from "herdr";
 
 const MONO = "JetBrains Mono, Menlo, monospace";
+
+const notch = (c, [l, r, t, b]) => [
+  div().absolute().left(l + 2).right(r + 2).top(t).bottom(b).bg(c),
+  div().absolute().left(l).right(r).top(t + 2).bottom(b + 2).bg(c),
+];
+const box = (frame, fill, shadow) => [
+  ...notch(shadow, [2, 0, 2, 0]),
+  ...notch(frame, [0, 2, 0, 2]),
+  ...notch(fill, [2, 4, 2, 4]),
+];
 
 async function ensureMusicHotkey(cx) {
   try {
@@ -556,19 +566,14 @@ export default class CompanyMusic extends View {
 
     const copyBtn = (cmd, label) => {
       const isCopied = this.copiedCmd === cmd;
-      return div()
-        .cursor_pointer()
+      return h_flex()
+        .relative()
+        .h(22)
         .px(8)
-        .py(3)
-        .rounded(4)
-        .bg(isCopied ? "#a6e3a133" : "#313244")
-        .border_1()
-        .border_color(isCopied ? "#a6e3a1" : "#45475a")
-        .text_size(10)
-        .font_family(MONO)
-        .font_semibold()
-        .text_color(isCopied ? "#a6e3a1" : "#cdd6f4")
-        .hover((s) => s.bg(isCopied ? "#a6e3a144" : "#45475a"))
+        .items_center()
+        .children(box(isCopied ? "#a6e3a1" : "#45475a", isCopied ? "#a6e3a122" : "#313244", "#11111b"))
+        .cursor_pointer()
+        .hover((s) => s.text_color("#ffffff"))
         .on_click((_e, cx) => {
           cx.write_to_clipboard(cmd);
           this.copiedCmd = cmd;
@@ -580,7 +585,14 @@ export default class CompanyMusic extends View {
             }
           });
         })
-        .child(isCopied ? "✓ Copied" : label || "Copy");
+        .child(
+          div()
+            .font_family(MONO)
+            .font_bold()
+            .text_size(9)
+            .text_color(isCopied ? "#a6e3a1" : "#cdd6f4")
+            .child(isCopied ? "COPIED" : label || "COPY"),
+        );
     };
 
     const cmdBox = (cmd) =>
@@ -589,7 +601,6 @@ export default class CompanyMusic extends View {
         .items_center()
         .justify_between()
         .p(6)
-        .rounded(6)
         .bg("#181825")
         .border_1()
         .border_color("#45475a")
@@ -605,43 +616,61 @@ export default class CompanyMusic extends View {
         }
       })
       .size_full()
-      .bg("#181825")
-      .border_1()
-      .border_color("#45475a")
-      .rounded(12)
-      .p(16)
-      .gap(12)
-      .text_color(t.foreground)
+      .min_h(0)
+      .relative()
+      .children(box("#45475a", "#181825", "#11111b"))
       .child(
-        h_flex()
-          .w_full()
-          .items_center()
-          .justify_between()
+        v_flex()
+          .relative()
+          .size_full()
+          .p(12)
+          .gap(10)
+          .font_family(MONO)
+          .text_color(t.foreground)
           .child(
-            v_flex()
-              .gap(2)
-              .child(div().font_bold().text_size(14).text_color("#cdd6f4").child("How to Install Audio Player"))
-              .child(div().text_size(11).text_color(t.dim).child("FFplay or MPV engine is required to stream audio without a browser"))
+            h_flex()
+              .w_full()
+              .pb(6)
+              .border_b(1)
+              .border_color("#313244")
+              .items_center()
+              .justify_between()
+              .child(
+                h_flex()
+                  .gap(8)
+                  .items_center()
+                  .child(svg("mods/company-status/boombox.svg").size(15))
+                  .child(
+                    v_flex()
+                      .gap(1)
+                      .child(div().font_family(MONO).font_bold().text_size(12).text_color("#cdd6f4").child("AUDIO ENGINE SETUP"))
+                      .child(div().text_size(9.5).text_color(t.dim).child("FFplay or MPV required for native audio streaming"))
+                  )
+              )
+              .child(
+                h_flex()
+                  .relative()
+                  .h(22)
+                  .px(8)
+                  .items_center()
+                  .cursor_pointer()
+                  .children(box("#45475a", "#313244", "#11111b"))
+                  .hover((s) => s.text_color("#ffffff"))
+                  .on_click(() => closeOverlay(props()?.overlay))
+                  .child(
+                    div()
+                      .text_size(9.5)
+                      .font_bold()
+                      .font_family(MONO)
+                      .text_color("#a6adc8")
+                      .child("ESC"),
+                  ),
+              ),
           )
-          .child(
-            div()
-              .cursor_pointer()
-              .px(7)
-              .py(2)
-              .rounded(4)
-              .text_size(11)
-              .font_family(MONO)
-              .text_color(t.dim)
-              .hover((s) => s.bg(t.hover).text_color(t.foreground))
-              .on_click(() => closeOverlay(props()?.overlay))
-              .child("✕ Close")
-          )
-      )
       .child(
         h_flex()
           .w_full()
           .p(3)
-          .rounded(8)
           .bg("#11111b")
           .border_1()
           .border_color("#313244")
@@ -652,7 +681,6 @@ export default class CompanyMusic extends View {
               .h(28)
               .items_center()
               .justify_center()
-              .rounded(6)
               .when(isMac, (el) => el.bg("#313244").border_1().border_color("#cba6f7"))
               .cursor_pointer()
               .text_size(11)
@@ -670,7 +698,6 @@ export default class CompanyMusic extends View {
               .h(28)
               .items_center()
               .justify_center()
-              .rounded(6)
               .when(isWindows, (el) => el.bg("#313244").border_1().border_color("#89b4fa"))
               .cursor_pointer()
               .text_size(11)
@@ -688,7 +715,6 @@ export default class CompanyMusic extends View {
               .h(28)
               .items_center()
               .justify_center()
-              .rounded(6)
               .when(isLinux, (el) => el.bg("#313244").border_1().border_color("#a6e3a1"))
               .cursor_pointer()
               .text_size(11)
@@ -706,7 +732,6 @@ export default class CompanyMusic extends View {
           .w_full()
           .flex_1()
           .p(12)
-          .rounded(8)
           .bg("#11111b")
           .border_1()
           .border_color("#313244")
@@ -775,7 +800,6 @@ export default class CompanyMusic extends View {
                 .w_full()
                 .px(10)
                 .py(6)
-                .rounded(6)
                 .bg("#f9e2af22")
                 .border_1()
                 .border_color("#f9e2af44")
@@ -798,7 +822,6 @@ export default class CompanyMusic extends View {
                     div()
                       .h(28)
                       .px(10)
-                      .rounded(6)
                       .when(isCurrentOsTab, (el) =>
                         el
                           .bg(isInstalling ? "#45475a" : "#89b4fa")
@@ -825,7 +848,6 @@ export default class CompanyMusic extends View {
                     div()
                       .h(28)
                       .px(9)
-                      .rounded(6)
                       .when(isCurrentOsTab, (el) =>
                         el
                           .bg("#313244")
@@ -853,7 +875,6 @@ export default class CompanyMusic extends View {
                     div()
                       .h(28)
                       .px(9)
-                      .rounded(6)
                       .bg("#313244")
                       .border_1()
                       .border_color("#45475a")
@@ -873,7 +894,8 @@ export default class CompanyMusic extends View {
                   .cursor_pointer()
                   .px(6)
                   .py(4)
-                  .rounded(4)
+                  .border_1()
+                  .border_color("#313244")
                   .text_size(10.5)
                   .font_family(MONO)
                   .text_color(t.dim)
@@ -885,7 +907,8 @@ export default class CompanyMusic extends View {
                   .child("Skip →")
               )
           )
-      );
+      )
+  );
   }
 
   render() {
@@ -925,124 +948,141 @@ export default class CompanyMusic extends View {
         }
       })
       .size_full()
-      .bg("#181825")
-      .border_1()
-      .border_color("#45475a")
-      .rounded(12)
-      .p(16)
-      .gap(12)
-      .text_color(t.foreground)
+      .min_h(0)
+      .relative()
+      .children(box("#45475a", "#181825", "#11111b"))
       .child(
-        h_flex()
-          .w_full()
-          .items_center()
-          .justify_between()
+        v_flex()
+          .relative()
+          .size_full()
+          .p(12)
+          .gap(8)
+          .font_family(MONO)
+          .text_color(t.foreground)
           .child(
             h_flex()
-              .gap(8)
+              .w_full()
+              .pb(6)
+              .border_b(1)
+              .border_color("#313244")
               .items_center()
-              .child(div().font_family(MONO).font_bold().text_size(13).text_color("#89b4fa").child("PIXEL MUSICBOX"))
+              .justify_between()
               .child(
-                div()
-                  .px(6)
-                  .py(1)
-                  .rounded(4)
-                  .bg("#313244")
-                  .text_size(9.5)
-                  .font_family(MONO)
-                  .text_color("#a6adc8")
-                  .child("AUDIO ONLY")
+                h_flex()
+                  .gap(8)
+                  .items_center()
+                  .child(svg("mods/company-status/boombox.svg").size(15))
+                  .child(div().font_family(MONO).font_bold().text_size(12).text_color("#89b4fa").child("PIXEL MUSICBOX"))
+                  .child(
+                    div()
+                      .px(5)
+                      .py(1)
+                      .bg("#313244")
+                      .border_1()
+                      .border_color("#45475a")
+                      .text_size(9)
+                      .font_family(MONO)
+                      .text_color("#a6adc8")
+                      .child("AUDIO ONLY")
+                  )
+                  .when(missingPlayer, (el) =>
+                    el.child(
+                      div()
+                        .px(5)
+                        .py(1)
+                        .bg("#f38ba833")
+                        .border_1()
+                        .border_color("#f38ba866")
+                        .text_size(9)
+                        .font_family(MONO)
+                        .text_color("#f38ba8")
+                        .cursor_pointer()
+                        .hover((s) => s.bg("#f38ba855"))
+                        .on_click((_e, cx) => {
+                          this.showGuide = true;
+                          cx.notify();
+                        })
+                        .child("⚠️ SETUP GUIDE")
+                    )
+                  )
               )
-              .when(missingPlayer, (el) =>
-                el.child(
-                  div()
-                    .px(6)
-                    .py(1)
-                    .rounded(4)
-                    .bg("#f38ba833")
-                    .border_1()
-                    .border_color("#f38ba866")
-                    .text_size(9.5)
-                    .font_family(MONO)
-                    .text_color("#f38ba8")
-                    .cursor_pointer()
-                    .hover((s) => s.bg("#f38ba855"))
-                    .on_click((_e, cx) => {
-                      this.showGuide = true;
-                      cx.notify();
-                    })
-                    .child("⚠️ Setup Guide")
-                )
+              .child(
+                h_flex()
+                  .gap(6)
+                  .items_center()
+                  .child(
+                    div()
+                      .id("btn-toggle-status-bar")
+                      .cursor_pointer()
+                      .px(6)
+                      .py(2)
+                      .border_1()
+                      .border_color("#45475a")
+                      .text_size(9.5)
+                      .font_family(MONO)
+                      .font_bold()
+                      .bg(isMusicHidden ? "#45475a" : "#313244")
+                      .text_color(isMusicHidden ? "#f9e2af" : t.dim)
+                      .hover((s) => s.bg(t.hover).text_color(t.foreground))
+                      .tooltip(isMusicHidden ? "Show on status bar" : "Hide MusicBox from status bar")
+                      .on_click((_e, cx) => {
+                        const nextVal = !isMusicBoxHidden();
+                        try {
+                          if (nextVal) {
+                            localStorage.setItem("pixel-hq.musicbox.hidden", "true");
+                          } else {
+                            localStorage.removeItem("pixel-hq.musicbox.hidden");
+                          }
+                        } catch {}
+                        setShared("pixel-hq.musicbox.hidden", nextVal);
+                        cx.spawn(async () => {
+                          await syncSettingsVisibility(nextVal);
+                        });
+                        cx.notify();
+                      })
+                      .child(isMusicHidden ? "STATUS: HIDDEN" : "STATUS: SHOWN")
+                  )
+                  .child(
+                    h_flex()
+                      .relative()
+                      .h(22)
+                      .px(8)
+                      .pt(2)
+                      .pb(4)
+                      .items_center()
+                      .cursor_pointer()
+                      .children(box("#45475a", "#313244", "#11111b"))
+                      .hover((s) => s.text_color("#ffffff"))
+                      .on_click(() => closeOverlay(props()?.overlay))
+                      .child(
+                        div()
+                          .text_size(9.5)
+                          .font_family(MONO)
+                          .font_bold()
+                          .text_color("#a6adc8")
+                          .child("ESC"),
+                      ),
+                  )
               )
           )
-          .child(
-            h_flex()
-              .gap(6)
-              .items_center()
-              .child(
-                div()
-                  .id("btn-toggle-status-bar")
-                  .cursor_pointer()
-                  .px(6)
-                  .py(2)
-                  .rounded(4)
-                  .text_size(10.5)
-                  .font_family(MONO)
-                  .bg(isMusicHidden ? "#45475a" : "#313244")
-                  .text_color(isMusicHidden ? "#f9e2af" : t.dim)
-                  .hover((s) => s.bg(t.hover).text_color(t.foreground))
-                  .tooltip(isMusicHidden ? "Show on status bar" : "Hide MusicBox from status bar (Right-click status bar button also hides)")
-                  .on_click((_e, cx) => {
-                    const nextVal = !isMusicBoxHidden();
-                    try {
-                      if (nextVal) {
-                        localStorage.setItem("pixel-hq.musicbox.hidden", "true");
-                      } else {
-                        localStorage.removeItem("pixel-hq.musicbox.hidden");
-                      }
-                    } catch {}
-                    setShared("pixel-hq.musicbox.hidden", nextVal);
-                    cx.spawn(async () => {
-                      await syncSettingsVisibility(nextVal);
-                    });
-                    cx.notify();
-                  })
-                  .child(isMusicHidden ? "👁️ Show on status bar" : "👁️ Hide from status bar")
-              )
-              .child(
-                div()
-                  .cursor_pointer()
-                  .px(7)
-                  .py(2)
-                  .rounded(4)
-                  .text_size(11)
-                  .font_family(MONO)
-                  .text_color(t.dim)
-                  .hover((s) => s.bg(t.hover).text_color(t.foreground))
-                  .on_click(() => closeOverlay(props()?.overlay))
-                  .child("✕ Close")
-              )
-          )
-      )
       .when(isMusicHidden, (el) =>
         el.child(
           h_flex()
             .w_full()
             .px(8)
-            .py(4)
-            .rounded(6)
+            .py(3)
             .bg("#f9e2af15")
             .border_1()
             .border_color("#f9e2af33")
             .items_center()
             .gap(6)
-            .child(div().text_size(11).child("💡"))
-            .child(div().text_size(10.5).text_color("#f9e2af").child("MusicBox is hidden. You can reopen it with Ctrl + Shift + M"))
+            .child(div().text_size(10).child("💡"))
+            .child(div().text_size(9.5).text_color("#f9e2af").child("MusicBox hidden from status bar. Reopen with Ctrl + Shift + M"))
         )
       )
       .child(
         v_flex()
-          .gap(6)
+          .gap(5)
           .w_full()
           .child(
             h_flex()
@@ -1052,32 +1092,34 @@ export default class CompanyMusic extends View {
               .child(
                 div()
                   .flex_1()
-                  .h(30)
-                  .px(8)
+                  .h(28)
+                  .px(7)
                   .flex()
                   .items_center()
-                  .rounded(6)
                   .bg("#11111b")
                   .border_1()
                   .border_color("#313244")
-                  .child(Input.new(this.urlInput).font_family(MONO).text_size(11.5).size_full().text_color(t.foreground))
+                  .child(Input.new(this.urlInput).font_family(MONO).text_size(11).size_full().text_color(t.foreground))
               )
               .child(
-                div()
+                h_flex()
                   .id("btn-play-custom")
-                  .h(30)
-                  .px(12)
-                  .rounded(6)
-                  .bg(this.busy ? "#45475a" : "#89b4fa")
-                  .cursor_pointer()
-                  .flex()
+                  .relative()
+                  .h(28)
+                  .px(10)
                   .items_center()
-                  .font_bold()
-                  .text_size(11)
-                  .text_color(this.busy ? "#cdd6f4" : "#11111b")
+                  .cursor_pointer()
+                  .children(box(this.busy ? "#45475a" : "#89b4fa", this.busy ? "#313244" : "#89b4fa", "#11111b"))
                   .hover((s) => s.opacity(0.88))
                   .on_click((_e, cx) => this.play(this.urlInput.value(), null, cx))
-                  .child(this.busy ? "⏳ Starting..." : "▶ Play")
+                  .child(
+                    div()
+                      .font_bold()
+                      .font_family(MONO)
+                      .text_size(10)
+                      .text_color(this.busy ? "#cdd6f4" : "#11111b")
+                      .child(this.busy ? "STARTING..." : "▶ PLAY"),
+                  ),
               )
           )
       )
@@ -1085,25 +1127,23 @@ export default class CompanyMusic extends View {
         el.child(
           h_flex()
             .w_full()
-            .px(10)
-            .py(7)
-            .rounded(6)
+            .px(8)
+            .py(5)
             .bg("#a6e3a122")
             .border_1()
             .border_color("#a6e3a155")
             .gap(6)
             .items_center()
-            .child(div().text_size(11).child("✓"))
-            .child(div().font_bold().text_size(10.5).text_color("#a6e3a1").child(this.installSuccess))
+            .child(div().text_size(10).child("✓"))
+            .child(div().font_bold().text_size(10).text_color("#a6e3a1").child(this.installSuccess))
         )
       )
       .when(Boolean(activeError || this.installing), (el) =>
         el.child(
           v_flex()
             .w_full()
-            .px(10)
-            .py(8)
-            .rounded(6)
+            .px(8)
+            .py(6)
             .bg(this.installing ? "#f9e2af1a" : "#f38ba822")
             .border_1()
             .border_color(this.installing ? "#f9e2af44" : "#f38ba855")
@@ -1112,40 +1152,38 @@ export default class CompanyMusic extends View {
               h_flex()
                 .gap(6)
                 .items_center()
-                .child(div().text_size(11).child(this.installing ? "⏳" : "⚠️"))
-                .child(div().font_bold().text_size(11).text_color(this.installing ? "#f9e2af" : "#f38ba8").child(this.installing ? "Installing Audio Extractor..." : "Audio Player Error"))
+                .child(div().text_size(10).child(this.installing ? "⏳" : "⚠️"))
+                .child(div().font_bold().text_size(10.5).text_color(this.installing ? "#f9e2af" : "#f38ba8").child(this.installing ? "INSTALLING AUDIO EXTRACTOR..." : "AUDIO PLAYER ERROR"))
                 .child(div().flex_1())
                 .when(Boolean((activeError && activeError.includes("yt-dlp")) || this.installing), (headEl) =>
                   headEl.child(
                     div()
                       .when(this.installing, (b) =>
                         b
-                          .px(7)
-                          .py(2)
-                          .rounded(3)
+                          .px(6)
+                          .py(1)
                           .bg("#313244")
                           .border_1()
                           .border_color("#45475a")
-                          .text_size(10)
-                          .font_semibold()
+                          .text_size(9.5)
+                          .font_bold()
                           .text_color("#f9e2af")
-                          .child("⏳ Installing yt-dlp...")
+                          .child("INSTALLING...")
                       )
                       .when(!this.installing, (b) =>
                         b
                           .cursor_pointer()
                           .px(6)
                           .py(1)
-                          .rounded(3)
                           .bg("#89b4fa22")
                           .border_1()
                           .border_color("#89b4fa55")
-                          .text_size(10)
-                          .font_semibold()
+                          .text_size(9.5)
+                          .font_bold()
                           .text_color("#89b4fa")
                           .hover((s) => s.bg("#89b4fa44"))
                           .on_click((_e, cx) => this.installYtDlpOnly(cx))
-                          .child("⚡ Install yt-dlp")
+                          .child("⚡ INSTALL YT-DLP")
                       )
                   )
                 )
@@ -1155,17 +1193,18 @@ export default class CompanyMusic extends View {
                       .cursor_pointer()
                       .px(6)
                       .py(1)
-                      .rounded(3)
                       .bg("#f38ba833")
-                      .text_size(10)
-                      .font_semibold()
+                      .border_1()
+                      .border_color("#f38ba866")
+                      .text_size(9.5)
+                      .font_bold()
                       .text_color("#f38ba8")
                       .hover((s) => s.bg("#f38ba855"))
                       .on_click((_e, cx) => {
                         this.showGuide = true;
                         cx.notify();
                       })
-                      .child("View Setup Guide →")
+                      .child("SETUP GUIDE →")
                   )
                 )
             )
@@ -1174,23 +1213,22 @@ export default class CompanyMusic extends View {
                 h_flex()
                   .gap(6)
                   .items_center()
-                  .child(div().text_size(10.5).font_medium().text_color("#f9e2af").child(this.installMsg || "Installing yt-dlp via pip (~3s)... Please wait"))
+                  .child(div().text_size(10).text_color("#f9e2af").child(this.installMsg || "Installing yt-dlp via pip (~3s)... Please wait"))
               )
             )
             .when(!this.installing, (bodyEl) =>
-              bodyEl.child(div().text_size(10.5).text_color("#eba0ac").child(activeError || ""))
+              bodyEl.child(div().text_size(10).text_color("#eba0ac").child(activeError || ""))
             )
         )
       )
       .child(
         v_flex()
           .w_full()
-          .p(10)
-          .rounded(8)
-          .bg("#11111b")
+          .p(8)
+          .bg("#0a0e14")
           .border_1()
-          .border_color("#313244")
-          .gap(8)
+          .border_color("#24273a")
+          .gap(6)
           .child(
             h_flex()
               .w_full()
@@ -1198,32 +1236,42 @@ export default class CompanyMusic extends View {
               .justify_between()
               .child(
                 h_flex()
-                  .gap(8)
+                  .gap(6)
                   .items_center()
-                  .child(div().text_size(14).child("📻"))
                   .child(
-                    v_flex()
-                      .gap(2)
-                      .child(div().text_size(9.5).font_family(MONO).text_color(t.dim).child("NOW PLAYING"))
-                      .child(div().font_bold().text_size(12).text_color(t.foreground).truncate().child(currentTitle))
+                    div()
+                      .font_family(MONO)
+                      .text_size(10)
+                      .font_bold()
+                      .text_color("#585b70")
+                      .child("(◎) ══════════ (◎)")
                   )
               )
               .child(
                 div()
-                  .px(7)
-                  .py(2)
-                  .rounded(4)
-                  .text_size(9.5)
+                  .px(6)
+                  .py(1)
+                  .border_1()
+                  .border_color(
+                    isPlaying
+                      ? "#a6e3a1"
+                      : isBuffering
+                      ? "#f9e2af"
+                      : isPaused
+                      ? "#cba6f7"
+                      : "#313244"
+                  )
+                  .text_size(8.5)
                   .font_family(MONO)
                   .font_bold()
                   .bg(
                     isPlaying
-                      ? "#a6e3a133"
+                      ? "#a6e3a122"
                       : isBuffering
-                      ? "#f9e2af33"
+                      ? "#f9e2af22"
                       : isPaused
-                      ? "#cba6f733"
-                      : "#313244"
+                      ? "#cba6f722"
+                      : "#181825"
                   )
                   .text_color(
                     isPlaying
@@ -1236,188 +1284,189 @@ export default class CompanyMusic extends View {
                   )
                   .child(
                     isPlaying
-                      ? "● PLAYING"
+                      ? "● PLAYING [STEREO]"
                       : isBuffering
-                      ? "⏳ BUFFERING"
+                      ? "⏳ BUFFERING..."
                       : isPaused
                       ? "⏸ PAUSED"
-                      : "IDLE"
+                      : "■ STANDBY"
                   )
               )
           )
-          .when(isPlaying || isPaused || isBuffering, (el) =>
-            el.child(
-              v_flex()
-                .w_full()
-                .gap(5)
-                .when(dur > 0, (bar) =>
-                  bar.child(
+          .child(
+            v_flex()
+              .w_full()
+              .gap(1)
+              .child(div().text_size(8.5).font_bold().font_family(MONO).text_color(isPlaying ? "#a6e3a1" : t.dim).child("AUDIO OUTPUT // DECK A"))
+              .child(div().font_bold().font_family(MONO).text_size(11.5).text_color(isPlaying ? "#a6e3a1" : "#cdd6f4").truncate().child(currentTitle))
+          )
+          .child(
+            v_flex()
+              .w_full()
+              .gap(4)
+              .child(
+                div()
+                  .w_full()
+                  .h(6)
+                  .bg("#11111b")
+                  .border_1()
+                  .border_color("#313244")
+                  .overflow_hidden()
+                  .child(
                     div()
-                      .w_full()
-                      .h(4)
-                      .rounded(2)
-                      .bg("#1e1e2e")
-                      .overflow_hidden()
+                      .h_full()
+                      .bg(isPlaying ? "#a6e3a1" : "#585b70")
+                      .w(`${Math.max(2, percent)}%`)
+                  )
+              )
+              .child(
+                h_flex()
+                  .w_full()
+                  .items_center()
+                  .justify_between()
+                  .child(
+                    h_flex()
+                      .gap(6)
+                      .items_center()
                       .child(
                         div()
-                          .h_full()
-                          .rounded(2)
-                          .bg(isPlaying ? "#89b4fa" : "#585b70")
-                          .w(`${Math.max(1, percent)}%`)
+                          .text_size(9)
+                          .font_family(MONO)
+                          .font_bold()
+                          .text_color(isPlaying ? "#a6e3a1" : t.dim)
+                          .child(
+                            dur > 0
+                              ? `TAPE TIME: ${formatTime(liveElapsed)} / ${formatTime(dur)}`
+                              : `LIVE STREAM: ${formatTime(liveElapsed)}`
+                          )
                       )
                   )
-                )
-                .child(
-                  h_flex()
-                    .w_full()
-                    .items_center()
-                    .justify_between()
-                    .child(
-                      h_flex()
-                        .gap(5)
-                        .items_center()
-                        .child(div().text_size(9.5).child("⏱"))
-                        .child(
+                  .child(
+                    h_flex()
+                      .gap(2)
+                      .items_center()
+                      .children(
+                        [3, 5, 8, 12, 10, 6, 9, 11, 7, 4].map((h, idx) =>
                           div()
-                            .text_size(10)
-                            .font_family(MONO)
-                            .font_semibold()
-                            .text_color(isPlaying ? "#cdd6f4" : t.dim)
-                            .child(
-                              dur > 0
-                                ? `${formatTime(liveElapsed)} / ${formatTime(dur)}`
-                                : `${formatTime(liveElapsed)} (Streaming)`
-                            )
+                            .w(2)
+                            .h(isPlaying ? h : 2)
+                            .bg(isPlaying ? (idx > 7 ? "#f38ba8" : idx > 5 ? "#f9e2af" : "#a6e3a1") : "#313244")
                         )
-                    )
-                    .when(dur > 0, (pct) =>
-                      pct.child(
-                        div()
-                          .text_size(9.5)
-                          .font_family(MONO)
-                          .font_semibold()
-                          .text_color(isPlaying ? "#89b4fa" : t.dim)
-                          .child(`${percent}%`)
                       )
-                    )
-                    .when(dur <= 0, (tag) =>
-                      tag.child(
-                        div()
-                          .px(4)
-                          .py(1)
-                          .rounded(2)
-                          .bg("#313244")
-                          .text_size(8.5)
-                          .font_family(MONO)
-                          .text_color("#89b4fa")
-                          .child("LIVE")
-                      )
-                    )
-                )
-            )
+                  )
+              )
           )
           .child(
             h_flex()
-              .gap(8)
+              .gap(6)
               .items_center()
+              .pt(2)
               .when(isPlaying || isPaused, (el) =>
                 el.child(
-                  div()
-                    .h(26)
+                  h_flex()
+                    .relative()
+                    .h(24)
                     .px(8)
-                    .rounded(4)
-                    .bg("#313244")
-                    .cursor_pointer()
-                    .flex()
                     .items_center()
-                    .text_size(11)
-                    .font_family(MONO)
-                    .font_semibold()
-                    .text_color("#cdd6f4")
-                    .hover((s) => s.bg("#45475a"))
+                    .cursor_pointer()
+                    .children(box("#45475a", "#313244", "#11111b"))
+                    .hover((s) => s.text_color("#ffffff"))
                     .tooltip("Previous track / station")
                     .on_click((_e, cx) => this.prev(cx))
-                    .child("⏮ Prev")
-                )
+                    .child(
+                      div()
+                        .text_size(9.5)
+                        .font_family(MONO)
+                        .font_bold()
+                        .text_color("#cdd6f4")
+                        .child("⏮ PREV"),
+                    ),
+                ),
               )
               .when(isPlaying, (el) =>
                 el.child(
-                  div()
-                    .h(26)
-                    .px(10)
-                    .rounded(4)
-                    .bg("#313244")
-                    .cursor_pointer()
-                    .flex()
+                  h_flex()
+                    .relative()
+                    .h(24)
+                    .px(9)
                     .items_center()
-                    .text_size(11)
-                    .font_family(MONO)
-                    .font_semibold()
-                    .text_color("#cdd6f4")
-                    .hover((s) => s.bg("#45475a"))
+                    .cursor_pointer()
+                    .children(box("#45475a", "#313244", "#11111b"))
+                    .hover((s) => s.text_color("#ffffff"))
                     .on_click((_e, cx) => this.pause(cx))
-                    .child("⏸ Pause")
-                )
+                    .child(
+                      div()
+                        .text_size(9.5)
+                        .font_family(MONO)
+                        .font_bold()
+                        .text_color("#cdd6f4")
+                        .child("⏸ PAUSE"),
+                    ),
+                ),
               )
               .when(isPaused, (el) =>
                 el.child(
-                  div()
-                    .h(26)
-                    .px(10)
-                    .rounded(4)
-                    .bg("#89b4fa")
-                    .cursor_pointer()
-                    .flex()
+                  h_flex()
+                    .relative()
+                    .h(24)
+                    .px(9)
                     .items_center()
-                    .text_size(11)
-                    .font_family(MONO)
-                    .font_bold()
-                    .text_color("#11111b")
-                    .hover((s) => s.opacity(0.88))
+                    .cursor_pointer()
+                    .children(box("#a6e3a1", "#a6e3a122", "#11111b"))
+                    .hover((s) => s.text_color("#ffffff"))
                     .on_click((_e, cx) => this.resume(cx))
-                    .child("▶ Resume")
-                )
+                    .child(
+                      div()
+                        .text_size(9.5)
+                        .font_family(MONO)
+                        .font_bold()
+                        .text_color("#a6e3a1")
+                        .child("▶ RESUME"),
+                    ),
+                ),
               )
               .when(isPlaying || isPaused || isBuffering, (el) =>
                 el.child(
-                  div()
-                    .h(26)
-                    .px(10)
-                    .rounded(4)
-                    .bg("#f38ba833")
-                    .border_1()
-                    .border_color("#f38ba866")
-                    .cursor_pointer()
-                    .flex()
+                  h_flex()
+                    .relative()
+                    .h(24)
+                    .px(9)
                     .items_center()
-                    .text_size(11)
-                    .font_family(MONO)
-                    .font_semibold()
-                    .text_color("#f38ba8")
-                    .hover((s) => s.bg("#f38ba855"))
+                    .cursor_pointer()
+                    .children(box("#f38ba8", "#f38ba822", "#11111b"))
+                    .hover((s) => s.text_color("#ffffff"))
                     .on_click((_e, cx) => this.stop(cx))
-                    .child("⏹ Stop")
-                )
+                    .child(
+                      div()
+                        .text_size(9.5)
+                        .font_family(MONO)
+                        .font_bold()
+                        .text_color("#f38ba8")
+                        .child("⏹ STOP"),
+                    ),
+                ),
               )
               .when(isPlaying || isPaused, (el) =>
                 el.child(
-                  div()
-                    .h(26)
+                  h_flex()
+                    .relative()
+                    .h(24)
                     .px(8)
-                    .rounded(4)
-                    .bg("#313244")
-                    .cursor_pointer()
-                    .flex()
                     .items_center()
-                    .text_size(11)
-                    .font_family(MONO)
-                    .font_semibold()
-                    .text_color("#cdd6f4")
-                    .hover((s) => s.bg("#45475a"))
+                    .cursor_pointer()
+                    .children(box("#45475a", "#313244", "#11111b"))
+                    .hover((s) => s.text_color("#ffffff"))
                     .tooltip("Next track / station")
                     .on_click((_e, cx) => this.next(cx))
-                    .child("⏭ Next")
-                )
+                    .child(
+                      div()
+                        .text_size(9.5)
+                        .font_family(MONO)
+                        .font_bold()
+                        .text_color("#cdd6f4")
+                        .child("⏭ NEXT"),
+                    ),
+                ),
               )
           )
       )
@@ -1434,7 +1483,7 @@ export default class CompanyMusic extends View {
                 .child(
                   div()
                     .font_family(MONO)
-                    .text_size(10)
+                    .text_size(9.5)
                     .font_bold()
                     .text_color(t.dim)
                     .child(`RECENTLY PLAYED (${this.history.length})`)
@@ -1442,113 +1491,131 @@ export default class CompanyMusic extends View {
                 .child(
                   div()
                     .cursor_pointer()
-                    .px(6)
+                    .px(5)
                     .py(1)
-                    .rounded(3)
-                    .text_size(9.5)
+                    .bg("#313244")
+                    .border_1()
+                    .border_color("#45475a")
+                    .text_size(9)
                     .font_family(MONO)
-                    .text_color(t.dim)
-                    .hover((s) => s.text_color("#f38ba8"))
+                    .font_bold()
+                    .text_color("#a6adc8")
+                    .hover((s) => s.bg(t.hover))
                     .on_click((_e, cx) => this.clearHistory(cx))
-                    .child("✕ Clear")
+                    .child("× CLEAR")
                 )
             )
-            .children(
-              this.history.map((h, i) => {
-                const active = music.url === h.url;
-                const isPl = h.type === "playlist";
-                const isYt = h.type === "youtube";
-                const badgeColor = isPl ? "#cba6f7" : isYt ? "#f38ba8" : "#89b4fa";
-                const badgeText = isPl ? "PLAYLIST" : isYt ? "YOUTUBE" : "STREAM";
-                const icon = isPl ? "📻" : isYt ? "🎬" : "🎵";
+            .child(
+              v_flex()
+                .w_full()
+                .gap(3)
+                .max_h(120)
+                .overflow_y_scrollbar()
+                .children(
+                  this.history.map((h) => {
+                    const active = music.url === h.url;
+                    const isMedia = h.url.includes("youtube.com") || h.url.includes("youtu.be") || h.url.includes("soundcloud.com");
+                    const icon = isMedia ? "🎬" : "📻";
+                    const badgeText = h.url.includes("soundcloud") ? "SOUNDCLOUD" : isMedia ? "YOUTUBE" : "DIRECT";
+                    const badgeColor = isMedia ? "#f38ba8" : "#89b4fa";
 
-                return h_flex()
-                  .id(`history-item-${i}`)
-                  .w_full()
-                  .h(34)
-                  .px(8)
-                  .gap(8)
-                  .items_center()
-                  .justify_between()
-                  .rounded(6)
-                  .bg(active ? "#313244" : "#11111b")
-                  .border_1()
-                  .border_color(active ? "#89b4fa" : "#313244")
-                  .cursor_pointer()
-                  .hover((s) => s.border_color("#89b4fa"))
-                  .on_click((_e, cx) => {
-                    this.urlInput.set_value(h.url);
-                    const isMedia = h.type === "playlist" || h.type === "youtube" || h.type === "soundcloud";
-                    this.play(h.url, isMedia ? null : h.title, cx);
-                  })
-                  .child(
-                    h_flex()
-                      .gap(6)
+                    return h_flex()
+                      .id(h.url)
+                      .w_full()
+                      .h(32)
+                      .px(8)
+                      .gap(7)
                       .items_center()
-                      .min_w(0)
-                      .flex_1()
+                      .justify_between()
+                      .bg(active ? "#313244" : "#11111b")
+                      .border_1()
+                      .border_color(active ? "#89b4fa" : "#313244")
+                      .cursor_pointer()
+                      .hover((s) => s.border_color("#89b4fa"))
+                      .on_click((_e, cx) => {
+                        this.urlInput.set_value(h.url);
+                        this.play(h.url, isMedia ? null : h.title, cx);
+                      })
                       .child(
-                        div()
-                          .px(5)
-                          .py(1)
-                          .rounded(3)
-                          .bg(`${badgeColor}22`)
-                          .border_1()
-                          .border_color(`${badgeColor}55`)
-                          .text_size(8.5)
-                          .font_family(MONO)
-                          .font_bold()
-                          .text_color(badgeColor)
-                          .child(`${icon} ${badgeText}`)
-                      )
-                      .child(
-                        v_flex()
-                          .gap(1)
+                        h_flex()
+                          .gap(6)
+                          .items_center()
                           .min_w(0)
                           .flex_1()
                           .child(
                             div()
-                              .font_semibold()
-                              .text_size(11)
-                              .text_color(active ? "#89b4fa" : t.foreground)
-                              .truncate()
-                              .child(h.title || h.url)
+                              .px(4)
+                              .py(0.5)
+                              .bg(`${badgeColor}22`)
+                              .border_1()
+                              .border_color(`${badgeColor}55`)
+                              .text_size(8)
+                              .font_family(MONO)
+                              .font_bold()
+                              .text_color(badgeColor)
+                              .child(`${icon} ${badgeText}`)
                           )
                           .child(
-                            div()
-                              .text_size(9)
-                              .font_family(MONO)
-                              .text_color(t.dim)
-                              .truncate()
-                              .child(h.url)
+                            v_flex()
+                              .gap(1)
+                              .min_w(0)
+                              .flex_1()
+                              .child(
+                                div()
+                                  .font_bold()
+                                  .text_size(10.5)
+                                  .text_color(active ? "#89b4fa" : t.foreground)
+                                  .truncate()
+                                  .child(h.title || h.url)
+                              )
+                              .child(
+                                div()
+                                  .text_size(8.5)
+                                  .font_family(MONO)
+                                  .text_color(t.dim)
+                                  .truncate()
+                                  .child(h.url)
+                              )
                           )
                       )
-                  )
-                  .child(
-                    div()
-                      .px(6)
-                      .py(2)
-                      .rounded(3)
-                      .bg(active && isPlaying ? "#a6e3a122" : "#181825")
-                      .border_1()
-                      .border_color(active && isPlaying ? "#a6e3a155" : "#313244")
-                      .text_size(9)
-                      .font_family(MONO)
-                      .font_semibold()
-                      .text_color(active && isPlaying ? "#a6e3a1" : "#cdd6f4")
-                      .child(active && isPlaying ? "● PLAYING" : "▶ Play")
-                  );
-              })
+                      .child(
+                        div()
+                          .px(5)
+                          .py(1)
+                          .bg(active && isPlaying ? "#a6e3a122" : "#181825")
+                          .border_1()
+                          .border_color(active && isPlaying ? "#a6e3a1" : "#313244")
+                          .text_size(8.5)
+                          .font_family(MONO)
+                          .font_bold()
+                          .text_color(active && isPlaying ? "#a6e3a1" : "#cdd6f4")
+                          .child(active && isPlaying ? "● PLAYING" : "▶ PLAY")
+                      );
+                  })
+                )
             )
         )
       )
       .child(
         v_flex()
-          .gap(4)
+          .gap(5)
           .w_full()
-          .child(div().font_family(MONO).text_size(10).font_bold().text_color(t.dim).child("DIRECT STREAM PRESETS (NO YT-DLP NEEDED)"))
+          .child(
+            h_flex()
+              .w_full()
+              .items_center()
+              .justify_between()
+              .child(
+                div()
+                  .font_family(MONO)
+                  .text_size(9.5)
+                  .font_bold()
+                  .text_color("#89b4fa")
+                  .child("■ SYNTHESIZER SOUND BANKS // DIRECT STREAM ■")
+              )
+          )
           .children(
-            PRESETS.map((p) => {
+            PRESETS.map((p, idx) => {
               const active = music.url === p.url;
               return h_flex()
                 .id(p.id)
@@ -1558,34 +1625,50 @@ export default class CompanyMusic extends View {
                 .gap(8)
                 .items_center()
                 .justify_between()
-                .rounded(6)
                 .bg(active ? "#313244" : "#11111b")
                 .border_1()
                 .border_color(active ? "#89b4fa" : "#313244")
                 .cursor_pointer()
-                .hover((s) => s.border_color("#89b4fa"))
+                .hover((s) => s.border_color(active ? "#89b4fa" : "#585b70"))
                 .on_click((_e, cx) => this.play(p.url, p.title, cx))
                 .child(
                   h_flex()
-                    .gap(6)
+                    .gap(8)
                     .items_center()
                     .min_w(0)
-                    .child(div().font_semibold().text_size(11).text_color(active ? "#89b4fa" : t.foreground).truncate().child(p.title))
-                    .child(div().text_size(10).text_color(t.dim).child(`· ${p.desc}`))
+                    .child(
+                      div()
+                        .px(4)
+                        .py(1)
+                        .bg(active ? "#89b4fa33" : "#181825")
+                        .border_1()
+                        .border_color(active ? "#89b4fa" : "#45475a")
+                        .font_family(MONO)
+                        .font_bold()
+                        .text_size(8.5)
+                        .text_color(active ? "#89b4fa" : "#a6adc8")
+                        .child(`0${idx + 1}`)
+                    )
+                    .when(active, (el) => el.child(div().font_family(MONO).font_bold().text_size(10).text_color("#89b4fa").child("▶")))
+                    .child(div().font_bold().font_family(MONO).text_size(10.5).text_color(active ? "#89b4fa" : t.foreground).truncate().child(p.title))
+                    .child(div().text_size(9).font_family(MONO).text_color(t.dim).child(`· ${p.desc}`))
                 )
                 .child(
                   div()
                     .px(6)
-                    .py(1)
-                    .rounded(3)
-                    .bg("#181825")
-                    .text_size(9)
+                    .py(1.5)
+                    .bg(active ? "#89b4fa22" : "#181825")
+                    .border_1()
+                    .border_color(active ? "#89b4fa" : "#313244")
+                    .text_size(8.5)
                     .font_family(MONO)
+                    .font_bold()
                     .text_color(active ? "#89b4fa" : "#6c7086")
-                    .child(p.tag)
+                    .child(active && isPlaying ? "● ON AIR" : p.tag)
                 );
             })
           )
-      );
+      )
+  );
   }
 }
