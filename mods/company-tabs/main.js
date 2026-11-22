@@ -60,7 +60,7 @@ const tick = (c) => div().relative().flex_none().w(10).h(10)
 const bang = (c) => div().relative().flex_none().w(4).h(10)
   .children([div().absolute().left(1).top(0).w(2).h(6).bg(c), div().absolute().left(1).top(8).w(2).h(2).bg(c)]);
 const plus = (c) => div().relative().flex_none().w(10).h(10)
-  .children([div().absolute().left(4).top(0).w(2).h(10).bg(c), div().absolute().left(0).top(4).w(10).h(2).bg(c)]);
+  .children([div().absolute().left(3).top(0).w(4).h(10).bg(c), div().absolute().left(0).top(3).w(10).h(4).bg(c)]);
 
 export default class Tabs extends View {
   init(_props, cx) {
@@ -184,7 +184,8 @@ export default class Tabs extends View {
         .on_click(() => {
           if (on) run("layout.hide", { id: "panel" });
           else { run("layout.select", { stack: "panel-body", child: id }); run("layout.show", { id: "panel" }); }
-        }).child(text.toUpperCase());
+        })
+        .child(text.toUpperCase());
     };
     return h_flex().size_full().min_w(0).px(10).pl(lightsPadding).gap(3).items_center().bg(t.chrome).border_b(1).border_color(t.surface)
       .on_mouse_up("left", () => { this.pressed = null; })
@@ -195,8 +196,8 @@ export default class Tabs extends View {
       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
       .when(enabled.includes("files"), el => el.child(panelButton("files", "Files")))
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes")))
-      .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
-        .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
-        .child(button("close-window", w.platform === "windows" ? svg("mods/tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
+      .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/company-tabs/win-min.svg").size(14) : "−", () => run("window.minimize")))
+        .child(button("maximize", w.platform === "windows" ? svg(`mods/company-tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(14) : "□", () => run("window.maximize")))
+        .child(button("close-window", w.platform === "windows" ? svg("mods/company-tabs/win-close.svg").size(14) : svg("mods/company-pane/close.svg").size(13), () => run("window.close"))));
   }
 }
