@@ -114,8 +114,8 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [], 
   // A worktree's stop wears the branch glyph in its color instead of the state core.
   const node = div().absolute().left(3).top(c - 7).w(14).h(14).children(pix(tree ? tint : line, 14, 14))
     .child(tree
-      ? div().absolute().left(3).top(2).w(8).h(10).children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]]
-        .map(([x, y, w, h2]) => div().absolute().left(x).top(y).w(w).h(h2).bg(t.chrome)))
+      ? div().absolute().left(3).top(2).w(8).h(10).children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 2, 6], [1, 4, 4, 2]]
+        .map(([x, y, w, h2]) => div().absolute().left(x).top(y).w(w).h(h2).bg(day() ? "#ffffff" : t.chrome)))
       : div().absolute().left(3).top(3).w(8).h(8).bg(blocked ? "#f38ba8" : here ? "#f9e2af" : day() ? "#47445e" : "#ffffff"));
   return div().relative().w(GUTTER).h(h).flex_none()
     .child(div().absolute().left(6).top(0).w(8).h(end).bg(line + "66"))
@@ -546,7 +546,7 @@ export default class Spaces extends View {
         .child(div().absolute().left(0).top(0).size(20).rounded(3).bg("#ffffff"))
         .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(11).text_color(deepen(line, 0.45))
           .child([...(m ?? "this computer")][0].toUpperCase()));
-      const icon = svg(`mods/workspace-chrome/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
+      const icon = svg(`mods/company-spaces/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
       const badge = div().absolute().right(-3).bottom(-2).size(6).rounded(3).border_1().border_color(t.chrome).bg(connected ? t.ansi2 : t.dim);
       // One plate spans the platform, hung from the canopy by two rods: the badge and the line's
       // name at the left, the stop count and the fold mark at the right.
@@ -581,7 +581,7 @@ export default class Spaces extends View {
               .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(machine, cx); })
               .child(repair?.busy ? "Connecting…" : "Connect")))))
         .child(div().flex_none().font_family(MONO).font_bold().text_size(10).text_color(plateInk).child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
-        .child(svg(`mods/workspace-chrome/chevron-${folded ? "right" : "down"}.svg`).size(10).flex_none().text_color(plateInk));
+        .child(svg(`mods/company-spaces/chevron-${folded ? "right" : "down"}.svg`).size(10).flex_none().text_color(plateInk));
       const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 72).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
         .when(collapsed, el => el.mt(4).w(RAIL_CELL).justify_center().rounded(6).tooltip(login ? `${m} needs a login: run ${login}. Click for Copy.` : m ? `${m} · ${connected ? "connected" : (machine?.state ?? "asleep").replace(/_/g, " ")}` : "This computer"))
         .when(collapsed, el => el.cursor_pointer())
@@ -619,10 +619,10 @@ export default class Spaces extends View {
         .when(collapsed || connected, el => el.hover(s => s.bg(t.hover).text_color(t.foreground)).on_click(() => run("space.new", { machine: m ?? "" })))
         .when(collapsed, el => el.w(RAIL_CELL).rounded(6).justify_center().tooltip(`New space on ${m ?? "this computer"}`)
           .child(h_flex().size(18).rounded(5).border_1().border_color(t.dim).items_center().justify_center()
-            .child(svg("mods/workspace-chrome/plus.svg").size(10))))
+            .child(svg("mods/company-spaces/plus.svg").size(10))))
         .when(!collapsed, el => el.h(26).gap(6).text_size(11.5).child(rail(t, line, 26, { stop: "end", last: true }))
           // A vacant platform: the rail ends in a dashed stop, and a plus marks where the station will stand.
-          .child(svg("mods/workspace-chrome/plus.svg").size(12).flex_none())
+          .child(svg("mods/company-spaces/plus.svg").size(12).flex_none())
           .child("new station"));
       if (!collapsed && rebuilt) return [head];
       const cell = collapsed ? railCell : (el) => el;
@@ -783,7 +783,7 @@ const C = ROOMC();
       ...(done > 0 ? [chip(`${done} shipped`, t.done)] : []),
       ...(idle > 0 ? [chip(`${idle} break`, t.idle ?? t.dim)] : []),
     ];
-    const glyph = div().relative().w(8).h(10).flex_none().children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w2, h2]) => div().absolute().left(x).top(y).w(w2).h(h2).bg(raw ? t.accent : t.dim)));
+    const glyph = div().relative().w(8).h(10).flex_none().children([[0, 0, 2, 2], [0, 8, 2, 2], [5, 2, 2, 2], [0, 2, 1, 6], [1, 4, 5, 1]].map(([x, y, w2, h2]) => div().absolute().left(x).top(y).w(w2).h(h2).bg(raw ? fill : t.dim)));
     return h_flex().size_full().gap(11).items_center().px(4)
       .child(tile)
       .child(v_flex().flex_1().min_w(0).gap(3)
@@ -905,7 +905,7 @@ const C = ROOMC();
         .when(collapsed, el => el.pl(0).pr(0).justify_center())
         .when(!collapsed, el => el.child("Spaces"))
         .child(div().id("space-new").size(26).flex_none().flex().items_center().justify_center().rounded(6).hover(s => s.bg(t.hover).text_color(t.foreground))
-          .on_click(() => run("space.new")).child(svg("mods/workspace-chrome/plus.svg").size(14))))
+          .on_click(() => run("space.new")).child(svg("mods/company-spaces/plus.svg").size(14))))
       .child(v_flex().flex_1().min_h(0).px(collapsed ? 0 : 8).pb(14).overflow_y_scrollbar().mode("always")
         .on_mouse_up("left", (_e, cx) => { this.pressed = null; this.dragLine = null; this.overLine = null; cx.notify(); })
         .children(this.grouped(t, collapsed)));

@@ -88,7 +88,7 @@ export default class CompanyPane extends View {
     const title = custom.name ?? ((((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name) || "shell");
     const chip = (text, color, spin) => h_flex().relative().flex_none().gap(5).px(8).h(20).items_center().rounded(10).bg(color + "26").border_1().border_color(color + "59").text_size(10.5).font_semibold().text_color(color)
       .child(div().absolute().left(1).right(1).top(1).bottom(1).rounded(9).border_1().border_color(color + "33").loop("opacity", { from: 0.3, to: 1, period: st === "blocked" ? 900 : 2000, easing: "ease-in-out" }))
-      .when(Boolean(spin), el => el.child(svg("mods/workspace-chrome/spinner.svg").size(11).flex_none().text_color(color).spin(900)))
+      .when(Boolean(spin), el => el.child(svg("mods/company-pane/pixel-spinner.svg").size(11).flex_none().text_color(color).spin(900)))
       .child(text);
     const status = st === "working" ? chip("typing", t.working ?? "#89b4fa", true)
       : st === "blocked" ? chip("needs you", t.blocked ?? "#e8744f")

@@ -575,9 +575,9 @@ export default class Agents extends View {
           setShared("agents.sort", s.id);
           closeOverlay(props().overlay);
         })
-        .child(svg(`mods/workspace-chrome/${s.icon}.svg`).size(14).flex_none().text_color(t.muted))
+        .child(svg(`mods/company-agents/${s.icon}.svg`).size(14).flex_none().text_color(t.muted))
         .child(div().flex_1().child(s.label))
-        .when(s.id === on, (el) => el.child(svg("mods/workspace-chrome/check.svg").size(14).flex_none().text_color(t.foreground)))));
+        .when(s.id === on, (el) => el.child(svg("mods/company-agents/check.svg").size(14).flex_none().text_color(t.foreground)))));
   }
 
   needsYou(t) {
@@ -761,7 +761,7 @@ export default class Agents extends View {
         .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(c + "40"));
       return pulse ? d.loop("opacity", { from: 0.5, to: 1, period: 1400, easing: "ease-in-out" }) : d;
     };
-    if (a.status === "working") return svg("mods/workspace-chrome/spinner.svg").size(12).mx(1).flex_none().text_color(t.working).spin(900);
+    if (a.status === "working") return svg("mods/company-agents/pixel-spinner.svg").size(12).mx(1).flex_none().text_color(t.working).spin(900);
     if (a.status === "blocked" && compact) return div().relative().size(14).flex_none().rounded(4).bg(t.blocked + "26").text_size(10.5).font_bold().text_color(t.blocked).flex().items_center().justify_center()
       .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(6).bg(t.blocked + "33").loop("opacity", { from: 0.4, to: 1, period: 900, easing: "ease-in-out" })).child("!");
     if (a.status === "blocked") return div().relative().flex_none().px(6).h(18).rounded(5).bg(t.blocked + "26").text_size(10.5).font_semibold().text_color(t.blocked).flex().items_center()
@@ -1467,7 +1467,7 @@ export default class Agents extends View {
           open ? this.folded.add(a.address) : this.folded.delete(a.address);
           cx.notify();
         })
-        .child(svg(`mods/workspace-chrome/chevron-${open ? "down" : "right"}.svg`).size(11).flex_none())
+        .child(svg(`mods/company-agents/chevron-${open ? "down" : "right"}.svg`).size(11).flex_none())
         .when(!open, (el) => el.child(String(subs.length)));
     };
 
@@ -1558,7 +1558,7 @@ export default class Agents extends View {
           this.hovered = null;
           cx.notify();
         })
-        .child(svg(`mods/workspace-chrome/${isPinned ? "pin-off" : "pin"}.svg`).size(13));
+        .child(svg(`mods/company-agents/${isPinned ? "pin-off" : "pin"}.svg`).size(13));
       // Under a space header the space goes without saying; an automatic tab number says nothing.
       // Without a space header above (priority, pinned) the row names its space.
       const full = byPriority || isPinned;
@@ -1637,7 +1637,7 @@ export default class Agents extends View {
         .child(div().flex_1())
         .when(!open, (el) => el
           .when(!byPriority && top && top !== "idle", (el) => el.child(this.status(t, { status: top }, true)))
-          .child(svg("mods/workspace-chrome/chevron-right.svg").size(11).flex_none().text_color(t.dim)));
+          .child(svg("mods/company-agents/chevron-right.svg").size(11).flex_none().text_color(t.dim)));
     };
     const rows = collapsed
       ? list.flatMap(withKids)
@@ -2024,7 +2024,7 @@ export default class Agents extends View {
                     .hover((s) => s.text_color(t.foreground))
                     .on_click(() => openOverlay({ mod: "company-agents", kind: "popup", width: 200, height: 140, props: { sortMenu: true } }))
                     .tooltip(`Sort agents: ${sort.label}`)
-                    .child(svg(`mods/workspace-chrome/${sort.icon}.svg`).size(14)),
+                    .child(svg(`mods/company-agents/${sort.icon}.svg`).size(14)),
                 ))),
         )),
       )

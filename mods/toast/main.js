@@ -28,7 +28,15 @@ export default class Toast extends View {
   render(cx) {
     const t = theme();
     const p = props() ?? {};
-    const lvl = LEVEL_CONFIG[p.level] ?? LEVEL_CONFIG.info;
+    const base = LEVEL_CONFIG[p.level] ?? LEVEL_CONFIG.info;
+    const accent = p.level === "error" ? (t.blocked ?? base.color)
+      : p.level === "warning" ? (t.ansi3 ?? base.color)
+      : p.level === "success" ? (t.done ?? base.color)
+      : (t.working ?? base.color);
+    const lvl = { ...base, color: accent, bg: accent + "22", border: accent + "66" };
+    const frame = t.raised ?? "#45475a";
+    const fill = t.chrome ?? "#181825";
+    const shadow = t.surface ?? "#11111b";
     const login = /^([a-z0-9][a-z0-9_.-]{0,31}) needs login; run hc machine login \1$/.exec(p.body ?? "");
     const command = login ? `hc machine login ${login[1]}` : null;
 
@@ -36,7 +44,7 @@ export default class Toast extends View {
       .id("toast")
       .size_full()
       .relative()
-      .children(box("#45475a", "#181825", "#11111b"))
+      .children(box(frame, fill, shadow))
       .cursor_pointer()
       .hover((s) => s.opacity(0.96))
       .on_click(() => {
@@ -94,7 +102,7 @@ export default class Toast extends View {
                     .truncate()
                     .font_family(MONO)
                     .text_size(10)
-                    .text_color("#a6adc8")
+                    .text_color(t.muted)
                     .child(p.body ?? ""),
                 ),
               )
@@ -111,7 +119,7 @@ export default class Toast extends View {
                         .tooltip(command)
                         .font_family(MONO)
                         .text_size(10)
-                        .text_color("#a6adc8")
+                        .text_color(t.muted)
                         .child(command),
                     )
                     .child(
@@ -121,9 +129,9 @@ export default class Toast extends View {
                         .h(22)
                         .px(6)
                         .items_center()
-                        .children(box("#45475a", "#313244", "#11111b"))
+                        .children(box(frame, fill, shadow))
                         .cursor_pointer()
-                        .hover((s) => s.text_color("#ffffff"))
+                        .hover((s) => s.text_color(t.foreground))
                         .on_click((_e, cx) => {
                           cx.stop_propagation();
                           cx.write_to_clipboard(command);
@@ -135,7 +143,7 @@ export default class Toast extends View {
                             .font_family(MONO)
                             .font_bold()
                             .text_size(9)
-                            .text_color(this.copied ? "#a6e3a1" : "#89b4fa")
+                            .text_color(this.copied ? (t.done ?? "#a6e3a1") : (t.working ?? "#89b4fa"))
                             .child(this.copied ? "COPIED" : "COPY"),
                         ),
                     ),
