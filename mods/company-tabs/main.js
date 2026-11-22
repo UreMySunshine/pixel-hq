@@ -148,7 +148,7 @@ export default class Tabs extends View {
       const program = lead?.program;
       const name = label(c, lead);
       return h_flex().id(`tab-${c.id}`).relative().h(32).pl(9).pr(11).pt(4).pb(6).gap(7).items_center().flex_none()
-        .children([...box(c.active ? t.muted : t.raised, c.active ? t.raised : t.chrome, t.surface), ...(c.active ? [div().absolute().left(8).right(10).bottom(4).h(2).bg(t.accent)] : [])])
+        .children(box(c.active ? t.accent : t.raised, c.active ? t.accent : t.chrome, t.surface))
         // A rename or status dot on this or an earlier tab can push the active one out.
         .when(i <= active, el => el.on_size_change((_size, cx) => { this.scroll.scroll_to_item(active); cx.notify(); }))
         .on_mouse_down("left", (e, cx) => { cx.stop_propagation(); this.pressed = i; if (e.click_count === 2) run("tab.rename", { id: c.id }); })
@@ -158,14 +158,14 @@ export default class Tabs extends View {
           else run("tab.select", { id: c.id });
         })
         .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); openOverlay({ mod: "menu", kind: "popup", width: 200, props: { tab: "tab", target: { id: c.id, space: space.id } } }); })
-        .when(Boolean(program?.icon), el => el.child(program.tint ? svg(program.icon).size(14).text_color(c.active ? t.accent : t.muted) : image(program.icon).size(14)))
-        .child(div().max_w(170).truncate().font_family(MONO).font_bold().text_size(11).text_color(c.active ? t.foreground : t.muted).child(c.zoomed ? `${name} Z` : name))
-        .when(c.status === "working", el => el.child(spinner(t.working, this.frame)))
-        .when(c.status === "blocked", el => el.child(bang(t.blocked)))
-        .when(c.status === "done", el => el.child(tick(t.done)))
+        .when(Boolean(program?.icon), el => el.child(program.tint ? svg(program.icon).size(14).text_color(c.active ? t.accent_foreground : t.muted) : image(program.icon).size(14)))
+        .child(div().max_w(170).truncate().font_family(MONO).font_bold().text_size(11).text_color(c.active ? t.accent_foreground : t.muted).child(c.zoomed ? `${name} Z` : name))
+        .when(c.status === "working", el => el.child(spinner(c.active ? t.accent_foreground : t.working, this.frame)))
+        .when(c.status === "blocked", el => el.child(bang(c.active ? t.accent_foreground : t.blocked)))
+        .when(c.status === "done", el => el.child(tick(c.active ? t.accent_foreground : t.done)))
         .when(c.active, el => el.child(div().id(`close-${c.id}`).flex_none().relative().w(8).h(8).cursor_pointer().on_mouse_down("left", stop)
           .on_click((_e, cx) => { cx.stop_propagation(); run("tab.close", { id: c.id }); })
-          .children(cross(t.muted, 8))));
+          .children(cross(c.active ? t.accent_foreground : t.muted, 8))));
     };
     const root = layout(), sidebar = find(root, "sidebar"), w = window();
     // Old saved rails and a dragged-narrow sidebar can be smaller than the window buttons.
