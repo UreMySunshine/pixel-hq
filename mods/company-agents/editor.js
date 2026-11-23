@@ -227,8 +227,8 @@ export class Editor {
   // ---- Pieces ---------------------------------------------------------------
 
   button(t, id, label, action, { icon, primary, danger, disabled } = {}) {
-    return h_flex().id(id).h(28).px(10).gap(6).flex_none().items_center().rounded(7).text_size(12)
-      .border(1).border_color(primary ? t.solid : t.border)
+    return h_flex().id(id).h(28).px(10).gap(6).flex_none().items_center().text_size(12)
+      .border(2).border_color(primary ? t.solid : t.border)
       .bg(primary ? t.solid : t.surface)
       .text_color(disabled ? t.dim : primary ? t.solid_foreground : danger ? t.blocked : t.foreground)
       .when(!disabled, (el) => el.cursor_pointer().hover((s) => s.bg(primary ? t.solid : t.hover)).on_click((_e, cx) => action(cx)))
@@ -237,16 +237,16 @@ export class Editor {
   }
 
   chip(t, id, label, on, action) {
-    return div().id(id).h(26).px(10).flex_none().flex().items_center().rounded(13).text_size(12)
-      .border(1).border_color(on ? t.accent : t.border).bg(on ? t.accent + "22" : t.surface)
+    return div().id(id).h(26).px(10).flex_none().flex().items_center().text_size(12)
+      .border(2).border_color(on ? t.accent : t.border).bg(on ? t.accent + "22" : t.surface)
       .text_color(on ? t.foreground : t.muted).cursor_pointer().hover((s) => s.bg(t.hover))
       .on_click((_e, cx) => action(cx)).child(label);
   }
 
   // A small tile with a figure in it; `on` outlines it.
   tile(t, id, fig, label, on, action, w = 92) {
-    return v_flex().id(id).w(w).flex_none().p(6).gap(4).items_center().rounded(9)
-      .border(1.5).border_color(on ? t.accent : t.border).bg(on ? t.accent + "14" : t.background)
+    return v_flex().id(id).w(w).flex_none().p(6).gap(4).items_center()
+      .border(2).border_color(on ? t.accent : t.border).bg(on ? t.accent + "14" : t.background)
       .cursor_pointer().hover((s) => s.border_color(on ? t.accent : t.input))
       .on_click((_e, cx) => action(cx))
       .child(h_flex().h(46).items_center().justify_center().overflow_hidden().child(fig))
@@ -268,7 +268,7 @@ export class Editor {
       const on = id === this.setId;
       const n = uses(id);
       const tags = [isShipped(id) ? "Built-in" : null, c.default === id ? "Default" : null, n ? `${n} space${n > 1 ? "s" : ""}` : null].filter(Boolean);
-      return h_flex().id(`set-${id}`).px(8).py(6).gap(8).rounded(8).items_center().cursor_pointer()
+      return h_flex().id(`set-${id}`).px(8).py(6).gap(8).items_center().cursor_pointer()
         .when(on, (el) => el.bg(t.selected)).hover((s) => s.bg(on ? t.selected : t.hover))
         .on_click((_e, cx) => this.select(cx, id))
         .child(div().flex_none().child(figure(specFor(s, "working"), 26)))
@@ -355,7 +355,7 @@ export class Editor {
                   const motion = p.animated && !p.needsConvert ? "own" : spec.motion === "own" ? "bob" : spec.motion ?? "bob";
                   this.setSpec(cx, { image: p.path, motion });
                 }).tooltip(p.needsConvert ? "Animated SVG: pick it, then Own animation to keep its movement" : p.animated ? "Moves by itself" : p.name)))
-            : div().p(16).rounded(9).border(1).border_dashed().border_color(t.input).text_size(12).text_color(t.dim)
+            : div().p(16).border(2).border_dashed().border_color(t.input).text_size(12).text_color(t.dim)
               .child(this.pictures ? "No pictures yet. Drop PNG, GIF, WebP or SVG files here." : "Looking for pictures…")))
         .child(h_flex().gap(8).items_center()
           .child(this.button(t, "open-folder", `Open ${OWN_DIR}/`, () => openFolder(), { icon: "folder" }))
@@ -366,9 +366,9 @@ export class Editor {
       body = v_flex().gap(10)
         .child(h_flex().gap(8).items_center()
           .child(div().w(70).text_size(12).text_color(t.muted).child("Frames"))
-          .child(Input.new(this.textInput).flex_1().h(32).px(10).rounded(7).border(1).border_color(t.input).bg(t.background).text_size(14).text_color(t.foreground)))
+          .child(Input.new(this.textInput).flex_1().h(32).px(10).border(2).border_color(t.input).bg(t.background).text_size(14).text_color(t.foreground)))
         .child(h_flex().gap(4).flex_wrap().pl(78).children(EMOJI.map((e, i) =>
-          div().id(`emoji-${i}`).size(30).flex().items_center().justify_center().rounded(6).text_size(18).cursor_pointer()
+          div().id(`emoji-${i}`).size(30).flex().items_center().justify_center().text_size(18).cursor_pointer()
             .hover((s) => s.bg(t.hover)).tooltip("Add as a frame")
             .on_click((_e, cx) => {
               const list = [...words(this.textInput.value()), e];
@@ -381,7 +381,7 @@ export class Editor {
           .child(div().text_size(11.5).text_color(t.dim).child("between frames")))
         .child(this.motionRow(t, spec));
     }
-    return v_flex().gap(12).p(14).rounded(10).border(1).border_color(t.border).bg(t.surface).child(head).child(body);
+    return v_flex().gap(12).p(14).border(2).border_color(t.border).bg(t.surface).child(head).child(body);
   }
 
   setsTab(t, c) {
@@ -394,7 +394,7 @@ export class Editor {
         .child(h_flex().gap(8).items_center()
           .child(shipped
             ? div().flex_1().text_size(15).font_semibold().text_color(t.foreground).child(set.name)
-            : Input.new(this.nameInput).flex_1().h(32).px(10).rounded(7).border(1).border_color(t.input).bg(t.background).text_size(14).text_color(t.foreground))
+            : Input.new(this.nameInput).flex_1().h(32).px(10).border(2).border_color(t.input).bg(t.background).text_size(14).text_color(t.foreground))
           .child(this.button(t, "make-default", c.default === this.setId ? "Default" : "Use everywhere", (cx) => this.assign(cx, null, this.setId),
             { disabled: c.default === this.setId, icon: c.default === this.setId ? "check" : null }))
           .when(!shipped, (el) => el.child(this.button(t, "ai", "Tweak with AI", (cx) => this.tweakWithAI(cx),
@@ -421,8 +421,8 @@ export class Editor {
       const expanded = this.openRow === key;
       const choices = [...(name == null ? [] : [{ id: null, label: `Default (${sets[setIdFor(null, c)]?.name})` }]),
         ...Object.entries(sets).map(([id, s]) => ({ id, label: s.name || id }))];
-      return v_flex().rounded(9).border(1).border_color(expanded ? t.input : t.border).bg(t.surface)
-        .child(h_flex().id(`sp-${key}`).px(12).py(8).gap(12).items_center().cursor_pointer().rounded(9).hover((s) => s.bg(t.hover))
+      return v_flex().border(2).border_color(expanded ? t.input : t.border).bg(t.surface)
+        .child(h_flex().id(`sp-${key}`).px(12).py(8).gap(12).items_center().cursor_pointer().hover((s) => s.bg(t.hover))
           .on_click((_e, cx) => { this.openRow = expanded ? null : key; cx.notify(); })
           .child(v_flex().w(190).flex_none().min_w(0)
             .child(div().truncate().text_color(faded ? t.dim : t.foreground).font_medium().child(name ?? "Every other space"))
@@ -448,7 +448,7 @@ export class Editor {
     const t = theme();
     const c = config();
     if (!allSets(c)[this.setId]) this.setId = setIdFor(null, c);
-    const tab = (id, label) => div().id(`tab-${id}`).h(30).px(12).flex().items_center().rounded(7).text_size(12.5).cursor_pointer()
+    const tab = (id, label) => div().id(`tab-${id}`).h(30).px(12).flex().items_center().text_size(12.5).cursor_pointer()
       .bg(this.tab === id ? t.selected : t.popover).text_color(this.tab === id ? t.foreground : t.muted)
       .hover((s) => s.bg(t.hover)).on_click((_e, cx) => { this.tab = id; cx.notify(); }).child(label);
     return v_flex().size_full().bg(t.popover).text_size(13).text_color(t.foreground)
@@ -458,7 +458,7 @@ export class Editor {
         .child(div().flex_1())
         .child(tab("sets", "Sets"))
         .child(tab("spaces", "Spaces"))
-        .child(div().id("close").ml(8).size(28).flex().items_center().justify_center().rounded(7).cursor_pointer()
+        .child(div().id("close").ml(8).size(28).flex().items_center().justify_center().cursor_pointer()
           .text_color(t.muted).hover((s) => s.bg(t.hover).text_color(t.foreground))
           .on_click(() => closeOverlay(props().overlay)).child(svg(ICON("x")).size(14))))
       .child(this.tab === "sets" ? this.setsTab(t, c) : this.spacesTab(t, c))

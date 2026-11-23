@@ -63,7 +63,7 @@ export default class WorkspaceStatus extends View {
       .child(div().flex_none().size(4).bg(color))
       .child(div().font_family(MONO).font_bold().text_size(9.5).text_color(deepen(color)).child(text));
     // A count that opens the matching list of agents, as the needs-you chip does.
-    const listPill = (status, color, text, count, what) => div().id(`status-${status}`).cursor_pointer().rounded(6).px(4).hover(s => s.bg(t.hover))
+    const listPill = (status, color, text, count, what) => div().id(`status-${status}`).cursor_pointer().px(4).hover(s => s.bg(t.hover))
       .tooltip(`Open the ${what} agents`)
       .on_click(() => openOverlay({ mod: "company-agents", kind: "popup", width: 340, height: Math.min(440, Math.max(150, 52 + count * 56)), props: { agentList: status } }))
       .child(plate(color, text));
@@ -78,31 +78,37 @@ export default class WorkspaceStatus extends View {
       .when(Boolean(currentBranch), el => el.child(mark(branch(t.muted), currentBranch)))
       .child(sep())
       .child(div().font_family(MONO).text_size(9.5).child(`${list.length} on the team`))
-      .when(Boolean(shared("pixel-hq.updating")), (el) => el.child(
-        h_flex().id("update-status-pill").gap(6).items_center().px(7).py(2).rounded(6)
-          .bg("#89b4fa").text_color(t.chrome)
-          .tooltip("Downloading Pixel HQ update...")
-          .child(div().font_bold().text_size(11).child("⏳ Updating Pixel HQ..."))
-      ))
+      .when(Boolean(shared("pixel-hq.updating")), (el) => {
+        const c = t.working ?? "#89b4fa";
+        return el.child(
+          h_flex().id("update-status-pill").relative().h(15).px(5).gap(5).items_center().cursor_pointer()
+            .children(notch(c + "aa", soften(c)))
+            .tooltip("Downloading Pixel HQ update...")
+            .child(div().flex_none().size(4).bg(c).loop("opacity", { from: 0.4, to: 1, period: 900, easing: "ease-in-out" }))
+            .child(div().font_family(MONO).font_bold().text_size(9).text_color(deepen(c)).child("UPDATING"))
+        );
+      })
       .when(Boolean(!shared("pixel-hq.updating") && shared("pixel-hq.new-version")), (el) => {
         const upd = shared("pixel-hq.new-version");
         const urgent = Boolean(upd?.isUrgent);
         const pillBg = urgent ? (t.blocked ?? "#f38ba8") : t.accent;
         const verText = upd?.versionLabel ?? `v${upd.version}`;
-        const pillText = urgent ? `⚠️ Urgent update: ${verText}` : `✨ New update: ${verText}`;
+        const pillText = `${urgent ? "URGENT UPDATE" : "UPDATE"} ${verText}`;
         const tooltip = urgent
           ? `[Urgent Update] Pixel HQ ${verText} is out${upd.notes ? ` · ${upd.notes}` : ""} · Click to update now`
           : `Pixel HQ ${verText} is out${upd.notes ? ` · ${upd.notes}` : ""} · Click to update`;
         return el.child(
-          h_flex().id("update-status-pill").gap(6).items_center().px(7).py(2).rounded(6)
-            .bg(pillBg).text_color(t.chrome).cursor_pointer().hover(s => s.opacity(0.85))
+          h_flex().id("update-status-pill").relative().h(15).px(5).gap(5).items_center().cursor_pointer()
+            .children(notch(pillBg + "aa", soften(pillBg)))
+            .hover(s => s.opacity(0.85))
             .tooltip(tooltip)
             .on_click(() => run("company-agents.update"))
-            .child(div().font_bold().text_size(11).child(pillText))
+            .child(div().flex_none().size(4).bg(pillBg).when(urgent, (lamp) => lamp.loop("opacity", { from: 0.3, to: 1, period: 800, easing: "ease-in-out" })))
+            .child(div().font_family(MONO).font_bold().text_size(9).text_color(deepen(pillBg)).child(pillText))
         );
       })
       .when(n("working") > 0, el => el.child(listPill("working", working, `${n("working")} typing`, n("working"), "typing")))
-      .when(n("blocked") > 0, el => el.child(div().id("needs-you-pill").cursor_pointer().rounded(6).px(4).hover(s => s.bg(t.hover))
+      .when(n("blocked") > 0, el => el.child(div().id("needs-you-pill").cursor_pointer().px(4).hover(s => s.bg(t.hover))
         .tooltip("Open the needs-you list")
         .on_click(() => openOverlay({ mod: "company-agents", kind: "popup", width: 340, height: Math.min(440, Math.max(150, 52 + n("blocked") * 56)), props: { needsYou: true } }))
         .child(plate(blocked, `${n("blocked")} ${n("blocked") === 1 ? "needs" : "need"} you`))))

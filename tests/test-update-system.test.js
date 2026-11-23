@@ -60,8 +60,8 @@ async function runTests() {
 
   // 4. Verify company-status status bar pill triggers company-agents.update and shows transition
   assert.ok(statusSrc.includes('id("update-status-pill")'), "company-status must include update-status-pill");
-  assert.ok(statusSrc.includes("✨ New update: ${verText}"), "company-status must show '✨ New update: ${verText}' for normal type");
-  assert.ok(statusSrc.includes("⚠️ Urgent update: ${verText}"), "company-status must show '⚠️ Urgent update: ${verText}' for urgent type");
+  assert.ok(statusSrc.includes("URGENT UPDATE"), "company-status must show the urgent update label");
+  assert.ok(statusSrc.includes(": \"UPDATE\"") && statusSrc.includes("${verText}"), "company-status must show the update label and version for normal type");
   assert.ok(statusSrc.includes('run("company-agents.update")'), "update-status-pill must trigger company-agents.update on click");
   assert.ok(agentsUpdaterSrc.includes("v${curVer} → v${newVer}"), "updater must calculate version transition string (v<old> → v<new>)");
   console.log("PASS: company-status displays update pill and invokes company-agents.update");

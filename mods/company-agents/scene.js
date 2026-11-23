@@ -1,4 +1,4 @@
-// A pixel-art office, seen from the front: a slate wall with two city windows and a server rack in the corner, a water cooler,
+// A pixel-art office, seen from the front: a slate wall with two city windows, a break-room coffee corner and a server rack,
 // a tiled floor lit by the windows. Everything snaps to a 4px grid and is built from rectangles; lights twinkle with native .loop().
 // The wall, windows, city and floor are drawn for night or day (the layout's light and dark themes); the screens and gadgets stay as they are.
 import { div } from "gpui-kit";
@@ -164,21 +164,42 @@ export function sceneLayout(W, H) {
   const wA = two ? snap((usable - gap) / 2) : usable, wB = usable - wA - gap;
   const winY = snap(yH * 0.1), winH = snap(yH * 0.58);
   const wins = [{ x: x0, w: snap(wA), seed: 1, moon: true }, ...(two ? [{ x: x0 + wA + gap, w: snap(wB), seed: 4, moon: false }] : [])].map((o) => ({ ...o, y: winY, h: winH }));
-  const buildings = wins.flatMap((wn) => {
-    const bw = snap(wn.w / 6);
-    return Array.from({ length: 6 }, (_, i) => {
-      const bh = snap(14 + rnd(i + wn.seed * 7) * wn.h * 0.5);
-      return { x: wn.x + i * bw, y: wn.y + wn.h - bh, w: bw - 2, h: bh, i, seed: wn.seed };
-    });
-  });
+  const buildings = wins.flatMap((wn) => Array.from({ length: 6 }, (_, i) => {
+    // Edges are snapped, not the width: six bars keep the skyline inside the glass at every window size.
+    const x = wn.x + snap((i * wn.w) / 6), right = wn.x + snap(((i + 1) * wn.w) / 6);
+    const bh = snap(14 + rnd(i + wn.seed * 7) * wn.h * 0.5);
+    return { x, y: wn.y + wn.h - bh, w: right - x - 2, h: bh, i, seed: wn.seed };
+  }));
   const cx = two ? x0 + wA + Math.floor(gap / 2) : snap(W * 0.5), cr = Math.min(14, Math.floor(gap / 2) - 2) || 14;
   const rr = Math.max(8, cr);
   const sign = gap >= 44 && base - 48 >= 88 ? { x: cx - 16, y: 48, w: 32, h: 32 } : null;
-  // The board: a dot-matrix strip on the wall under the windows, between the plant and the water cooler, when there is room.
+  // The board: a dot-matrix strip on the wall under the windows, between the plant and the coffee corner, when there is room.
   const sill = winY + winH + 4, bx = x0 - 2, bw = cw - 8 - bx, bh = 16;
   const board = base - sill >= 30 && bw >= 96 ? { x: bx, y: snap(sill + Math.max(6, (base - sill - bh) / 2 - 4)), w: bw, h: bh } : null;
   return { W, H, yH, base, rackX, rackW, rackCab, rackTop, cw, wins, buildings, two, cx, cy: 26, rr, sign, board,
-    cooler: { x: cw, y: base - 54, w: 20, h: 54 }, plant: { x: 0, y: base - 84, w: 36, h: 84 } };
+    breakRoom: { x: cw, y: base - 54, w: 20, h: 54 }, plant: { x: 0, y: base - 84, w: 36, h: 84 } };
+}
+
+// A wall calendar: a wood frame, white paper, a coloured header and a month grid with one date ringed.
+function calendar(x, y, w, h) {
+  const o = [r(x, y, w, h, "#6b4a32"), r(x + 2, y + 2, w - 4, h - 4, "#f4eedd"), r(x + 2, y + 2, w - 4, 1, "#ffffff")];
+  o.push(r(x + 3, y + 4, w - 6, 3, "#f38ba8"), r(x + 3, y + 8, w - 6, 1, "#9aa1c2"));
+  for (let gy = 0; gy < 3; gy++) for (let gx = 0; gx < 4; gx++) o.push(r(x + 4 + gx * 3, y + 11 + gy * 3, 2, 2, "#8f93ab"));
+  const rx = x + 10, ry = y + 14;
+  o.push(r(rx, ry, 4, 1, "#c0424e"), r(rx, ry + 3, 4, 1, "#c0424e"), r(rx, ry, 1, 4, "#c0424e"), r(rx + 3, ry, 1, 4, "#c0424e"));
+  return o;
+}
+
+// A hanging planter on a wall bracket: a terracotta pot with three vines of unequal length and leaves on both sides.
+function vinePlanter(x, y, len) {
+  const o = [r(x + 2, y, 10, 2, "#5a3a27"), r(x + 4, y + 2, 6, 2, "#6b4a32"),
+    r(x + 1, y + 4, 12, 4, "#a06c48"), r(x + 3, y + 8, 8, 3, "#8a5a3c")];
+  for (const [vx, l] of [[x + 3, len], [x + 8, len - 3], [x + 12, len - 6]]) {
+    o.push(r(vx, y + 10, 2, Math.max(4, l), "#2f6e3b"));
+    for (let k = 4; k < l; k += 5) o.push(r(vx + (k % 10 < 5 ? -2 : 2), y + 9 + k, 3, 2, k % 10 < 5 ? "#3a8247" : "#5fb06b"));
+    o.push(r(vx + ((l % 10) < 5 ? -1 : 1), y + 9 + Math.max(4, l), 3, 2, "#5fb06b"));
+  }
+  return o;
 }
 
 // opts: { now (Date), spaces: [{ id, name, status, active }], needYou, load, shipped, droop }.
@@ -268,15 +289,34 @@ export function scene(W, H, opts = {}) {
       div().absolute().left(bx).top(by).w(12).h(10).flex().items_center().justify_center().font_family("JetBrains Mono").font_bold().text_size(7.5).text_color("#2a0f16").child(n > 9 ? "9+" : String(n)));
   }
 
-  // The water cooler stands on the baseboard, left of the server rack; its tank and tap glow, and a bubble rises now and then.
+  // Wall dressing: a hanging vine planter in the free strip left of the windows, with a calendar under it when the plant
+  // leaves room. The strip is the only free wall the windows leave at sidebar widths.
+  const plantTop = base - 70;
+  {
+    const strip = wins[0].x - 12, vineY = 4;
+    if (strip >= 24) {
+      const len = Math.max(8, Math.min(20, plantTop - vineY - 20));
+      L.push(...vinePlanter(6, vineY, len));
+      const py = vineY + 9 + len + 6;
+      if (plantTop - py >= 24) L.push(...calendar(6, py, 20, 24));
+    }
+  }
+
+  // The break-room coffee corner stands on the baseboard, left of the server rack: a walnut cabinet with a two-drawer
+  // front, an espresso machine with a blinking brew light, and a mug catching the spout. Clicking it sends finished staff
+  // on a break (main.js settles them from the same footprint).
   const cw = Lo.cw;
   L.push(
-    div().absolute().left(0).top(0).w(1).h(1).children([r(cw - 2, base - 58, 24, 30, "#89dceb2e")]).loop("opacity", { from: 0.5, to: 1, period: 2600, easing: "ease-in-out" }),
-    r(cw + 2, base - 54, 16, 22, "#6fa8d6"), r(cw + 4, base - 52, 4, 10, "#a9d0ee"), r(cw, base - 32, 20, 32, "#b7bfd6"), r(cw, base - 32, 20, 4, "#d3d8ea"),
-    r(cw + 6, base - 26, 8, 8, "#e8744f40"), r(cw + 8, base - 24, 4, 4, "#e8744f"),
-    // Loop values are kept small and relative to a normally placed lane: Herdr doesn't scale loop values by the zoom, so a loop over
-    // absolute wall heights drifts (at zoom 1.2 this bubble floated a jug's height above the cooler).
-    div().absolute().left(cw + 10).top(base - 52).w(2).h(18).child(r(0, 16, 2, 2, "#e6f2fb").loop("top", { from: 16, to: 0, period: 2600, easing: "ease-in" })));
+    r(cw, base - 36, 20, 3, "#a06c48"), r(cw, base - 33, 20, 30, "#8a5a3c"), r(cw, base - 3, 20, 3, "#5a3a27"),
+    r(cw + 2, base - 29, 16, 1, "#6f472f"), r(cw + 2, base - 18, 16, 1, "#6f472f"),
+    r(cw + 9, base - 25, 2, 2, "#d8c7aa"), r(cw + 9, base - 14, 2, 2, "#d8c7aa"),
+    r(cw + 2, base - 54, 16, 18, "#313244"), r(cw + 3, base - 53, 14, 4, "#45475a"),
+    r(cw + 4, base - 52, 3, 2, "#a6e3a1").loop("opacity", { from: 0.25, to: 1, period: 900, easing: "ease-in-out" }),
+    r(cw + 9, base - 52, 7, 2, "#585b70"),
+    r(cw + 5, base - 46, 10, 9, "#181825"), r(cw + 8, base - 45, 4, 4, "#45475a"), r(cw + 9, base - 41, 2, 5, "#cdd6f4"),
+    r(cw + 3, base - 37, 14, 2, "#2a2f45"),
+    r(cw + 13, base - 41, 4, 4, "#e8e2d0"), r(cw + 17, base - 40, 1, 2, "#e8e2d0"),
+    r(cw + 14, base - 45, 1, 3, "#cdd6f4").loop("opacity", { from: 0, to: 0.7, period: 1600, easing: "ease-in-out" }));
 
   // The plant in the left corner is a little potted tree that grows with the work shipped today: a sapling with one leafy crown,
   // then a new branch with its own cluster of leaves at 1, 4, 8, 13, 19 and 26 tasks, and pink blossoms from 30. While someone has
@@ -289,8 +329,8 @@ export function scene(W, H, opts = {}) {
   const BRANCHES = [[tx, -40, tx + 1, -50, 3], [tx, -30, px + 1, -36, 2], [tx + 2, -33, px + 21, -39, 2], [tx, -42, px + 1, -50, 2],
     [tx + 2, -45, px + 22, -53, 2], [tx, -50, px + 5, -60, 2], [tx + 2, -52, px + 20, -63, 2]];
   const STEPS = [1, 4, 8, 13, 19, 26], grown = 1 + STEPS.filter((n) => shipped >= n).length;
-  // the trunk, a touch thicker at the base
-  L.push(r(tx, base - 40, 3, 22, bark), r(tx, base - 40, 1, 22, barkHi), r(tx - 1, base - 22, 5, 4, bark));
+  // the trunk, a touch thicker at the base; its top reaches the highest branch so no crown floats free
+  L.push(r(tx, base - 52, 3, 34, bark), r(tx, base - 52, 1, 34, barkHi), r(tx - 1, base - 22, 5, 4, bark));
   const crowns = [];
   BRANCHES.slice(0, grown).forEach(([fx, fy, ex, ey, size], i) => {
     const ty = base + ey + (i ? sag * (i % 2 ? 1 : 2) : sag);

@@ -40,6 +40,9 @@ const plate = (border, fill, shadow) => [
   ...notch(border, [0, 2, 0, 2]),
   ...notch(fill, [1, 3, 1, 3]),
 ];
+// A right arrow in 2px steps, for the list rows' affordance.
+const arrowRight = (c) => div().relative().flex_none().w(10).h(10)
+  .children([[0, 4, 7, 2], [5, 2, 2, 2], [7, 4, 2, 2], [5, 6, 2, 2]].map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg(c)));
 
 // To the rail (on macOS wide enough for the traffic lights), or back to the width it had.
 function toggleSidebar() {
@@ -138,9 +141,9 @@ const vitalsTip = (ctx) => [ctx.pct != null ? `Context ${ctx.pct}% used` : null,
 // The HP bar is the context fill, read from the label the status line writes.
 function thinBar(t, pct, color, width) {
   const fill = pct > 0 ? Math.max(2, Math.round((width * pct) / 100)) : 0;
-  const halo = (c) => div().absolute().left(-1).right(-1).top(-2).bottom(-2).rounded(3).bg(c);
-  return div().w(width).h(3).flex_none().rounded(2).bg(t.border)
-    .child(div().relative().h_full().rounded(2).bg(color).w(fill)
+  const halo = (c) => div().absolute().left(-1).right(-1).top(-2).bottom(-2).bg(c);
+  return div().w(width).h(3).flex_none().bg(t.border)
+    .child(div().relative().h_full().bg(color).w(fill)
       .when(fill > 0, (el) => el.child(halo(color + "40"))));
 }
 const hpColor = (t, pct) => (pct >= 80 ? t.ansi1 : pct >= 60 ? t.ansi3 : t.ansi2);
@@ -359,6 +362,8 @@ export default class Agents extends View {
     this.folded = new Set();
     // Where the person dragged each pet: fractions of the panel, kept across restarts.
     try { this.petpos = JSON.parse(localStorage.getItem("petpos") ?? "{}"); } catch { this.petpos = {}; }
+    // The workstation each agent started at, kept by address so a rerender never reshuffles it.
+    try { this.desks = JSON.parse(localStorage.getItem("deskstyles") ?? "{}"); } catch { this.desks = {}; }
     this.drag = null;
     // Find staff: typing dims everyone who does not match; Enter jumps to the first match.
     this.query = "";
@@ -567,7 +572,6 @@ export default class Agents extends View {
         .h(31)
         .px(8)
         .gap(9)
-        .rounded(7)
         .items_center()
         .text_color(t.foreground)
         .hover((el) => el.bg(t.hover))
@@ -614,7 +618,6 @@ export default class Agents extends View {
           .h(52)
           .px(6)
           .gap(8)
-          .rounded(8)
           .items_center()
           .cursor_pointer()
           .hover((s) => s.bg(t.hover))
@@ -626,7 +629,7 @@ export default class Agents extends View {
           .child(v_flex().flex_1().min_w(0).gap(1)
             .child(div().truncate().text_size(12.5).text_color(t.foreground).child(name))
             .child(div().truncate().text_size(10.5).text_color(t.muted).child(sub)))
-          .child(div().flex_none().text_size(14).text_color("#89b4fa").child("→"));
+          .child(arrowRight("#89b4fa"));
       }));
   }
 
@@ -655,7 +658,6 @@ export default class Agents extends View {
         .h(52)
         .px(6)
         .gap(8)
-        .rounded(8)
         .items_center()
         .cursor_pointer()
         .hover((s) => s.bg(t.hover))
@@ -667,7 +669,7 @@ export default class Agents extends View {
         .child(v_flex().flex_1().min_w(0).gap(1)
           .child(div().truncate().text_size(12.5).text_color(t.foreground).child(nameOf(a)))
           .child(div().truncate().text_size(10.5).text_color(t.muted).child([a.space_name, a.program?.name].filter(Boolean).join(" · "))))
-        .child(div().flex_none().text_size(14).text_color("#89b4fa").child("→"))));
+        .child(arrowRight("#89b4fa"))));
   }
 
   peek(addr) {
@@ -736,7 +738,6 @@ export default class Agents extends View {
       .id(`sub-${k.address}`)
       .pl(44)
       .pr(8)
-      .rounded(8)
       .h(34)
       .flex_none()
       .gap(0)
@@ -757,18 +758,18 @@ export default class Agents extends View {
   status(t, a, compact = false) {
     const color = t[a.status] ?? t.dim;
     const dot = (c, pulse) => {
-      const d = div().relative().size(7).mx(3).flex_none().rounded(4).bg(c)
-        .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).rounded(7).bg(c + "40"));
+      const d = div().relative().size(7).mx(3).flex_none().bg(c)
+        .child(div().absolute().left(-3).right(-3).top(-3).bottom(-3).bg(c + "40"));
       return pulse ? d.loop("opacity", { from: 0.5, to: 1, period: 1400, easing: "ease-in-out" }) : d;
     };
     if (a.status === "working") return svg("mods/company-agents/pixel-spinner.svg").size(12).mx(1).flex_none().text_color(t.working).spin(900);
-    if (a.status === "blocked" && compact) return div().relative().size(14).flex_none().rounded(4).bg(t.blocked + "26").text_size(10.5).font_bold().text_color(t.blocked).flex().items_center().justify_center()
-      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(6).bg(t.blocked + "33").loop("opacity", { from: 0.4, to: 1, period: 900, easing: "ease-in-out" })).child("!");
-    if (a.status === "blocked") return div().relative().flex_none().px(6).h(18).rounded(5).bg(t.blocked + "26").text_size(10.5).font_semibold().text_color(t.blocked).flex().items_center()
-      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).rounded(7).bg(t.blocked + "33").loop("opacity", { from: 0.4, to: 1, period: 900, easing: "ease-in-out" })).child("Needs you");
+    if (a.status === "blocked" && compact) return div().relative().size(14).flex_none().bg(t.blocked + "26").text_size(10.5).font_bold().text_color(t.blocked).flex().items_center().justify_center()
+      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).bg(t.blocked + "33").loop("opacity", { from: 0.4, to: 1, period: 900, easing: "ease-in-out" })).child("!");
+    if (a.status === "blocked") return div().relative().flex_none().px(6).h(18).bg(t.blocked + "26").text_size(10.5).font_semibold().text_color(t.blocked).flex().items_center()
+      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).bg(t.blocked + "33").loop("opacity", { from: 0.4, to: 1, period: 900, easing: "ease-in-out" })).child("Needs you");
     // Idle: a ring; done: a glowing dot.
-    if (a.status === "idle") return div().size(7).mx(3).flex_none().rounded(4).border(1.5).border_color(t.idle ?? t.dim);
-    return a.status === "done" ? dot(color, true) : div().size(7).mx(3).flex_none().rounded(4).bg(t.dim + "00");
+    if (a.status === "idle") return div().size(7).mx(3).flex_none().border(2).border_color(t.idle ?? t.dim);
+    return a.status === "done" ? dot(color, true) : div().size(7).mx(3).flex_none().bg(t.dim + "00");
   }
 
   async scan(cx) {
@@ -927,7 +928,7 @@ export default class Agents extends View {
     out.push(spot("wall-rack", Lo.rackX, Lo.rackTop, Lo.rackCab, Lo.base - Lo.rackTop,
       o.load ? `${o.load} running across the office (sub-agents and shell jobs) · click for the list` : "Nothing running in the background · click for the list", () => this.openWorkload()));
     const done = everyone.filter((a) => a.status === "done" && !this.settled.has(a.address));
-    out.push(spot("wall-cooler", Lo.cooler.x, Lo.cooler.y, Lo.cooler.w, Lo.cooler.h,
+    out.push(spot("wall-break", Lo.breakRoom.x, Lo.breakRoom.y, Lo.breakRoom.w, Lo.breakRoom.h,
       done.length ? `Break room: send ${done.length} finished staff on a break` : "Break room: nobody has finished a task", (cx) => {
         for (const a of done) this.settled.add(a.address);
         try { localStorage.setItem("settled", JSON.stringify([...this.settled])); } catch { /* storage disabled: settled until restart */ }
@@ -985,9 +986,9 @@ export default class Agents extends View {
     const tip = [...panels.map((p) => p.charAt(0) + p.slice(1).toLowerCase()), fuelTip ? `Usage window: ${fuelTip}` : null].filter(Boolean).join("\n");
     const board = div().absolute().left(0).top(0).w(B.x + B.w + 4).h(B.y + B.h + 4)
       // the bezel, a dark face with faint scanlines, two bolts
-      .child(div().absolute().left(B.x - 2).top(B.y - 2).w(B.w + 4).h(B.h + 4).rounded(2).bg("#0a0c1a"))
+      .child(div().absolute().left(B.x - 2).top(B.y - 2).w(B.w + 4).h(B.h + 4).bg("#0a0c1a"))
       .child(div().absolute().left(B.x).top(B.y).w(B.w).h(B.h).bg("#14110c").border_1().border_color(needs ? "#5a2234" : "#3a2f1c"))
-      .when(needs, (el) => el.child(div().absolute().left(B.x - 2).top(B.y - 2).w(B.w + 4).h(B.h + 4).rounded(2).border_1().border_color("#f38ba8")
+      .when(needs, (el) => el.child(div().absolute().left(B.x - 2).top(B.y - 2).w(B.w + 4).h(B.h + 4).border_1().border_color("#f38ba8")
         .loop("opacity", { from: 0.2, to: 1, period: 900, easing: "ease-in-out" })))
       .children(gauge)
       .child(shown)
@@ -1020,13 +1021,13 @@ export default class Agents extends View {
       .when(rows.length === 0, (el) => el.child(div().px(10).py(18).text_size(12).text_color(t.dim).child("Quiet: no sub-agents or shell jobs running.")))
       .children(rows.map(({ a, x }) => {
         const parts = [x.interns.length ? plural(x.interns.length, "sub-agent") : null, x.jobs ? `${plural(x.jobs, "shell job")}${x.long ? ` (${x.long} over a minute)` : ""}` : null].filter(Boolean).join(" · ");
-        return h_flex().id(`wl-${a.address}`).h(52).px(6).gap(8).rounded(8).items_center().cursor_pointer().hover((st) => st.bg(t.hover))
+        return h_flex().id(`wl-${a.address}`).h(52).px(6).gap(8).items_center().cursor_pointer().hover((st) => st.bg(t.hover))
           .on_click(() => { run("agent.focus", { terminal: a.address }); closeOverlay(props().overlay); })
           .child(div().flex_none().child(figureFor(a.space_name, a.status, 34, 0, speciesOf(progOf(a)))))
           .child(v_flex().flex_1().min_w(0).gap(1)
             .child(div().truncate().text_size(12.5).text_color(t.foreground).child([a.space_name, a.program?.name].filter(Boolean).join(" · ")))
             .child(div().truncate().text_size(10.5).text_color(t.muted).child(parts)))
-          .child(div().flex_none().text_size(14).text_color("#89b4fa").child("→"));
+          .child(arrowRight("#89b4fa"));
       }));
   }
 
@@ -1385,6 +1386,17 @@ export default class Agents extends View {
     this.pendingSetupCodex = !ok;
   }
 
+  // The workstation an agent sits at: picked at random the first time its address appears, then kept across rerenders
+  // and restarts (4 styles: steel cubicle, walnut writing desk, white studio desk, dark standing desk).
+  deskOf(address) {
+    if (this.desks?.[address] == null) {
+      this.desks = this.desks ?? {};
+      this.desks[address] = Math.floor(Math.random() * 4);
+      try { localStorage.setItem("deskstyles", JSON.stringify(this.desks)); } catch { /* storage blocked: the pick holds for this session */ }
+    }
+    return this.desks[address];
+  }
+
   render(cx) {
     const t = theme();
     if (props()?.sortMenu) return this.sortMenu(t);
@@ -1457,7 +1469,6 @@ export default class Agents extends View {
         .gap(3)
         .flex()
         .items_center()
-        .rounded(4)
         .text_size(11)
         .text_color(open ? t.dim : (t[top] ?? t.dim))
         .cursor_pointer()
@@ -1546,7 +1557,6 @@ export default class Agents extends View {
         .id(`pin-${a.address}`)
         .flex_none()
         .p(2)
-        .rounded(4)
         .text_color(t.dim)
         .cursor_pointer()
         .hover((s) => s.bg(t.hover).text_color(t.foreground))
@@ -1571,7 +1581,6 @@ export default class Agents extends View {
         .flex_none()
         .border_b(2)
         .border_color(pal().rowEdge)
-        .rounded(8)
         .items_center()
         .gap(6)
         .bg(pal().row)
@@ -1649,6 +1658,21 @@ export default class Agents extends View {
     const F = isDay()
       ? { panel: "#737b9e", panelHi: "#8f97b8", panelEdge: "#5d648a", deskTop: "#666d94", deskFront: "#545a80", deskUnder: "#3b3f58", apron: "#33364b", shadow: "#2a24401f" }
       : { panel: "#8b92b4", panelHi: "#aab1d2", panelEdge: "#6f7698", deskTop: "#7a81a6", deskFront: "#646a8c", deskUnder: "#454a68", apron: "#3b3f5a", shadow: "#00000000" };
+    // Four workstations: the steel cubicle, a walnut writing desk, a white studio desk with a drawer, and a dark standing
+    // desk with an LED strip. `panels` null means no partitions; `item` is the small thing on the right of the top.
+    const DESKS = isDay()
+      ? [
+          { panels: [F.panel, F.panelHi, F.panelEdge], top: F.deskTop, front: F.deskFront, under: F.deskUnder, apron: F.apron, shape: "panel", item: "mouse" },
+          { panels: null, top: "#a9764a", front: "#8a5a3c", under: "#6b4a32", apron: "#5a3a27", shape: "legs", item: "plant" },
+          { panels: ["#7fb3ac", "#a6d4cd", "#5f928c"], top: "#e6e9f5", front: "#c9cee4", under: "#9aa1c2", apron: "#7e86ad", shape: "drawer", item: "pens" },
+          { panels: null, top: "#3f4463", front: "#333752", under: "#262a40", apron: "#1e2134", shape: "led", item: "notes" },
+        ]
+      : [
+          { panels: [F.panel, F.panelHi, F.panelEdge], top: F.deskTop, front: F.deskFront, under: F.deskUnder, apron: F.apron, shape: "panel", item: "mouse" },
+          { panels: null, top: "#9a6a47", front: "#7c5036", under: "#5f3d28", apron: "#4d3120", shape: "legs", item: "plant" },
+          { panels: ["#5f9a94", "#82bdb6", "#4a7d78"], top: "#cfd4e8", front: "#aeb5d0", under: "#878dad", apron: "#6f7594", shape: "drawer", item: "pens" },
+          { panels: null, top: "#2f344a", front: "#262a3d", under: "#1d2030", apron: "#161927", shape: "led", item: "notes" },
+        ];
     const sz = this.size ?? { width: 268, height: 640 };
     // Every agent gets a desk. The more agents, the smaller the desks (never below 0.42x), so all of them stay visible.
     const horizon = yHorizon(sz.height);
@@ -1732,8 +1756,45 @@ export default class Agents extends View {
       const isUrge = isIdle && unseen >= IDLE_URGE;
       const isSnooze = isIdle && unseen >= IDLE_SNOOZE && !isUrge;
       const isNudged = this.nudged.has(a.address);
-      // The pet sits on a chair behind a wooden desk (the MacBook is part of the pet).
+      // The pet sits on a chair behind a desk (the MacBook is part of the pet).
       const ctr = DUCK_CENTER * petW;
+      const D = DESKS[this.deskOf(a.address)];
+      // Partitions only on the two panelled styles, so desks read differently across the floor.
+      const panels = D.panels ? [
+        div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg(D.panels[0]),
+        div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(2)).h(PET * 0.62).bg(D.panels[1]),
+        div().absolute().left(petW + kk(4)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg(D.panels[0]),
+        div().absolute().left(petW + kk(7)).top(PET * 0.34).w(kk(2)).h(PET * 0.62).bg(D.panels[2]),
+      ] : [];
+      // The desk: one 3px top shared by all styles, then a front panel, legs, a drawer or an LED band under it.
+      const t0 = PET * 0.84;
+      const slab = (t, h, c) => div().absolute().left(-kk(6)).top(t).w(petW + kk(12)).h(h).bg(c);
+      const desk = D.shape === "legs"
+        ? [slab(t0, kk(3), D.top),
+           div().absolute().left(-kk(4)).top(t0 + kk(3)).w(kk(3)).h(kk(13)).bg(D.front),
+           div().absolute().left(petW + kk(1)).top(t0 + kk(3)).w(kk(3)).h(kk(13)).bg(D.front),
+           div().absolute().left(-kk(2)).top(t0 + kk(9)).w(petW + kk(4)).h(kk(2)).bg(D.apron)]
+        : D.shape === "drawer"
+        ? [slab(t0, kk(8), D.front), slab(t0, kk(3), D.top), slab(t0 + kk(8), kk(3), D.under),
+           div().absolute().left(-kk(2)).top(t0 + kk(4)).w(petW + kk(4)).h(kk(3)).bg(D.under),
+           div().absolute().left(petW / 2 - kk(5)).top(t0 + kk(5)).w(kk(10)).h(kk(1)).bg(D.apron),
+           div().absolute().left(-kk(3)).top(t0 + kk(12)).w(petW + kk(6)).h(kk(10)).bg(D.apron)]
+        : [slab(t0, kk(9), D.front), slab(t0, kk(3), D.top), slab(t0 + kk(9), kk(3), D.under),
+           div().absolute().left(-kk(3)).top(t0 + kk(12)).w(petW + kk(6)).h(kk(10)).bg(D.apron),
+           ...(D.shape === "led" ? [div().absolute().left(-kk(4)).top(t0 + kk(3)).w(petW + kk(8)).h(kk(1)).bg("#89b4fa").loop("opacity", { from: 0.35, to: 1, period: 2200, easing: "ease-in-out" })] : [])];
+      // The thing on the right of the top: a mouse, a succulent, a pen cup or two sticky notes.
+      const item = D.item === "mouse"
+        ? [div().absolute().left(petW - kk(6)).top(t0 - kk(4)).w(kk(7)).h(kk(4)).bg("#c9cee6")]
+        : D.item === "plant"
+        ? [div().absolute().left(petW - kk(8)).top(t0 - kk(4)).w(kk(6)).h(kk(4)).bg("#8a5a3c"),
+           div().absolute().left(petW - kk(7)).top(t0 - kk(8)).w(kk(4)).h(kk(4)).bg("#3a8247"),
+           div().absolute().left(petW - kk(7)).top(t0 - kk(8)).w(kk(2)).h(kk(2)).bg("#5fb06b")]
+        : D.item === "pens"
+        ? [div().absolute().left(petW - kk(7)).top(t0 - kk(6)).w(kk(6)).h(kk(6)).bg(D.under),
+           div().absolute().left(petW - kk(6)).top(t0 - kk(10)).w(kk(1)).h(kk(4)).bg("#89b4fa"),
+           div().absolute().left(petW - kk(4)).top(t0 - kk(9)).w(kk(1)).h(kk(3)).bg("#f38ba8")]
+        : [div().absolute().left(petW - kk(9)).top(t0 - kk(5)).w(kk(4)).h(kk(5)).bg("#f5c2e7"),
+           div().absolute().left(petW - kk(5)).top(t0 - kk(4)).w(kk(4)).h(kk(4)).bg("#f9e2af")];
       const away = this.out?.addr === a.address && breakers.includes(a.address);
       // On a break the pet steps out beside its desk for a moment and comes right back, over and over.
       const dir = left + petW / 2 < sz.width / 2 ? 1 : -1;
@@ -1748,23 +1809,20 @@ export default class Agents extends View {
         .child(div().absolute().left(ctr - petW * 0.4).top(-kk(10)).w(petW * 0.8).h(PET * 0.9).rounded_t(9).bg("#3c4054"))
         .child(div().absolute().left(ctr - petW * 0.4 + kk(5)).top(-kk(1)).w(petW * 0.8 - kk(10)).h(PET * 0.9 - kk(12)).rounded_t(6).bg("#474c66"))
         .child(div().absolute().left(ctr - kk(1)).top(kk(0)).w(kk(2)).h(PET * 0.9 - kk(13)).bg("#363a4f"))
-        .child(div().absolute().left(ctr - petW * 0.4 + kk(7)).top(-kk(8)).w(petW * 0.8 - kk(14)).h(kk(3)).rounded(2).bg("#60668a"))
-        .child(div().absolute().left(ctr - petW * 0.4 - kk(9)).top(PET * 0.34).w(kk(11)).h(kk(19)).rounded(4).bg("#1c1e2c"))
-        .child(div().absolute().left(ctr - petW * 0.4 - kk(7)).top(PET * 0.34 + kk(2)).w(kk(8)).h(kk(16)).rounded(3).bg("#32364b"))
-        .child(div().absolute().left(ctr - petW * 0.4 - kk(6)).top(PET * 0.34 + kk(3)).w(kk(6)).h(kk(3)).rounded(1).bg("#585e82"))
-        .child(div().absolute().left(ctr + petW * 0.4 - kk(2)).top(PET * 0.34).w(kk(11)).h(kk(19)).rounded(4).bg("#1c1e2c"))
-        .child(div().absolute().left(ctr + petW * 0.4 - kk(1)).top(PET * 0.34 + kk(2)).w(kk(8)).h(kk(16)).rounded(3).bg("#32364b"))
-        .child(div().absolute().left(ctr + petW * 0.4).top(PET * 0.34 + kk(3)).w(kk(6)).h(kk(3)).rounded(1).bg("#585e82"))
+        .child(div().absolute().left(ctr - petW * 0.4 + kk(7)).top(-kk(8)).w(petW * 0.8 - kk(14)).h(kk(3)).bg("#60668a"))
+        .child(div().absolute().left(ctr - petW * 0.4 - kk(9)).top(PET * 0.34).w(kk(11)).h(kk(19)).bg("#1c1e2c"))
+        .child(div().absolute().left(ctr - petW * 0.4 - kk(7)).top(PET * 0.34 + kk(2)).w(kk(8)).h(kk(16)).bg("#32364b"))
+        .child(div().absolute().left(ctr - petW * 0.4 - kk(6)).top(PET * 0.34 + kk(3)).w(kk(6)).h(kk(3)).bg("#585e82"))
+        .child(div().absolute().left(ctr + petW * 0.4 - kk(2)).top(PET * 0.34).w(kk(11)).h(kk(19)).bg("#1c1e2c"))
+        .child(div().absolute().left(ctr + petW * 0.4 - kk(1)).top(PET * 0.34 + kk(2)).w(kk(8)).h(kk(16)).bg("#32364b"))
+        .child(div().absolute().left(ctr + petW * 0.4).top(PET * 0.34 + kk(3)).w(kk(6)).h(kk(3)).bg("#585e82"))
         .child(div().absolute().left(ctr - kk(2)).top(PET * 0.84 + kk(8)).w(kk(4)).h(kk(10)).bg("#2b2f45"))
         .child(div().absolute().left(ctr - kk(15)).top(PET * 0.84 + kk(18)).w(kk(30)).h(kk(4)).bg("#2b2f45"))
         .child(div().absolute().left(ctr - kk(17)).top(PET * 0.84 + kk(22)).w(kk(5)).h(kk(4)).bg("#14172a"))
         .child(div().absolute().left(ctr + kk(12)).top(PET * 0.84 + kk(22)).w(kk(5)).h(kk(4)).bg("#14172a"))
         // Cubicle panels on both sides of the desk, on a contact shadow that lifts the desk off the floor.
         .child(div().absolute().left(-kk(11)).top(PET * 0.84 + kk(22)).w(petW + kk(22)).h(kk(6)).bg(F.shadow))
-        .child(div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg(F.panel))
-        .child(div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(2)).h(PET * 0.62).bg(F.panelHi))
-        .child(div().absolute().left(petW + kk(4)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg(F.panel))
-        .child(div().absolute().left(petW + kk(7)).top(PET * 0.34).w(kk(2)).h(PET * 0.62).bg(F.panelEdge))
+        .children(panels)
         .when(Boolean(cl), (el) => el.child(div().absolute().left(petW - kk(8)).top(-kk(26)).w(kk(12)).h(kk(18))
           .children([[6, 0, 6, 4], [3, 4, 6, 4], [0, 8, 10, 4], [4, 12, 5, 4], [2, 16, 4, 2]].map(([x, y, w, h]) => div().absolute().left(kk(x)).top(kk(y)).w(kk(w)).h(kk(h)).bg(cl.kind === "file" ? "#ff5370" : "#f9b84a")))
           .loop("opacity", { from: 0.25, to: 1, period: 520, easing: "ease-in-out" })))
@@ -1776,19 +1834,16 @@ export default class Agents extends View {
         // Shipped: pixel confetti rains over the desk until someone looks at it.
         .when(a.status === "done", (el) => el.children([["#f9e2af", 0.10, 900], ["#f38ba8", 0.22, 1300], ["#a6e3a1", 0.34, 1000], ["#89b4fa", 0.46, 1500], ["#cba6f7", 0.58, 1100], ["#fab387", 0.70, 1400], ["#94e2d5", 0.82, 950]]
           .map(([c, fx0, p], j) => div().absolute().left(petW * fx0).top(-20).w(4).h(4).bg(c).loop("top", { from: -22 - (j % 3) * 6, to: PET * 0.55, period: p, easing: "linear" }))))
-        // A steel-grey desk with a front panel, and a mouse on top.
-        .child(div().absolute().left(-kk(6)).top(PET * 0.84).w(petW + kk(12)).h(kk(9)).bg(F.deskFront))
-        .child(div().absolute().left(-kk(6)).top(PET * 0.84).w(petW + kk(12)).h(kk(3)).bg(F.deskTop))
-        .child(div().absolute().left(-kk(6)).top(PET * 0.84 + kk(9)).w(petW + kk(12)).h(kk(3)).bg(F.deskUnder))
-        .child(div().absolute().left(-kk(3)).top(PET * 0.84 + kk(12)).w(petW + kk(6)).h(kk(10)).bg(F.apron))
+        // The desk in this agent's style, and the object picked for it.
+        .children(desk)
         .child(div().absolute().left(ctr - kk(8)).top(PET * 0.84 + kk(15)).w(kk(16)).h(kk(3)).bg("#262a40"))
-        .child(div().absolute().left(petW - kk(6)).top(PET * 0.84 - kk(4)).w(kk(7)).h(kk(4)).rounded(2).bg("#c9cee6"))
+        .children(item)
         // A server rack on the right cubicle panel: one blinking LED per shell job, amber once it has run over a minute.
         .when(act.jobs > 0, (el) => {
           const rackTop = PET * 0.3, rackH = PET * 0.66, fit = Math.max(1, Math.floor((rackH - kk(4)) / kk(5)));
-          const leds = Array.from({ length: Math.min(act.jobs, fit) }, (_, i) => div().absolute().left(kk(2)).top(kk(3) + i * kk(5)).w(kk(5)).h(Math.max(2, kk(3))).rounded(1)
+          const leds = Array.from({ length: Math.min(act.jobs, fit) }, (_, i) => div().absolute().left(kk(2)).top(kk(3) + i * kk(5)).w(kk(5)).h(Math.max(2, kk(3)))
             .bg(i < act.long ? "#f9b84a" : "#a6e3a1").loop("opacity", { from: 0.3, to: 1, period: 360 + ((i * 137) % 420), easing: "linear" }));
-          return el.child(div().absolute().left(petW + kk(2)).top(rackTop).w(kk(9)).h(rackH).rounded(2).bg("#161827").border_1().border_color("#2e3250")
+          return el.child(div().absolute().left(petW + kk(2)).top(rackTop).w(kk(9)).h(rackH).bg("#161827").border_1().border_color("#2e3250")
             .child(div().absolute().left(kk(2)).top(rackH - kk(4)).w(kk(5)).h(kk(1)).bg("#2e3250"))
             .children(leds));
         })
@@ -1805,16 +1860,16 @@ export default class Agents extends View {
             return div().absolute().left(x0).top(floor + (i % 2) * ru(2)).w(x1 - x0 + ru(9)).h(rh)
               .child(div().absolute().top(0).left(0).w(ru(9)).h(rh).loop("left", { from: i % 2 ? x1 - x0 : 0, to: i % 2 ? 0 : x1 - x0, period: 1700 + i * 600, easing: "ease-in-out" })
               .child(div().absolute().left(0).top(0).w(ru(9)).h(rh).loop("top", { from: 0, to: -ru(2), period: 320 + i * 40, easing: "ease-out" })
-                .child(div().absolute().left(ru(1)).top(0).w(ru(7)).h(ru(6)).rounded(2).bg(c))
+                .child(div().absolute().left(ru(1)).top(0).w(ru(7)).h(ru(6)).bg(c))
                 .child(div().absolute().left(ru(2)).top(ru(2)).w(ru(5)).h(ru(2)).bg("#1e2030")
                   .child(div().absolute().left(ru(1)).top(0).w(ru(1)).h(ru(2)).bg(c).loop("left", { from: 0, to: ru(3), period: 900, easing: "linear" })))
                 .child(div().absolute().left(ru(2)).top(ru(6)).w(ru(5)).h(ru(4)).bg("#585e82"))
-                .child(div().absolute().left(ru(4)).top(ru(5)).w(ru(5)).h(ru(4)).rounded(1).bg("#e9d8b4").border_1().border_color("#a8946a"))
+                .child(div().absolute().left(ru(4)).top(ru(5)).w(ru(5)).h(ru(4)).bg("#e9d8b4").border_1().border_color("#a8946a"))
                 .child(div().absolute().left(ru(2)).top(ru(10)).w(ru(2)).bg("#2b2f45").loop("height", { from: ru(1), to: ru(3), period: leg, easing: "linear" }))
                 .child(div().absolute().left(ru(5)).top(ru(10)).w(ru(2)).bg("#2b2f45").loop("height", { from: ru(3), to: ru(1), period: leg, easing: "linear" }))));
           };
           return el.children(Array.from({ length: shown }, (_, i) => bot(i)))
-            .when(extra > 0, (e2) => e2.child(div().absolute().left(x1 + ru(4)).top(floor + ru(3)).px(2).rounded(3)
+            .when(extra > 0, (e2) => e2.child(div().absolute().left(x1 + ru(4)).top(floor + ru(3)).px(2)
               .bg("#0f111acc").text_size(Math.max(8, kk(9))).text_color("#cdd6f4").child(`+${extra}`)));
         })
         // Interns in front of the desk, one tiny pet per running sub-agent (three at most, then "+N").
@@ -1823,7 +1878,7 @@ export default class Agents extends View {
           const top = PET * 0.84 + kk(22) - ih, shown = act.interns.slice(0, 3), extra = act.interns.length - shown.length;
           return el
             .children(shown.map((it, j) => div().absolute().left(kk(2) + j * step).top(top).child(duckMood(mood(it.status, 0), ih, { species: it.species }))))
-            .when(extra > 0, (e2) => e2.child(div().absolute().left(kk(2) + shown.length * step + Math.round(iw * 0.45)).top(top + Math.round(ih * 0.3)).px(3).rounded(3)
+            .when(extra > 0, (e2) => e2.child(div().absolute().left(kk(2) + shown.length * step + Math.round(iw * 0.45)).top(top + Math.round(ih * 0.3)).px(3)
               .bg("#0f111acc").text_size(Math.max(8, kk(9))).text_color("#cdd6f4").child(`+${extra}`)));
         })
         // Papers pile up on the desk as the agent's context fills: one sheet per 10%, the top ones turn pink past 80%.
@@ -1857,7 +1912,7 @@ export default class Agents extends View {
           return el.child(full ? div().absolute().left(0).top(PET * 0.84 - n * sh - kk(6)).w(petW).h(n * sh + kk(8))
             .child(pile.top(kk(2)).loop("top", { from: kk(2), to: 0, period: 600, easing: "ease-in-out" })) : pile);
         })
-        .when(a.status === "done", (el) => el.child(div().id(`settle-${a.address}`).absolute().left(-kk(3)).top(-kk(13)).w(kk(13)).h(kk(13)).rounded(3)
+        .when(a.status === "done", (el) => el.child(div().id(`settle-${a.address}`).absolute().left(-kk(3)).top(-kk(13)).w(kk(13)).h(kk(13))
           .bg("#a6e3a1").flex().items_center().justify_center().cursor_pointer()
           .tooltip("Settle: this staff clocks out until their next task")
           .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
@@ -1956,17 +2011,17 @@ export default class Agents extends View {
       })
       .child(scene(sz.width, sz.height, sceneOpts))
       .children(this.sceneSpots(sz, everyone, sceneOpts))
-      .when(list.length === 0 && settledFloor === 0, (el) => el.child(div().absolute().left(12).top(sz.height * 0.5).w(sz.width - 24).px(8).py(6).rounded(3).bg(P.plate).text_size(12).text_color(P.plateInk).child("No staff on this floor yet. Hire one with the + above, or start an agent in this space.")))
-      .when(list.length === 0 && settledFloor > 0, (el) => el.child(div().absolute().left(12).top(sz.height * 0.5).w(sz.width - 24).px(8).py(6).rounded(3).bg(P.plate).text_size(12).text_color(P.plateInk).child("Everyone shipped has clocked out. Click the ✓ settled chip in the corner to bring them back.")))
-      .when(hidden > 0, (el) => el.child(div().absolute().right(8).top(horizon + 6).px(8).py(3).rounded(8).bg(P.deepBox).border_1().border_color(P.frame).text_size(11).text_color(t.muted).child(`+${hidden} more · narrow the panel to list all`)))
+      .when(list.length === 0 && settledFloor === 0, (el) => el.child(div().absolute().left(12).top(sz.height * 0.5).w(sz.width - 24).px(8).py(6).bg(P.plate).text_size(12).text_color(P.plateInk).child("No staff on this floor yet. Hire one with the + above, or start an agent in this space.")))
+      .when(list.length === 0 && settledFloor > 0, (el) => el.child(div().absolute().left(12).top(sz.height * 0.5).w(sz.width - 24).px(8).py(6).bg(P.plate).text_size(12).text_color(P.plateInk).child("Everyone shipped has clocked out. Click the ✓ settled chip in the corner to bring them back.")))
+      .when(hidden > 0, (el) => el.child(div().absolute().right(8).top(horizon + 6).px(8).py(3).bg(P.deepBox).border_1().border_color(P.frame).text_size(11).text_color(t.muted).child(`+${hidden} more · narrow the panel to list all`)))
       .children(links)
       .children(this.drag?.moved ? [...pets.filter((_, i) => seated[i].address !== this.drag.addr), ...pets.filter((_, i) => seated[i].address === this.drag.addr)] : pets)
       .when(Boolean(this.notice), (el) => {
-        const box = v_flex().id("oc-notice").absolute().left(8).right(8).top(horizon + 6).px(8).py(6).gap(6).rounded(8).bg(P.deepBox).border_1().border_color(P.accent).text_size(11).text_color(t.foreground)
+        const box = v_flex().id("oc-notice").absolute().left(8).right(8).top(horizon + 6).px(8).py(6).gap(6).bg(P.deepBox).border_1().border_color(P.accent).text_size(11).text_color(t.foreground)
           .on_mouse_down("left", (_e, cx) => cx.stop_propagation());
         return el.child(box.cursor_pointer().on_click((_e, cx) => { this.notice = null; cx.notify(); }).child(this.notice));
       })
-      .when(settledCount > 0, (el) => el.child(div().id("settled-undo").absolute().right(8).top(this.notice ? horizon + 84 : horizon + 6).px(8).py(3).rounded(8).bg("#11111bdd").border_1().border_color("#45475a").text_size(11).text_color("#a6e3a1").cursor_pointer()
+      .when(settledCount > 0, (el) => el.child(div().id("settled-undo").absolute().right(8).top(this.notice ? horizon + 84 : horizon + 6).px(8).py(3).bg("#11111bdd").border_1().border_color("#45475a").text_size(11).text_color("#a6e3a1").cursor_pointer()
         .tooltip("Bring settled staff back on every floor")
         .on_click((_e, cx) => { this.settled.clear(); try { localStorage.removeItem("settled"); } catch { /* storage disabled: next render retries */ } cx.notify(); })
         .child(`✓ ${settledCount} settled`)));
@@ -1979,7 +2034,7 @@ export default class Agents extends View {
     ];
     const MAG = [[2, 0, 4, 1], [1, 1, 1, 1], [6, 1, 1, 1], [0, 2, 1, 4], [7, 2, 1, 4], [1, 6, 1, 1], [6, 6, 1, 1], [2, 7, 4, 1], [7, 7, 2, 1], [8, 8, 2, 1], [9, 9, 1, 1]];
     const magnifier = (c) => div().relative().w(15).h(15).flex_none().children(MAG.map(([x, y, w, h]) => div().absolute().left(x * 1.5).top(y * 1.5).w(w * 1.5).h(h * 1.5).bg(c)));
-        const corgi = image("mods/company-brand/logo.png").size(24).flex_none().rounded(4);
+        const corgi = image("mods/company-brand/logo.png").size(24).flex_none();
     const mono = "JetBrains Mono";
 
     return v_flex()
@@ -2002,7 +2057,7 @@ export default class Agents extends View {
                   .tooltip(`${blockedAll.length} ${blockedAll.length === 1 ? "agent needs" : "agents need"} you · open the list`)
                   .on_click(() => this.openNeedsYou())
                   .children([[6, 0, 2, 1], [4, 1, 6, 1], [3, 2, 8, 1], [2, 3, 10, 7], [1, 10, 12, 2], [0, 12, 14, 1], [5, 13, 4, 1], [6, 14, 2, 1]].map(([x, y, w, h]) => div().absolute().left(x).top(y).w(w).h(h).bg("#f9e2af")))
-                  .child(div().absolute().right(-5).top(-5).min_w(10).h(10).px(2).rounded(5).bg("#f38ba8").flex().items_center().justify_center().text_size(7.5).font_bold().text_color("#11111b").child(String(blockedAll.length)))))
+                  .child(div().absolute().right(-5).top(-5).min_w(10).h(10).px(2).bg("#f38ba8").flex().items_center().justify_center().text_size(7.5).font_bold().text_color("#11111b").child(String(blockedAll.length)))))
                 .when(Boolean(this.fileError), (el) => el.child(div().id("ag-file-error").text_size(11).font_bold().text_color(t.blocked)
                   .tooltip(`${this.fileError}. Using the last good figures.`).child("!")))
                 .child(div().id("ag-hire").relative().w(14).h(14).flex_none().cursor_pointer()
@@ -2057,7 +2112,7 @@ export default class Agents extends View {
             .child(div().id("staff-clear").flex_none().px(4).text_size(14).font_family(mono).text_color(t.dim).cursor_pointer().hover((s) => s.text_color(t.foreground))
               .on_click((_e, cx) => { this.searchInput.set_value(""); this.query = ""; cx.notify(); }).child("×"))))))
       .child(collapsed ? v_flex().id("ag-list").flex_1().min_h(0).px(0).overflow_y_scrollbar().mode("always").children(rows) : farm)
-      .when(collapsed && settledCount > 0, (el) => el.child(h_flex().h(22).px(6).items_center().child(div().id("settled-undo-rail").px(6).h(17).flex().items_center().rounded(8).bg("#a6e3a122").text_size(10).text_color("#a6e3a1").cursor_pointer()
+      .when(collapsed && settledCount > 0, (el) => el.child(h_flex().h(22).px(6).items_center().child(div().id("settled-undo-rail").px(6).h(17).flex().items_center().bg("#a6e3a122").text_size(10).text_color("#a6e3a1").cursor_pointer()
         .tooltip("Bring settled staff back on every floor")
         .on_click((_e, cx) => { this.settled.clear(); try { localStorage.removeItem("settled"); } catch { /* storage disabled: next render retries */ } cx.notify(); })
         .child(`✓ ${settledCount} settled`))))

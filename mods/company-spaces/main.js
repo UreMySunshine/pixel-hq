@@ -124,8 +124,10 @@ function rail(t, line, h, { stop = null, here = false, last = false, crew = [], 
     .children(sleepers)
     .when(stop === "station" && (here || blocked), (el) => el.child(div().absolute().left(0).top(c - 10).w(20).h(20).children(pix(blocked ? "#f38ba8" : "#f9e2af", 20, 20))
       .loop("opacity", { from: 0.4, to: 0.9, period: blocked ? 800 : 1800, easing: "ease-in-out" })))
-    .when(stop === "station", (el) => el.child(node
-      .child(div().absolute().left(-2).right(-2).top(-2).bottom(-2).bg((here ? "#f9e2af" : line) + "99").loop("opacity", { from: 0.5, to: 1, period: here ? 1600 : 3000, easing: "ease-in-out" }))))
+    .when(stop === "station", (el) => el
+      // The halo sits behind the stop, a 2px ring around it; on top it tinted the core and the branch glyph.
+      .child(div().absolute().left(1).top(c - 9).w(18).h(18).bg((here ? "#f9e2af" : line) + "99").loop("opacity", { from: 0.5, to: 1, period: here ? 1600 : 3000, easing: "ease-in-out" }))
+      .child(node))
     .when(stop === "end", (el) => el.child(div().absolute().left(4).top(c - 6).w(12).h(12).rounded(2).border_2().border_dashed().border_color(line).bg(t.chrome)))
     .when(moving, (el) => el.child(loco(blocked, tint).absolute().left(3)
       .loop("top", { from: c - 32, to: c - 20, period: 2400 })));
@@ -525,14 +527,14 @@ export default class Spaces extends View {
       const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t, line));
       // The plate follows the station-sign reference: four concentric rings — a dark outline,
       // a band of the line's color, a lit white line and a dark inner rule — around a pale
-      // face, with one bolt head near each corner and a white rounded badge carrying the
+      // face, with one bolt head near each corner and a white notched badge carrying the
       // machine's initial.
       const plateFace = lighten(line, 0.22);
       const plateShell = deepen(line, 0.5);
       const plateEdge = "#e4ebff";
       const plateInk = "#ffffff";
       const plateDim = "#ffffffc0";
-      const ring = (inset, color, radius) => div().absolute().left(inset).right(inset).top(inset).bottom(inset).rounded(radius).bg(color);
+      const ring = (inset, color) => div().absolute().left(inset).right(inset).top(inset).bottom(inset).bg(color);
       // A bolt head near a corner: a 3×3 dark block with one lit pixel on the upper outer corner.
       const rivet = (side, v) => [0, 1, 2].flatMap((dx) => [0, 1, 2].map((dy) => {
         const glint = dx === 0 && dy === (v === "t" ? 0 : 2);
@@ -543,11 +545,11 @@ export default class Spaces extends View {
       }));
       const bullet = div().relative().w(20).h(20).flex_none()
         .child(div().absolute().left(-2).top(-2).children(pix("#ffffff33", 24, 24)).loop("opacity", { from: 0.4, to: 1, period: 2600, easing: "ease-in-out" }))
-        .child(div().absolute().left(0).top(0).size(20).rounded(3).bg("#ffffff"))
+        .child(div().absolute().left(0).top(0).size(20).children(pix("#ffffff", 20, 20)))
         .child(h_flex().absolute().left(0).top(0).size(20).items_center().justify_center().font_family(MONO).font_bold().text_size(11).text_color(deepen(line, 0.45))
           .child([...(m ?? "this computer")][0].toUpperCase()));
       const icon = svg(`mods/company-spaces/${m ? "server" : "monitor"}.svg`).size(13).flex_none();
-      const badge = div().absolute().right(-3).bottom(-2).size(6).rounded(3).border_1().border_color(t.chrome).bg(connected ? t.ansi2 : t.dim);
+      const badge = div().absolute().right(-3).bottom(-2).size(6).border_1().border_color(t.chrome).bg(connected ? t.ansi2 : t.dim);
       // One plate spans the platform, hung from the canopy by two rods: the badge and the line's
       // name at the left, the stop count and the fold mark at the right.
       const metal = day() ? "#8d86b4" : "#3a3f5c";
@@ -559,11 +561,11 @@ export default class Spaces extends View {
         .child(div().absolute().left(23).top(-1).w(4).h(2).bg(metal))
         .child(div().absolute().right(23).top(-1).w(4).h(2).bg(metal))
         .children([
-          ring(0, plateShell, 3),
-          ring(1, line, 3),
-          ring(2, "#ffffff", 2),
-          ring(3, plateShell, 2),
-          ring(4, plateFace, 1),
+          ring(0, plateShell),
+          ring(1, line),
+          ring(2, "#ffffff"),
+          ring(3, plateShell),
+          ring(4, plateFace),
           div().absolute().left(5).right(5).top(4).h(1).bg("#ffffff55"),
           ...rivet("l", "t"), ...rivet("r", "t"), ...rivet("l", "b"), ...rivet("r", "b"),
         ])
@@ -583,7 +585,7 @@ export default class Spaces extends View {
         .child(div().flex_none().font_family(MONO).font_bold().text_size(10).text_color(plateInk).child(`${mine.length} ${mine.length === 1 ? "station" : "stations"}`))
         .child(svg(`mods/company-spaces/chevron-${folded ? "right" : "down"}.svg`).size(10).flex_none().text_color(plateInk));
       const head = h_flex().relative().id(`machine-${m ?? "local"}`).h(collapsed ? 26 : 72).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
-        .when(collapsed, el => el.mt(4).w(RAIL_CELL).justify_center().rounded(6).tooltip(login ? `${m} needs a login: run ${login}. Click for Copy.` : m ? `${m} · ${connected ? "connected" : (machine?.state ?? "asleep").replace(/_/g, " ")}` : "This computer"))
+        .when(collapsed, el => el.mt(4).w(RAIL_CELL).justify_center().tooltip(login ? `${m} needs a login: run ${login}. Click for Copy.` : m ? `${m} · ${connected ? "connected" : (machine?.state ?? "asleep").replace(/_/g, " ")}` : "This computer"))
         .when(collapsed, el => el.cursor_pointer())
         .when(!collapsed, el => el.bg(HEADBAR()).mb(2).children(platform(line)))
         .hover(s => s.bg(t.hover))
@@ -614,11 +616,11 @@ export default class Spaces extends View {
           .when(hovered, el => el.child(grip(t.dim))))
         .when(collapsed, el => el.child(div().relative().flex_none().child(icon).when(Boolean(m), el => el.child(badge))))
         .when(!collapsed, el => el.child(sign));
-      const empty = h_flex().id(`machine-new-${m ?? "local"}`).h(28).flex_none().px(collapsed ? 0 : 8).gap(7).items_center().rounded(7)
+      const empty = h_flex().id(`machine-new-${m ?? "local"}`).h(28).flex_none().px(collapsed ? 0 : 8).gap(7).items_center()
         .text_size(12).text_color(t.dim)
         .when(collapsed || connected, el => el.hover(s => s.bg(t.hover).text_color(t.foreground)).on_click(() => run("space.new", { machine: m ?? "" })))
-        .when(collapsed, el => el.w(RAIL_CELL).rounded(6).justify_center().tooltip(`New space on ${m ?? "this computer"}`)
-          .child(h_flex().size(18).rounded(5).border_1().border_color(t.dim).items_center().justify_center()
+        .when(collapsed, el => el.w(RAIL_CELL).justify_center().tooltip(`New space on ${m ?? "this computer"}`)
+          .child(h_flex().size(18).border_2().border_color(t.dim).items_center().justify_center()
             .child(svg("mods/company-spaces/plus.svg").size(10))))
         .when(!collapsed, el => el.h(26).gap(6).text_size(11.5).child(rail(t, line, 26, { stop: "end", last: true }))
           // A vacant platform: the rail ends in a dashed stop, and a plus marks where the station will stand.
@@ -822,7 +824,6 @@ const C = ROOMC();
       .h(CARD)
       .flex_none()
       .justify_center()
-      .rounded(8)
       .when(on, (el) => el.bg(t.selected).child(div().absolute().left(0).top(12).bottom(12).w(3).bg(line)))
       .when(!on, (el) => el.hover((s) => s.bg(t.hover)))
       .when(this.pressed === w.id && this.over !== w.id, (el) => el.opacity(0.5))
@@ -873,7 +874,6 @@ const C = ROOMC();
       .relative()
       .w(RAIL_CELL)
       .h(26)
-      .rounded(6)
       .justify_center()
       .items_center()
       .when(w.active, (el) => el.bg(t.selected))
@@ -904,7 +904,7 @@ const C = ROOMC();
       .child(h_flex().h(31).pl(16).pr(10).items_center().justify_between().text_size(11.5).text_color(t.dim)
         .when(collapsed, el => el.pl(0).pr(0).justify_center())
         .when(!collapsed, el => el.child("Spaces"))
-        .child(div().id("space-new").size(26).flex_none().flex().items_center().justify_center().rounded(6).hover(s => s.bg(t.hover).text_color(t.foreground))
+        .child(div().id("space-new").size(26).flex_none().flex().items_center().justify_center().hover(s => s.bg(t.hover).text_color(t.foreground))
           .on_click(() => run("space.new")).child(svg("mods/company-spaces/plus.svg").size(14))))
       .child(v_flex().flex_1().min_h(0).px(collapsed ? 0 : 8).pb(14).overflow_y_scrollbar().mode("always")
         .on_mouse_up("left", (_e, cx) => { this.pressed = null; this.dragLine = null; this.overLine = null; cx.notify(); })

@@ -1,10 +1,34 @@
 // A desk nameplate as the pane header: the agent's pixel pet, its job title, status and folder.
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, InputState, Input } from "gpui-base";
-import { panes, props, run, theme, home, layout, shared, setShared, appHome, readTextFile, writeTextFile } from "herdr";
+import { panes, props, run, theme, home, layout, shared, setShared, appHome, readTextFile, writeTextFile, settings } from "herdr";
 import { agentOf, duckMood, duckWidth, mood } from "./duck.js";
 
 const ROLE = (p) => agentOf(p.program?.key)?.role ?? (p.program?.shell ? "Terminal" : (p.program?.name ?? "Contractor"));
+
+// A notched pixel plate: a 2px frame with cut corners around a fill of the same hue.
+const frame = (border, fill) => [
+  div().absolute().left(2).right(2).top(0).bottom(0).bg(border),
+  div().absolute().left(0).right(0).top(2).bottom(2).bg(border),
+  div().absolute().left(3).right(3).top(1).bottom(1).bg(fill),
+  div().absolute().left(1).right(1).top(3).bottom(3).bg(fill),
+];
+// An opaque tint of c over the panel tone, and a label color pushed toward ink: a translucent fill lets the frame layers show
+// through and darkens the plate, and the raw pastel is too light to read on it.
+const day = () => settings().dark === false;
+const soften = (c, k = 0.82) => {
+  const to = day() ? "#d7d2e9" : "#cdd6f4";
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
+};
+const deepen = (c, k = 0.65) => {
+  const to = "#1d1e3e";
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
+};
+const MONO = "JetBrains Mono";
 
 function paneFrame(node) {
   if (!node || node.hidden) return null;
@@ -66,7 +90,7 @@ export default class CompanyPane extends View {
   me() { return panes().find((p) => p.pane === props()?.pane); }
 
   button(t, id, icon, command, args) {
-    return div().id(id).p(3).rounded(5).text_color(t.dim)
+    return div().id(id).p(3).text_color(t.dim)
       .hover((s) => s.bg(t.hover).text_color(t.foreground))
       .on_click((_e, cx) => { cx.stop_propagation(); run(command, args); })
       .child(svg(`mods/company-pane/${icon}.svg`).size(14));
@@ -83,19 +107,21 @@ export default class CompanyPane extends View {
     const H = 30;
     const avatar = species
       ? div().flex_none().w(duckWidth(H)).h(H).child(duckMood(mood(st ?? "idle"), H, { species }))
-      : div().flex_none().size(24).rounded(6).bg(t.raised).flex().items_center().justify_center().text_size(12).text_color(t.muted).child(">_");
+      : div().flex_none().size(24).bg(t.raised).flex().items_center().justify_center().text_size(12).text_color(t.muted).child(">_");
     const custom = (shared("pixel-hq.names") ?? {})[pane] ?? {};
     const title = custom.name ?? ((((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name) || "shell");
-    const chip = (text, color, spin) => h_flex().relative().flex_none().gap(5).px(8).h(20).items_center().rounded(10).bg(color + "26").border_1().border_color(color + "59").text_size(10.5).font_semibold().text_color(color)
-      .child(div().absolute().left(1).right(1).top(1).bottom(1).rounded(9).border_1().border_color(color + "33").loop("opacity", { from: 0.3, to: 1, period: st === "blocked" ? 900 : 2000, easing: "ease-in-out" }))
-      .when(Boolean(spin), el => el.child(svg("mods/company-pane/pixel-spinner.svg").size(11).flex_none().text_color(color).spin(900)))
-      .child(text);
+    const chip = (text, color, spin) => h_flex().relative().flex_none().gap(5).px(6).h(20).items_center()
+      .children(frame(color + "aa", soften(color)))
+      .child(div().flex_none().size(5).bg(color).when(st === "blocked", (lamp) => lamp.loop("opacity", { from: 0.3, to: 1, period: 900, easing: "ease-in-out" })))
+      .when(Boolean(spin), el => el.child(svg("mods/company-pane/pixel-spinner.svg").size(12).flex_none().text_color(deepen(color, 0.8)).spin(900)))
+      .child(div().font_family(MONO).font_bold().text_size(10).text_color(deepen(color, 0.8)).child(text));
     const status = st === "working" ? chip("typing", t.working ?? "#89b4fa", true)
       : st === "blocked" ? chip("needs you", t.blocked ?? "#e8744f")
       : st === "done" ? chip("shipped", t.done ?? "#8ec07c")
       : species ? chip("on break", t.idle ?? t.dim) : null;
     const edit = (field, el, width) => this.editing?.pane === pane && this.editing.field === field
-      ? div().id(`pe-${pane}-${field}`).flex_none().w(width).h(22).px(7).flex().items_center().rounded(5).border_1().border_color(t.accent)
+      ? div().id(`pe-${pane}-${field}`).relative().flex_none().w(width).h(22).px(6).flex().items_center()
+          .children(frame(t.accent, t.background))
           .on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Input.new(this.input).h_full().text_size(11.5).text_color(t.foreground))
       : el.cursor_text().hover((s) => s.bg(t.hover)).tooltip("Click to rename")
           .on_click((_e, cx) => { cx.stop_propagation(); this.start(field, pane, field === "role" ? (custom.role ?? ROLE(p)) : title, cx); });
@@ -114,8 +140,11 @@ export default class CompanyPane extends View {
       .on_click(() => run("pane.focus", { pane }))
       .child(avatar)
       .child(h_flex().flex_none().gap(7).items_center()
-        .child(edit("name", div().id(`pn-${pane}`).truncate().max_w(220).px(3).rounded(4).font_semibold().text_color(t.foreground).child(title), 170))
-        .child(edit("role", div().id(`pr-${pane}`).flex_none().px(7).h(19).flex().items_center().rounded(5).bg(t.accent + "1f").text_size(10.5).text_color(t.accent).child(custom.role ?? ROLE(p)), 120)))
+        .child(edit("name", div().id(`pn-${pane}`).truncate().max_w(220).px(3).font_semibold().text_color(t.foreground).child(title), 170))
+        .child(edit("role", div().id(`pr-${pane}`).relative().flex_none().gap(5).pl(5).pr(7).h(20).flex().items_center()
+          .children(frame(t.accent + "88", soften(t.accent)))
+          .child(div().flex_none().w(2).h(10).bg(deepen(t.accent, 0.8)))
+          .child(div().font_family(MONO).font_bold().text_size(10).text_color(deepen(t.accent, 0.8)).child(custom.role ?? ROLE(p))), 120)))
       .child(div().flex_1().truncate().text_color(t.dim).child(folder(p.cwd)))
       .when(Boolean(status), el => el.child(status))
       .when(this.hovered, el => el
