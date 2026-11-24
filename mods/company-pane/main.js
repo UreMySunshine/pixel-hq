@@ -50,7 +50,6 @@ function folder(cwd) {
 
 export default class CompanyPane extends View {
   init(_props, cx) {
-    this.hovered = false;
     this.editing = null;
     this.file = `${appHome()}/pixel-hq-names.json`;
     // Shared with the office list, so a new name shows there too; the file keeps it across restarts.
@@ -88,13 +87,6 @@ export default class CompanyPane extends View {
   }
 
   me() { return panes().find((p) => p.pane === props()?.pane); }
-
-  button(t, id, icon, command, args) {
-    return div().id(id).p(3).text_color(t.dim)
-      .hover((s) => s.bg(t.hover).text_color(t.foreground))
-      .on_click((_e, cx) => { cx.stop_propagation(); run(command, args); })
-      .child(svg(`mods/company-pane/${icon}.svg`).size(14));
-  }
 
   render(cx) {
     const t = theme();
@@ -136,7 +128,6 @@ export default class CompanyPane extends View {
       .when(!bottom, el => el.border_b(1))
       .border_color(t.border)
       .text_size(12)
-      .on_hover((hovered, cx) => { this.hovered = hovered; cx.notify(); })
       .on_click(() => run("pane.focus", { pane }))
       .child(avatar)
       .child(h_flex().flex_none().gap(7).items_center()
@@ -146,11 +137,6 @@ export default class CompanyPane extends View {
           .child(div().flex_none().w(2).h(10).bg(deepen(t.accent, 0.8)))
           .child(div().font_family(MONO).font_bold().text_size(10).text_color(deepen(t.accent, 0.8)).child(custom.role ?? ROLE(p))), 120)))
       .child(div().flex_1().truncate().text_color(t.dim).child(folder(p.cwd)))
-      .when(Boolean(status), el => el.child(status))
-      .when(this.hovered, el => el
-        .child(this.button(t, `ph-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }))
-        .child(this.button(t, `ph-d-${pane}`, "split-down", "pane.split", { direction: "down", pane }))
-        .child(this.button(t, `ph-z-${pane}`, p.zoomed ? "unzoom" : "zoom", "pane.zoom", { pane }))
-        .child(this.button(t, `ph-x-${pane}`, "close", "pane.close", { pane })));
+      .when(Boolean(status), el => el.child(status));
   }
 }
