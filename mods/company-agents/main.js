@@ -151,10 +151,7 @@ const vitalsBars = (t, ctx, id, width) => v_flex().id(id).gap(2)
   .when(ctx.pct != null, (el) => el.child(thinBar(t, ctx.pct, hpColor(t, ctx.pct), width)));
 
 // Reads the Antigravity transcript for a workspace: the last conversation the CLI logged for it, then the last
-// usage line with token counts. Pure file reads through the mod's own file API, so it behaves the same on every
-// platform (the former lsof-based path needed sh and Unix).
-const homeDir = () => process.env.HOME ?? process.env.USERPROFILE ?? "";
-const agyHome = () => process.env.AGY_HOME ?? `${homeDir()}/.gemini/antigravity-cli`;
+// usage line with token counts.
 const progOf = (a) => {
   const fg = a?.foreground;
   const fgArgv = Array.isArray(fg?.argv) ? fg.argv.join(" ") : "";
@@ -301,37 +298,16 @@ if os.path.exists(hist):
 
 const agyTranscriptVitals = async (cwd, machine) => {
   if (!cwd) return null;
-  if (machine) {
+  // python3 reads the files itself: a transcript outgrows readTextFile's 1 MiB limit within a few turns.
+  const candidates = window()?.platform === "windows" && !machine ? ["python", "python3", "py"] : ["python3", "python"];
+  for (const bin of candidates) {
+    const r = await exec(bin, ["-c", AGY_VITALS_PY, cwd], { on: machine ?? undefined, timeout: 6000 }).catch(() => null);
+    if (!r) continue;
     try {
-      const r = await exec("python3", ["-c", AGY_VITALS_PY, cwd], { on: machine, timeout: 6000 }).catch(() => null);
-      if (r?.code === 0 && r.stdout) {
-        const ev = JSON.parse(r.stdout.trim().split("\n").pop());
-        if (ev && typeof ev.pct === "number") return ev;
-      }
-    } catch {}
-    return null;
-  }
-  let hist;
-  try { hist = await readTextFile(`${agyHome()}/history.jsonl`); } catch { return null; }
-  const needle = `"workspace":${JSON.stringify(cwd)}`;
-  let conversationId = null;
-  for (const line of String(hist).split("\n")) {
-    if (!line.includes(needle)) continue;
-    const m = line.match(/"conversationId":"([^"]+)"/);
-    if (m) conversationId = m[1];
-  }
-  if (!conversationId) return null;
-  let transcript;
-  try { transcript = await readTextFile(`${agyHome()}/brain/${conversationId}/.system_generated/logs/transcript.jsonl`); } catch { return null; }
-  const lines = String(transcript).split("\n");
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (!lines[i].includes('"input_tokens":')) continue;
-    try {
-      const ev = JSON.parse(lines[i]);
-      const used = (Number(ev?.input_tokens) || 0) + (Number(ev?.cache_read_tokens) || 0);
-      if (!(used > 0)) return null;
-      return { pct: Math.max(0, Math.min(100, Math.round((used * 100) / 1000000))), model: ev?.model ?? "agy" };
-    } catch { return null; }
+      const ev = r.code === 0 && r.stdout ? JSON.parse(r.stdout.trim().split("\n").pop()) : null;
+      if (ev && typeof ev.pct === "number") return ev;
+    } catch { /* odd output: try the next interpreter */ }
+    break;
   }
   return null;
 };
