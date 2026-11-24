@@ -5,6 +5,8 @@ const PIXEL_HQ_FILES = [
   "layouts/pixel-hq.svg",
   "themes/pixel-hq.json",
   "themes/pixel-hq-light.json",
+  "mods/pixel-toast/main.js",
+  "mods/pixel-toast/mod.json",
   "mods/company-brand/main.js",
   "mods/company-brand/mod.json",
   "mods/company-brand/search.svg",
