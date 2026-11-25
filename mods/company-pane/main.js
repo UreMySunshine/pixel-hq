@@ -6,28 +6,27 @@ import { agentOf, duckMood, duckWidth, mood } from "./duck.js";
 
 const ROLE = (p) => agentOf(p.program?.key)?.role ?? (p.program?.shell ? "Terminal" : (p.program?.name ?? "Contractor"));
 
-// A notched pixel plate: a 2px frame with cut corners around a fill of the same hue.
-const frame = (border, fill) => [
+// A notched pixel plate: a 2px outline with cut corners, a fill and a 2px drop shadow under it.
+const frame = (border, fill, shadow = "#00000000") => [
+  div().absolute().left(3).right(3).top(2).bottom(-2).bg(shadow),
   div().absolute().left(2).right(2).top(0).bottom(0).bg(border),
   div().absolute().left(0).right(0).top(2).bottom(2).bg(border),
   div().absolute().left(3).right(3).top(1).bottom(1).bg(fill),
   div().absolute().left(1).right(1).top(3).bottom(3).bg(fill),
 ];
-// An opaque tint of c over the panel tone, and a label color pushed toward ink: a translucent fill lets the frame layers show
-// through and darkens the plate, and the raw pastel is too light to read on it.
+// An opaque tint of c over the plate paper, and a label color pushed toward ink: a translucent fill lets the frame layers
+// show through and darkens the plate, and the raw pastel is too light to read on it. By day the paper is cream, matching
+// the office nameplates; by night it is the panel's lavender.
 const day = () => settings().dark === false;
-const soften = (c, k = 0.82) => {
-  const to = day() ? "#d7d2e9" : "#cdd6f4";
-  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+const mix = (c, to, k) => {
+  if (!/^#[0-9a-f]{6}$/i.test(c) || !/^#[0-9a-f]{6}$/i.test(to)) return c;
   const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
   return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
 };
-const deepen = (c, k = 0.65) => {
-  const to = "#1d1e3e";
-  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
-  const [a, b] = [c, to].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
-  return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
-};
+const soften = (c, k = 0.82) => mix(c, day() ? "#f6ead6" : "#cdd6f4", k);
+const deepen = (c, k = 0.65) => mix(c, "#1d1e3e", k);
+// The status plate keeps the hue of its status colour: it is tinted toward white (or the night panel), not toward the cream.
+const tint = (c, k = 0.7) => mix(c, day() ? "#ffffff" : "#cdd6f4", k);
 const MONO = "JetBrains Mono";
 
 function paneFrame(node) {
@@ -102,15 +101,16 @@ export default class CompanyPane extends View {
       : div().flex_none().size(24).bg(t.raised).flex().items_center().justify_center().text_size(12).text_color(t.muted).child(">_");
     const custom = (shared("pixel-hq.names") ?? {})[pane] ?? {};
     const title = custom.name ?? ((((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name) || "shell");
+    const idleColor = t.ansi3 ?? t.idle ?? t.dim;
     const chip = (text, color, spin) => h_flex().relative().flex_none().gap(5).px(6).h(20).items_center()
-      .children(frame(color + "aa", soften(color)))
+      .children(frame(deepen(color, 0.55), tint(color), day() ? "#3b33583a" : "#00000055"))
       .child(div().flex_none().size(5).bg(color).when(st === "blocked", (lamp) => lamp.loop("opacity", { from: 0.3, to: 1, period: 900, easing: "ease-in-out" })))
-      .when(Boolean(spin), el => el.child(svg("mods/company-pane/pixel-spinner.svg").size(12).flex_none().text_color(deepen(color, 0.8)).spin(900)))
-      .child(div().font_family(MONO).font_bold().text_size(10).text_color(deepen(color, 0.8)).child(text));
+      .when(Boolean(spin), el => el.child(svg("mods/company-pane/pixel-spinner.svg").size(12).flex_none().text_color(deepen(color, 0.85)).spin(900)))
+      .child(div().font_family(MONO).font_bold().text_size(10).text_color(deepen(color, 0.85)).child(text));
     const status = st === "working" ? chip("typing", t.working ?? "#89b4fa", true)
       : st === "blocked" ? chip("needs you", t.blocked ?? "#e8744f")
       : st === "done" ? chip("shipped", t.done ?? "#8ec07c")
-      : species ? chip("on break", t.idle ?? t.dim) : null;
+      : species ? chip("on break", idleColor) : null;
     const edit = (field, el, width) => this.editing?.pane === pane && this.editing.field === field
       ? div().id(`pe-${pane}-${field}`).relative().flex_none().w(width).h(22).px(6).flex().items_center()
           .children(frame(t.accent, t.background))
@@ -133,9 +133,9 @@ export default class CompanyPane extends View {
       .child(h_flex().flex_none().gap(7).items_center()
         .child(edit("name", div().id(`pn-${pane}`).truncate().max_w(220).px(3).font_semibold().text_color(t.foreground).child(title), 170))
         .child(edit("role", div().id(`pr-${pane}`).relative().flex_none().gap(5).pl(5).pr(7).h(20).flex().items_center()
-          .children(frame(t.accent + "88", soften(t.accent)))
-          .child(div().flex_none().w(2).h(10).bg(deepen(t.accent, 0.8)))
-          .child(div().font_family(MONO).font_bold().text_size(10).text_color(deepen(t.accent, 0.8)).child(custom.role ?? ROLE(p))), 120)))
+          .children(frame(day() ? "#3b3358" : deepen(t.accent, 0.5), day() ? "#f6ead6" : soften(t.accent), day() ? "#3b33583a" : "#00000055"))
+          .child(div().flex_none().w(2).h(10).bg(t.accent))
+          .child(div().font_family(MONO).font_bold().text_size(10).text_color(day() ? "#3b3358" : deepen(t.accent, 0.85)).child(custom.role ?? ROLE(p))), 120)))
       .child(div().flex_1().truncate().text_color(t.dim).child(folder(p.cwd)))
       .when(Boolean(status), el => el.child(status));
   }
