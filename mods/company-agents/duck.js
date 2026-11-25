@@ -198,7 +198,7 @@ export function duck(status, height, waited = 0) {
 
 // One mood; `still` draws it without any motion.
 // `pace` (1 to 2) speeds the typing up when more is going on at the desk (sub-agents, shell jobs).
-export function duckMood(m, height, { still = false, species = "crab", pace = 1 } = {}) {
+export function duckMood(m, height, { still = false, species = "crab", pace = 1, prop = null } = {}) {
   const fast = (ms) => Math.round(ms / Math.max(1, Math.min(2, pace)));
   const sp = SPECIES[species] ?? SPECIES.crab;
   if (sp.whale) {
@@ -289,7 +289,8 @@ export function duckMood(m, height, { still = false, species = "crab", pace = 1 
   let props = null;
   if (typing) {
     // Sitting behind a MacBook: we see the silver lid with its glowing apple, the screen's light on the face.
-    const SILVER = "#c9ced6", EDGE = "#7d8290", DECK = "#aeb4c0", RIM = "#3f4460";
+    const SILVER = prop?.lid ?? "#c9ced6", EDGE = prop?.edge ?? "#7d8290", DECK = prop?.deck ?? "#aeb4c0", RIM = prop?.rim ?? "#3f4460";
+    const MARK = prop?.mark ?? "#ffffff";
     const glow = motion(rect(40, 56, 170, 44, "#8fd0ff"), "opacity", { from: 0.06, to: 0.2, period: fast(900), easing: "ease-in-out" });
     // The lid shows the maker's logo: the white apple, or for Antigravity its rainbow arch.
     const lid = sp.arch
@@ -297,8 +298,8 @@ export function duckMood(m, height, { still = false, species = "crab", pace = 1 
         .child(rect(120, 130, 12, 4, "#FC413D")).child(rect(116, 134, 20, 4, "#F5A83A")).child(rect(112, 138, 28, 4, "#9BCB4E"))
         .child(rect(110, 142, 10, 12, "#3186FF")).child(rect(132, 142, 10, 12, "#3186FF")).child(rect(114, 142, 24, 4, "#3186FF"))
       : div().absolute().left(0).top(0).w(1).h(1)
-        .child(rect(126, 128, 6, 4, "#ffffff")).child(rect(114, 134, 24, 4, "#ffffff")).child(rect(110, 138, 32, 12, "#ffffff"))
-        .child(rect(114, 150, 24, 6, "#ffffff")).child(rect(138, 138, 6, 6, SILVER));
+        .child(rect(126, 128, 6, 4, MARK)).child(rect(114, 134, 24, 4, MARK)).child(rect(110, 138, 32, 12, MARK))
+        .child(rect(114, 150, 24, 6, MARK)).child(rect(138, 138, 6, 6, SILVER));
     const apple = motion(lid, "opacity", { from: 0.55, to: 1, period: 1400, easing: "ease-in-out" });
     props = div().absolute().left(0).top(0).w(px(1)).h(px(1))
       .child(glow)
@@ -359,21 +360,23 @@ export function duckMood(m, height, { still = false, species = "crab", pace = 1 
         ]),
         "top", { from: px(0), to: px(-16), period: 1800, easing: "ease-out" }
       );
+      const mug = prop?.mug ?? MUG, band = prop?.band ?? "#3c3836";
       props = div().absolute().left(0).top(0).w(px(1)).h(px(1))
         .child(zzz)
         .child(rect(-90, 128, 64, 62, "#3f4460")).child(rect(-34, 138, 24, 36, "#3f4460"))
-        .child(rect(-86, 132, 56, 54, MUG))
-        .child(rect(-30, 142, 16, 28, MUG))
-        .child(rect(-76, 142, 36, 8, "#3c3836"));
+        .child(rect(-86, 132, 56, 54, mug))
+        .child(rect(-30, 142, 16, 28, mug))
+        .child(rect(-76, 142, 36, 8, band));
     } else {
+      const mug = prop?.mug ?? MUG, band = prop?.band ?? "#6B3F2A";
       const steam = motion(div().absolute().left(0).top(0).w(px(1)).h(px(1))
         .child(rect(-76, 96, 8, 28, STEAM)).child(rect(-56, 84, 8, 36, STEAM)), "opacity", { from: 0.1, to: 0.8, period: 1500, easing: "ease-in-out" });
       props = div().absolute().left(0).top(0).w(px(1)).h(px(1))
         .child(steam)
         .child(rect(-90, 128, 64, 62, "#3f4460")).child(rect(-34, 138, 24, 36, "#3f4460"))
-        .child(rect(-86, 132, 56, 54, MUG))
-        .child(rect(-30, 142, 16, 28, MUG))
-        .child(rect(-76, 142, 36, 8, "#6B3F2A"));
+        .child(rect(-86, 132, 56, 54, mug))
+        .child(rect(-30, 142, 16, 28, mug))
+        .child(rect(-76, 142, 36, 8, band));
     }
   }
 

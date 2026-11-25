@@ -1,7 +1,7 @@
 // A pixel-art office, seen from the front: a slate wall with two city windows, a break-room coffee corner and a server rack,
 // a tiled floor lit by the windows. Everything snaps to a 4px grid and is built from rectangles; lights twinkle with native .loop().
 // The wall, windows, city and floor are drawn for night or day (the layout's light and dark themes); the screens and gadgets stay as they are.
-import { div } from "gpui-kit";
+import { div, image } from "gpui-kit";
 import { isDay } from "./palette.js";
 
 const U = 4;
@@ -140,7 +140,7 @@ const NIGHT = {
 };
 const DAY = {
   wall: "#e2dff0", ceil: "#cbc6e0", band: "#d6d1ea", bandTop: "#bfb8dc", skirt: "#b0a8d2",
-  frame: "#5b5480", sky: "#b7cdf5", glint: "#f9e2af", moon: "#f2c94c", bldg: "#8f92c4", pane: "#fab387", glass: "#ffffff59", sill: "#a49cc8",
+  frame: "#cfe6d6", sky: "#bfe1f7", glint: "#f9e2af", moon: "#f2c94c", bldg: "#8f92c4", pane: "#fab387", glass: "#ffffff59", sill: "#ffffff",
   clockRim: "#9c94c2", clockFace: "#ffffff", hand: "#3c3a54",
   floor: "#d9dde9", grout: "#c3c8d8", edge: "#8f93ab", pool: "#fff3c9b3",
 };
@@ -190,16 +190,11 @@ function calendar(x, y, w, h) {
   return o;
 }
 
-// A hanging planter on a wall bracket: a terracotta pot with three vines of unequal length and leaves on both sides.
-function vinePlanter(x, y, len) {
-  const o = [r(x + 2, y, 10, 2, "#5a3a27"), r(x + 4, y + 2, 6, 2, "#6b4a32"),
-    r(x + 1, y + 4, 12, 4, "#a06c48"), r(x + 3, y + 8, 8, 3, "#8a5a3c")];
-  for (const [vx, l] of [[x + 3, len], [x + 8, len - 3], [x + 12, len - 6]]) {
-    o.push(r(vx, y + 10, 2, Math.max(4, l), "#2f6e3b"));
-    for (let k = 4; k < l; k += 5) o.push(r(vx + (k % 10 < 5 ? -2 : 2), y + 9 + k, 3, 2, k % 10 < 5 ? "#3a8247" : "#5fb06b"));
-    o.push(r(vx + ((l % 10) < 5 ? -1 : 1), y + 9 + Math.max(4, l), 3, 2, "#5fb06b"));
-  }
-  return o;
+// The plants are PixelLab sprites from the herdr-office asset set, one scene px per sprite pixel at scale 1.
+const SPRITE = { "pot-sunflower": [14, 28], "pot-succulent": [22, 21], "pot-tulip": [22, 25], "hang-ivy": [23, 32], "hang-pink": [19, 32] };
+function sprite(name, x, bottom, s = 1) {
+  const [w, h] = SPRITE[name];
+  return image(`mods/company-agents/assets/${name}.png`).absolute().left(x).top(bottom - h * s).w(w * s).h(h * s);
 }
 
 // opts: { now (Date), spaces: [{ id, name, status, active }], needYou, load, shipped, droop }.
@@ -220,13 +215,21 @@ export function scene(W, H, opts = {}) {
     div().absolute().left(0).top(0).w(1).h(1).children([r(0, base - 2, W, 6, tubeB + "33"), r(0, base, W, 2, tubeB)]).loop("opacity", { from: 0.55, to: 1, period: 3400, easing: "ease-in-out" }),
   );
 
-  // Windows onto the city: the sky of the hour, stars at night, the sun or the moon crossing from the left window to the right.
+  // Windows onto the city: the sky of the hour, stars at night, clouds by day, the sun or the moon crossing from the left
+  // window to the right. By day a cream trim with pastel drapes and a scalloped valance, following herdr-office's windowPane.
+  const TRIM = "#fffaf2", TRIM_SHADE = "#e6d2b8", CURTAINS = [["#bfe8d4", "#98d4b9"], ["#d3c4f5", "#b7a3e8"]];
   for (const wn of wins) {
-    const rim = isDay() ? "#89dceb" : "#89b4fa";
-    L.push(
-      div().absolute().left(0).top(0).w(1).h(1).children([r(wn.x - 8, wn.y - 8, wn.w + 16, wn.h + 16, rim + "2e"), r(wn.x - 5, wn.y - 5, wn.w + 10, wn.h + 10, rim + "44")]).loop("opacity", { from: 0.5, to: 1, period: 3600, easing: "ease-in-out" }),
-      r(wn.x - 4, wn.y - 4, wn.w + 8, wn.h + 8, p.frame), r(wn.x, wn.y, wn.w, wn.h, p.sky));
+    if (!isDay()) L.push(div().absolute().left(0).top(0).w(1).h(1).children([r(wn.x - 8, wn.y - 8, wn.w + 16, wn.h + 16, "#89b4fa2e"), r(wn.x - 5, wn.y - 5, wn.w + 10, wn.h + 10, "#89b4fa44")]).loop("opacity", { from: 0.5, to: 1, period: 3600, easing: "ease-in-out" }));
+    L.push(isDay()
+      ? div().absolute().left(wn.x - 4).top(wn.y - 4).w(wn.w + 8).h(wn.h + 8).rounded(4).bg(TRIM).border_1().border_color(TRIM_SHADE)
+      : r(wn.x - 4, wn.y - 4, wn.w + 8, wn.h + 8, p.frame));
+    L.push(r(wn.x, wn.y, wn.w, wn.h, p.sky));
     if (!isDay()) for (let i = 0; i < 6; i++) L.push(r(wn.x + 6 + (i % 4) * snap(wn.w / 4), wn.y + 6 + snap(rnd(i + wn.seed) * wn.h * 0.3), U, U, p.glint).loop("opacity", { from: 0.2, to: 0.9, period: 1500 + i * 400, easing: "ease-in-out" }));
+    else {
+      const cloud = (x, y, w) => [r(x + 2, y, w - 4, 2, "#ffffff"), r(x, y + 2, w, 4, "#ffffff"), r(x + 3, y + 6, w - 6, 2, "#eef7ff")];
+      L.push(...cloud(wn.x + snap(Math.min(8, wn.w * 0.2)), wn.y + 10, Math.min(16, wn.w - 12)));
+      if (wn.w > 56) L.push(...cloud(wn.x + wn.w - 24, wn.y + 26, 12));
+    }
   }
   {
     const span = wins.reduce((n, wn) => n + wn.w - 20, 0);
@@ -258,8 +261,24 @@ export function scene(W, H, opts = {}) {
     else if (st === "done") L.push(r(b.x + Math.floor(b.w / 2) - 2, b.y - 4, 4, 4, "#a6e3a1"));
   }
   for (const wn of wins) {
-    for (const f of [0.16, 0.5, 0.84]) for (let s = 0; s < wn.h / 4; s++) { const gx = wn.x + f * wn.w - s * 3; if (gx > wn.x + 2 && gx + 8 < wn.x + wn.w - 2) L.push(r(gx, wn.y + s * 4, 8, 4, p.glass)); }
-    L.push(r(wn.x + wn.w / 2 - 2, wn.y, 4, wn.h, p.frame), r(wn.x, wn.y + wn.h / 2 - 2, wn.w, 4, p.frame), r(wn.x - 8, wn.y + wn.h + 4, wn.w + 16, 5, p.sill));
+    const day = isDay(), [cloth, fold] = CURTAINS[wn.seed === 1 ? 0 : 1];
+    if (!day) for (const f of [0.16, 0.5, 0.84]) for (let s = 0; s < wn.h / 4; s++) { const gx = wn.x + f * wn.w - s * 3; if (gx > wn.x + 2 && gx + 8 < wn.x + wn.w - 2) L.push(r(gx, wn.y + s * 4, 8, 4, p.glass)); }
+    const mull = day ? TRIM : p.frame, mw = day ? 2 : 4;
+    L.push(r(wn.x + Math.round(wn.w / 2 - mw / 2), wn.y, mw, wn.h, mull), r(wn.x, wn.y + Math.round(wn.h / 2 - mw / 2), wn.w, mw, mull));
+    if (day) {
+      // Drapes tied back at each side, a scalloped valance over the top, and a cream sill board.
+      const dw = wn.w >= 56 ? 10 : 8;
+      const drape = (left) => div().absolute().left(left ? wn.x + 2 : wn.x + wn.w - 2 - dw).top(wn.y + 2).w(dw).h(wn.h - 4).rounded_b(5).bg(cloth)
+        .child(div().absolute().left(left ? dw - 3 : 1).top(0).w(2).h_full().bg(fold).opacity(0.7));
+      L.push(drape(true), drape(false),
+        div().absolute().left(wn.x).top(wn.y).w(wn.w).h(12).rounded(3).bg(cloth)
+          .children(Array.from({ length: 4 }, (_, i) => div().absolute().left(i * (wn.w / 4)).top(7).w(wn.w / 4).h(9).rounded_b(4).bg(cloth))),
+        div().absolute().left(wn.x - 8).top(wn.y + wn.h + 1).w(wn.w + 16).h(7).rounded(2).bg(TRIM).border_1().border_color(TRIM_SHADE));
+    } else {
+      L.push(r(wn.x - 8, wn.y + wn.h + 4, wn.w + 16, 5, p.sill));
+    }
+    const pot = wn.seed === 1 ? "pot-sunflower" : "pot-succulent";
+    L.push(sprite(pot, wn.x + wn.w - SPRITE[pot][0] - 10, wn.y + wn.h + (day ? 4 : 7)));
   }
 
   // The clock between the windows shows the time: an hour and a minute hand drawn in 2px steps.
@@ -289,17 +308,17 @@ export function scene(W, H, opts = {}) {
       div().absolute().left(bx).top(by).w(12).h(10).flex().items_center().justify_center().font_family("JetBrains Mono").font_bold().text_size(7.5).text_color("#2a0f16").child(n > 9 ? "9+" : String(n)));
   }
 
-  // Wall dressing: a hanging vine planter in the free strip left of the windows, with a calendar under it when the plant
-  // leaves room. The strip is the only free wall the windows leave at sidebar widths.
+  // Wall dressing: a hanging ivy in the free strip left of the windows, with a calendar under it when the strip has the
+  // height for both, and a pink hanging plant over the coffee corner.
   const plantTop = base - 70;
   {
-    const strip = wins[0].x - 12, vineY = 4;
+    const strip = wins[0].x - 12;
     if (strip >= 24) {
-      const len = Math.max(8, Math.min(20, plantTop - vineY - 20));
-      L.push(...vinePlanter(6, vineY, len));
-      const py = vineY + 9 + len + 6;
+      L.push(sprite("hang-ivy", 3, 32));
+      const py = 38;
       if (plantTop - py >= 24) L.push(...calendar(6, py, 20, 24));
     }
+    L.push(sprite("hang-pink", Lo.cw, 32));
   }
 
   // The break-room coffee corner stands on the baseboard, left of the server rack: a walnut cabinet with a two-drawer

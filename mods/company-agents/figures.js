@@ -116,11 +116,11 @@ export function specFor(set, slot) {
   return set?.slots?.[slot] ?? (slot === "waiting" ? set?.slots?.blocked : null) ?? (slot === "urge" || slot === "snooze" ? set?.slots?.idle : null) ?? SHIPPED.classic.slots[slot];
 }
 
-// What an agent in this space and state looks like, `height` px tall.
-export function figureFor(spaceName, status, height, waited = 0, species = "crab", pace = 1) {
+// What an agent in this space and state looks like, `height` px tall. `prop` tints the laptop and mug it works with.
+export function figureFor(spaceName, status, height, waited = 0, species = "crab", pace = 1, prop = null) {
   const c = config();
   const set = allSets(c)[setIdFor(spaceName, c)];
-  return figure(specFor(set, slotOf(status, waited)), height, species, pace);
+  return figure(specFor(set, slotOf(status, waited)), height, species, pace, prop);
 }
 
 function moved(el, motion, h, x) {
@@ -135,9 +135,9 @@ function moved(el, motion, h, x) {
 }
 
 // Every figure takes the duck's box, so rows line up whatever set a space uses.
-export function figure(spec, height, species = "crab", pace = 1) {
+export function figure(spec, height, species = "crab", pace = 1, prop = null) {
   const w = duckWidth(height);
-  if (spec?.duck) return duckMood(spec.duck, height, { still: Boolean(spec.still), species, pace });
+  if (spec?.duck) return duckMood(spec.duck, height, { still: Boolean(spec.still), species, pace, prop });
   const box = div().relative().flex_none().w(w).h(height);
   const x = Math.round(w * DUCK_CENTER - height / 2);
   if (spec?.image) {

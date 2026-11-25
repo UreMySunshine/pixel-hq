@@ -127,6 +127,115 @@ function activityAll(all) {
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const freshDay = () => ({ day: dayKey(), shipped: 0, workMs: 0, bySpace: {} });
 
+// The chair a desk keeps: six padded task chairs — graphite, pink, mesh, mint, umber leather and sky, the pastel shades
+// taken from the reference office's chair family — plus a wooden slat-back chair. Each set dresses the back shell, inner
+// back, seat cushion, highlight, seam, arms, post and castors.
+const CHAIRS = [
+  { back: "#1c1e2c", backHi: "#3c4054", cushion: "#474c66", glint: "#60668a", seam: "#363a4f", arm: "#1c1e2c", armHi: "#32364b", armGlint: "#585e82", post: "#2b2f45", wheel: "#14172a", headrest: true, head: "#4d5273", arms: true, r: 11, w: 0.8 },
+  { back: "#c07a90", backHi: "#d996a8", cushion: "#e8b4c2", glint: "#f3cfd8", seam: "#a26578", arm: "#c07a90", armHi: "#d996a8", armGlint: "#eec0cc", post: "#6f7698", wheel: "#3b3f58", arms: true, slim: true, r: 9, w: 0.8 },
+  { back: "#282d49", backHi: "#3d4468", cushion: "#4b5478", glint: "#6b749c", seam: "#1f2338", arm: "#282d49", armHi: "#3a405f", armGlint: "#5b6390", post: "#2b2f45", wheel: "#14172a", arms: true, slim: true, mesh: true, r: 9, w: 0.8 },
+  { back: "#4f8a83", backHi: "#6aa39c", cushion: "#8fc2ba", glint: "#b2d9d2", seam: "#3c6863", arm: "#4f8a83", armHi: "#6aa39c", armGlint: "#8fc2ba", post: "#6f7698", wheel: "#3b3f58", arms: true, slim: true, r: 9, w: 0.8 },
+  { back: "#3b2a26", backHi: "#5a423a", cushion: "#6f5346", glint: "#8d6b58", seam: "#2b1e1b", arm: "#3b2a26", armHi: "#5a423a", armGlint: "#7d5b4a", post: "#4a3f45", wheel: "#241f26", headrest: true, head: "#6f5346", arms: true, r: 11, w: 0.86 },
+  { back: "#4a6f96", backHi: "#6a93ba", cushion: "#8fb5d6", glint: "#b0cfe8", seam: "#3a5a7c", arm: "#4a6f96", armHi: "#6a93ba", armGlint: "#8fb5d6", post: "#6f7698", wheel: "#3b3f58", arms: true, slim: true, r: 9, w: 0.8 },
+  { kind: "wood", back: "#5a3a27", backHi: "#a9764a", glint: "#c08c5c", w: 0.84, r: 0 },
+];
+
+// The small thing on the desk's right corner, from the herdr-office toy set, in sprite pixels.
+const TOYS = {
+  duck: [12, 12], succulent: [12, 14], bunny: [12, 15], dino: [12, 14], cactus: [11, 15], snowglobe: [12, 14],
+  bear: [12, 15], robot: [10, 14], fishbowl: [14, 13], sprout: [7, 14], gumball: [12, 15], apple: [12, 14],
+  alarmclock: [13, 13], cupcake: [10, 14], piggy: [15, 12], globe: [12, 14], boba: [10, 14], candle: [10, 13],
+};
+
+// The animals that run shell-job errands, from the herdr-office set, in sprite pixels. `i-<name>-l.png` faces left.
+const ANIMALS = {
+  alpaca: [22, 29], axolotl: [28, 25], bear: [19, 28], beaver: [27, 25], bluebird: [23, 24], bunny: [18, 30],
+  camel: [28, 29], capybara: [28, 25], chick: [20, 27], chipmunk: [21, 24], cow: [30, 27], croc: [29, 25],
+  dalmatian: [26, 27], deer: [25, 29], dino: [27, 27], donkey: [26, 30], dragon: [28, 28], duck: [22, 26],
+  elephant: [30, 29], fox: [26, 28], frog: [22, 25], giraffe: [24, 30], goat: [25, 28], hamster: [19, 25],
+  hedgehog: [26, 28], husky: [24, 30], kangaroo: [26, 29], koala: [23, 29], lion: [26, 28], meerkat: [20, 27],
+  monkey: [26, 27], mouse: [24, 27], otter: [22, 27], owl: [21, 26], panda: [20, 28], penguin: [21, 26],
+  piglet: [29, 25], pug: [25, 24], raccoon: [27, 27], redpanda: [27, 27], rockhopper: [20, 27], sheep: [29, 27],
+  shiba: [27, 28], sloth: [18, 29], squirrel: [27, 27], tiger: [29, 28], turtle: [28, 20], unicorn: [28, 29],
+  wolf: [27, 28],
+};
+const ANIMAL_NAMES = Object.keys(ANIMALS);
+
+// The laptop lid, deck and edge, the apple mark, and the mug with its coffee band that an agent works with.
+const DESK_PROPS = {
+  silver: { lid: "#c9ced6", edge: "#7d8290", deck: "#aeb4c0", rim: "#3f4460", mark: "#ffffff", mug: "#F4E9DC", band: "#6B3F2A" },
+  rose: { lid: "#d9a6b0", edge: "#a76f7c", deck: "#c9929d", rim: "#6d3f4a", mark: "#fffaf2", mug: "#f0c0cd", band: "#a26578" },
+  graphite: { lid: "#3f4460", edge: "#262a40", deck: "#32374f", rim: "#161827", mark: "#cdd6f4", mug: "#45475a", band: "#181825" },
+  mint: { lid: "#a6d4cd", edge: "#6aa39c", deck: "#8fc2ba", rim: "#4a7d78", mark: "#fffaf2", mug: "#b2d9d2", band: "#3c6863" },
+  cream: { lid: "#e7ddc8", edge: "#b8a98c", deck: "#d9ccb2", rim: "#6b5a44", mark: "#8a6a4a", mug: "#e8d8ba", band: "#5a3a27" },
+  sky: { lid: "#b7d3ea", edge: "#7fa5c5", deck: "#9dc0dc", rim: "#4a6f96", mark: "#fffaf2", mug: "#b7d3ea", band: "#3a5a7c" },
+  beige: { lid: "#d9c4a8", edge: "#a98b68", deck: "#c9b292", rim: "#6b4a32", mark: "#5a3a27", mug: "#d9c4a8", band: "#4d3120" },
+};
+
+// A workstation kit: the desk style, chair, desk toy and laptop/mug palette an agent draws as one set. Each agent picks
+// one kit when it first appears and keeps it; nothing is mixed across kits.
+const KITS = [
+  { desk: 0, chair: 0, toy: "duck", prop: DESK_PROPS.silver },
+  { desk: 2, chair: 1, toy: "cupcake", prop: DESK_PROPS.rose },
+  { desk: 3, chair: 2, toy: "robot", prop: DESK_PROPS.graphite },
+  { desk: 2, chair: 3, toy: "succulent", prop: DESK_PROPS.mint },
+  { desk: 1, chair: 4, toy: "globe", prop: DESK_PROPS.cream },
+  { desk: 0, chair: 5, toy: "snowglobe", prop: DESK_PROPS.sky },
+  { desk: 1, chair: 6, toy: "candle", prop: DESK_PROPS.beige },
+  { desk: 0, chair: 1, toy: "bunny", prop: DESK_PROPS.rose },
+  { desk: 0, chair: 3, toy: "sprout", prop: DESK_PROPS.mint },
+  { desk: 2, chair: 4, toy: "boba", prop: DESK_PROPS.cream },
+  { desk: 3, chair: 5, toy: "fishbowl", prop: DESK_PROPS.sky },
+  { desk: 1, chair: 0, toy: "alarmclock", prop: DESK_PROPS.graphite },
+];
+
+// A chair drawn from behind around the seated agent, its castors on the floor at x = ctr.
+function chairEls(C, ctr, petW, PET, kk) {
+  const bw = Math.round(petW * C.w), bx = ctr - Math.round(bw / 2);
+  if (C.kind === "wood") {
+    const top = -kk(12);
+    return [
+      div().absolute().left(bx - kk(1)).top(top).w(kk(3)).h(Math.round(PET * 0.88)).bg(C.back),
+      div().absolute().left(bx + bw - kk(2)).top(top).w(kk(3)).h(Math.round(PET * 0.88)).bg(C.back),
+      ...[0.16, 0.44, 0.72].map((f) => div().absolute().left(bx).top(Math.round(top + PET * 0.88 * f)).w(bw).h(kk(3)).bg(C.backHi)),
+      div().absolute().left(bx - kk(2)).top(top - kk(1)).w(bw + kk(4)).h(kk(2)).bg(C.glint),
+    ];
+  }
+  const o = [
+    div().absolute().left(bx - kk(2)).top(-kk(12)).w(bw + kk(4)).h(PET * 0.9 + kk(2)).rounded_t(C.r).bg(C.back),
+    div().absolute().left(bx).top(-kk(10)).w(bw).h(PET * 0.9).rounded_t(C.r - 2).bg(C.backHi),
+    div().absolute().left(bx + kk(5)).top(-kk(1)).w(bw - kk(10)).h(PET * 0.9 - kk(12)).rounded_t(C.r - 3).bg(C.cushion),
+    div().absolute().left(ctr - kk(1)).top(0).w(kk(2)).h(PET * 0.9 - kk(13)).bg(C.seam),
+    div().absolute().left(bx + kk(7)).top(-kk(8)).w(bw - kk(14)).h(kk(3)).bg(C.glint),
+  ];
+  if (C.headrest) o.push(
+    div().absolute().left(ctr - kk(15)).top(-kk(17)).w(kk(30)).h(kk(11)).rounded_t(6).bg(C.back),
+    div().absolute().left(ctr - kk(13)).top(-kk(15)).w(kk(26)).h(kk(9)).rounded_t(5).bg(C.head),
+  );
+  if (C.mesh) o.push(
+    div().absolute().left(bx + kk(3)).top(kk(20)).w(bw - kk(6)).h(kk(3)).bg(C.seam),
+    div().absolute().left(bx + kk(3)).top(kk(28)).w(bw - kk(6)).h(kk(3)).bg(C.seam),
+  );
+  if (C.arms) {
+    const aw = kk(C.slim ? 7 : 11), ax = kk(C.slim ? 7 : 9), right = ctr + petW * 0.4 - kk(2);
+    o.push(
+      div().absolute().left(ctr - petW * 0.4 - ax).top(PET * 0.34).w(aw).h(kk(19)).bg(C.arm),
+      div().absolute().left(ctr - petW * 0.4 - ax + kk(2)).top(PET * 0.34 + kk(2)).w(Math.max(2, aw - kk(3))).h(kk(16)).bg(C.armHi),
+      div().absolute().left(ctr - petW * 0.4 - ax + kk(3)).top(PET * 0.34 + kk(3)).w(Math.max(2, aw - kk(5))).h(kk(3)).bg(C.armGlint),
+      div().absolute().left(right).top(PET * 0.34).w(aw).h(kk(19)).bg(C.arm),
+      div().absolute().left(right + kk(1)).top(PET * 0.34 + kk(2)).w(Math.max(2, aw - kk(3))).h(kk(16)).bg(C.armHi),
+      div().absolute().left(right + kk(2)).top(PET * 0.34 + kk(3)).w(Math.max(2, aw - kk(5))).h(kk(3)).bg(C.armGlint),
+    );
+  }
+  o.push(
+    div().absolute().left(ctr - kk(2)).top(PET * 0.84 + kk(8)).w(kk(4)).h(kk(10)).bg(C.post),
+    div().absolute().left(ctr - kk(15)).top(PET * 0.84 + kk(18)).w(kk(30)).h(kk(4)).bg(C.post),
+    div().absolute().left(ctr - kk(17)).top(PET * 0.84 + kk(22)).w(kk(5)).h(kk(4)).bg(C.wheel),
+    div().absolute().left(ctr + kk(12)).top(PET * 0.84 + kk(22)).w(kk(5)).h(kk(4)).bg(C.wheel),
+  );
+  return o;
+}
+
 function duration(ms) {
   const m = Math.floor(ms / 60000);
   if (m < 1) return "<1m";
@@ -185,11 +294,11 @@ const progOf = (a) => {
   return String(a?.program?.key ?? a?.program?.name ?? a?.agent ?? fg?.name ?? a?.name ?? a?.title ?? "");
 };
 
-const CODEX_VITALS_PY = `import glob, json, os, subprocess, sys, time
+const CODEX_VITALS_PY = `import json, os, subprocess, sys
 pid_str = sys.argv[1].strip() if len(sys.argv) > 1 else ""
-cwd = sys.argv[2].strip() if len(sys.argv) > 2 else ""
 home = os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
-sessions_dir = os.path.join(home, "sessions")
+# Only the rollout this codex process holds open belongs to the pane; guessing by cwd picked up a VS Code
+# codex thread and gave a fresh terminal conversation that thread's context.
 fpath = None
 if pid_str and pid_str.isdigit():
   try:
@@ -202,22 +311,6 @@ if pid_str and pid_str.isdigit():
             fpath = cand
             break
   except Exception: pass
-if not fpath and os.path.isdir(sessions_dir):
-  files = glob.glob(os.path.join(sessions_dir, "**", "rollout-*.jsonl"), recursive=True)
-  if files:
-    files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-    if cwd:
-      norm_cwd = cwd.replace('\\\\', '/').rstrip('/')
-      for cand in files[:40]:
-        try:
-          with open(cand, "r", encoding="utf-8") as f:
-            first = f.readline()
-            if f'"cwd":"{cwd}"' in first or f'"cwd": "{cwd}"' in first or norm_cwd in first.replace('\\\\\\\\', '/'):
-              fpath = cand
-              break
-        except Exception: pass
-    if not fpath:
-      fpath = files[0]
 model = None
 token_ev = None
 if fpath and os.path.isfile(fpath):
@@ -245,7 +338,7 @@ if not model:
       for line in open(cfg, "r", encoding="utf-8"):
         s = line.strip()
         if s.startswith("model =") or s.startswith("model="):
-          model = s.split("=", 1)[1].strip('"').strip("'")
+          model = s.split("=", 1)[1].strip().strip('"').strip("'")
           break
     except Exception: pass
 pct = None
@@ -338,8 +431,8 @@ export default class Agents extends View {
     this.folded = new Set();
     // Where the person dragged each pet: fractions of the panel, kept across restarts.
     try { this.petpos = JSON.parse(localStorage.getItem("petpos") ?? "{}"); } catch { this.petpos = {}; }
-    // The workstation each agent started at, kept by address so a rerender never reshuffles it.
-    try { this.desks = JSON.parse(localStorage.getItem("deskstyles") ?? "{}"); } catch { this.desks = {}; }
+    // The workstation kit each agent started with, kept by address so a rerender never reshuffles it.
+    try { this.kits = JSON.parse(localStorage.getItem("workkits") ?? "{}"); } catch { this.kits = {}; }
     this.drag = null;
     // Find staff: typing dims everyone who does not match; Enter jumps to the first match.
     this.query = "";
@@ -791,10 +884,9 @@ export default class Agents extends View {
             info = JSON.parse((await hc(["get", targetAddr, "--json"]).catch(() => ({ stdout: "{}" }))).stdout || "{}");
           }
           const pid = info?.foreground?.pid;
-          const cwd = info?.foreground?.cwd || info?.cwd || (a?.pane ? paneBy.get(a.pane)?.cwd : null);
           const candidates = window()?.platform === "windows" && !machine ? ["python", "python3", "py"] : ["python3", "python"];
           for (const bin of candidates) {
-            const r = await exec(bin, ["-c", CODEX_VITALS_PY, String(pid ?? ""), cwd ?? ""], { timeout: 8000, on: machine }).catch(() => null);
+            const r = await exec(bin, ["-c", CODEX_VITALS_PY, String(pid ?? "")], { timeout: 8000, on: machine }).catch(() => null);
             if (!r) continue;
             const ev = r.code === 0 && r.stdout ? JSON.parse(r.stdout.trim().split("\n").pop()) : null;
             if (ev && (ev.pct != null || ev.model || ev.quota != null)) {
@@ -1362,15 +1454,15 @@ export default class Agents extends View {
     this.pendingSetupCodex = !ok;
   }
 
-  // The workstation an agent sits at: picked at random the first time its address appears, then kept across rerenders
-  // and restarts (4 styles: steel cubicle, walnut writing desk, white studio desk, dark standing desk).
-  deskOf(address) {
-    if (this.desks?.[address] == null) {
-      this.desks = this.desks ?? {};
-      this.desks[address] = Math.floor(Math.random() * 4);
-      try { localStorage.setItem("deskstyles", JSON.stringify(this.desks)); } catch { /* storage blocked: the pick holds for this session */ }
+  // The matched workstation an agent started with: picked from KITS the first time its address appears, then kept
+  // across rerenders and restarts.
+  kitOf(address) {
+    if (this.kits?.[address] == null) {
+      this.kits = this.kits ?? {};
+      this.kits[address] = Math.floor(Math.random() * KITS.length);
+      try { localStorage.setItem("workkits", JSON.stringify(this.kits)); } catch { /* storage blocked: the pick holds for this session */ }
     }
-    return this.desks[address];
+    return this.kits[address];
   }
 
   render(cx) {
@@ -1635,19 +1727,19 @@ export default class Agents extends View {
       ? { panel: "#737b9e", panelHi: "#8f97b8", panelEdge: "#5d648a", deskTop: "#666d94", deskFront: "#545a80", deskUnder: "#3b3f58", apron: "#33364b", shadow: "#2a24401f" }
       : { panel: "#8b92b4", panelHi: "#aab1d2", panelEdge: "#6f7698", deskTop: "#7a81a6", deskFront: "#646a8c", deskUnder: "#454a68", apron: "#3b3f5a", shadow: "#00000000" };
     // Four workstations: the steel cubicle, a walnut writing desk, a white studio desk with a drawer, and a dark standing
-    // desk with an LED strip. `panels` null means no partitions; `item` is the small thing on the right of the top.
+    // desk with an LED strip. `panels` null means no partitions.
     const DESKS = isDay()
       ? [
-          { panels: [F.panel, F.panelHi, F.panelEdge], top: F.deskTop, front: F.deskFront, under: F.deskUnder, apron: F.apron, shape: "panel", item: "mouse" },
-          { panels: null, top: "#a9764a", front: "#8a5a3c", under: "#6b4a32", apron: "#5a3a27", shape: "legs", item: "plant" },
-          { panels: ["#7fb3ac", "#a6d4cd", "#5f928c"], top: "#e6e9f5", front: "#c9cee4", under: "#9aa1c2", apron: "#7e86ad", shape: "drawer", item: "pens" },
-          { panels: null, top: "#3f4463", front: "#333752", under: "#262a40", apron: "#1e2134", shape: "led", item: "notes" },
+          { panels: [F.panel, F.panelHi, F.panelEdge], top: F.deskTop, front: F.deskFront, under: F.deskUnder, apron: F.apron, shape: "panel" },
+          { panels: null, top: "#a9764a", front: "#8a5a3c", under: "#6b4a32", apron: "#5a3a27", shape: "legs" },
+          { panels: ["#7fb3ac", "#a6d4cd", "#5f928c"], top: "#e6e9f5", front: "#c9cee4", under: "#9aa1c2", apron: "#7e86ad", shape: "drawer" },
+          { panels: null, top: "#3f4463", front: "#333752", under: "#262a40", apron: "#1e2134", shape: "led" },
         ]
       : [
-          { panels: [F.panel, F.panelHi, F.panelEdge], top: F.deskTop, front: F.deskFront, under: F.deskUnder, apron: F.apron, shape: "panel", item: "mouse" },
-          { panels: null, top: "#9a6a47", front: "#7c5036", under: "#5f3d28", apron: "#4d3120", shape: "legs", item: "plant" },
-          { panels: ["#5f9a94", "#82bdb6", "#4a7d78"], top: "#cfd4e8", front: "#aeb5d0", under: "#878dad", apron: "#6f7594", shape: "drawer", item: "pens" },
-          { panels: null, top: "#2f344a", front: "#262a3d", under: "#1d2030", apron: "#161927", shape: "led", item: "notes" },
+          { panels: [F.panel, F.panelHi, F.panelEdge], top: F.deskTop, front: F.deskFront, under: F.deskUnder, apron: F.apron, shape: "panel" },
+          { panels: null, top: "#9a6a47", front: "#7c5036", under: "#5f3d28", apron: "#4d3120", shape: "legs" },
+          { panels: ["#5f9a94", "#82bdb6", "#4a7d78"], top: "#cfd4e8", front: "#aeb5d0", under: "#878dad", apron: "#6f7594", shape: "drawer" },
+          { panels: null, top: "#2f344a", front: "#262a3d", under: "#1d2030", apron: "#161927", shape: "led" },
         ];
     const sz = this.size ?? { width: 268, height: 640 };
     // Every agent gets a desk. The more agents, the smaller the desks (never below 0.42x), so all of them stay visible.
@@ -1701,6 +1793,7 @@ export default class Agents extends View {
     const hidden = list.length - seated.length;
     const posOf = new Map();
     const monoF = "JetBrains Mono";
+    const errands = [];
     const pets = seated.map((a, i) => {
       // A pet keeps its desk: slots follow a stable order, not the status sort.
       const slot = order.indexOf(a.address);
@@ -1715,6 +1808,8 @@ export default class Agents extends View {
       const ctx = contextOf.get(a.address);
       const ctxPct = ctx?.pct ?? null;
       const act = activityOf.get(a.address) ?? { interns: [], jobs: 0, long: 0 };
+      // Shell jobs put a runner on the floor from this desk to the server rack, drawn in the office-wide layer below.
+      if (act.jobs > 0) errands.push({ jobs: act.jobs, long: act.long, left, top, address: a.address });
       // Typing speeds up with every intern and job at the desk, up to twice as fast.
       const pace = 1 + Math.min(1, 0.25 * (act.interns.length + act.jobs));
       const more = detail.get(a.address);
@@ -1732,9 +1827,13 @@ export default class Agents extends View {
       const isUrge = isIdle && unseen >= IDLE_URGE;
       const isSnooze = isIdle && unseen >= IDLE_SNOOZE && !isUrge;
       const isNudged = this.nudged.has(a.address);
-      // The pet sits on a chair behind a desk (the MacBook is part of the pet).
+      // The pet sits on a chair behind a desk (the MacBook is part of the pet). Desk, chair, toy and laptop/mug all come
+      // from the one kit the agent started with.
       const ctr = DUCK_CENTER * petW;
-      const D = DESKS[this.deskOf(a.address)];
+      const kit = KITS[this.kitOf(a.address)];
+      const D = DESKS[kit.desk];
+      const chair = CHAIRS[kit.chair];
+      const toyName = kit.toy;
       // Partitions only on the two panelled styles, so desks read differently across the floor.
       const panels = D.panels ? [
         div().absolute().left(-kk(9)).top(PET * 0.34).w(kk(5)).h(PET * 0.62).bg(D.panels[0]),
@@ -1758,44 +1857,17 @@ export default class Agents extends View {
         : [slab(t0, kk(9), D.front), slab(t0, kk(3), D.top), slab(t0 + kk(9), kk(3), D.under),
            div().absolute().left(-kk(3)).top(t0 + kk(12)).w(petW + kk(6)).h(kk(10)).bg(D.apron),
            ...(D.shape === "led" ? [div().absolute().left(-kk(4)).top(t0 + kk(3)).w(petW + kk(8)).h(kk(1)).bg("#89b4fa").loop("opacity", { from: 0.35, to: 1, period: 2200, easing: "ease-in-out" })] : [])];
-      // The thing on the right of the top: a mouse, a succulent, a pen cup or two sticky notes.
-      const item = D.item === "mouse"
-        ? [div().absolute().left(petW - kk(6)).top(t0 - kk(4)).w(kk(7)).h(kk(4)).bg("#c9cee6")]
-        : D.item === "plant"
-        ? [div().absolute().left(petW - kk(8)).top(t0 - kk(4)).w(kk(6)).h(kk(4)).bg("#8a5a3c"),
-           div().absolute().left(petW - kk(7)).top(t0 - kk(8)).w(kk(4)).h(kk(4)).bg("#3a8247"),
-           div().absolute().left(petW - kk(7)).top(t0 - kk(8)).w(kk(2)).h(kk(2)).bg("#5fb06b")]
-        : D.item === "pens"
-        ? [div().absolute().left(petW - kk(7)).top(t0 - kk(6)).w(kk(6)).h(kk(6)).bg(D.under),
-           div().absolute().left(petW - kk(6)).top(t0 - kk(10)).w(kk(1)).h(kk(4)).bg("#89b4fa"),
-           div().absolute().left(petW - kk(4)).top(t0 - kk(9)).w(kk(1)).h(kk(3)).bg("#f38ba8")]
-        : [div().absolute().left(petW - kk(9)).top(t0 - kk(5)).w(kk(4)).h(kk(5)).bg("#f5c2e7"),
-           div().absolute().left(petW - kk(5)).top(t0 - kk(4)).w(kk(4)).h(kk(4)).bg("#f9e2af")];
+      // The thing on the right of the top: one toy from the herdr-office set, seated on the desk surface.
+      const [toyW, toyH] = TOYS[toyName], iw = Math.max(3, Math.round(toyW * S)), ih = Math.max(3, Math.round(toyH * S));
+      const item = [image(`mods/company-agents/assets/t-${toyName}.png`).absolute().left(petW - iw - kk(2)).top(t0 - ih).w(iw).h(ih)];
       const away = this.out?.addr === a.address && breakers.includes(a.address);
       // On a break the pet steps out beside its desk for a moment and comes right back, over and over.
       const dir = left + petW / 2 < sz.width / 2 ? 1 : -1;
       const dx = dir * (petW + kk(30));
       const dy = Math.round(PET * 0.42);
       const seat = div().relative().w(petW).h(PET + kk(28))
-        // Office chair seen from behind: a tall rounded back with a headrest, a lighter cushion with a centre seam,
-        // two rounded armrests, then a pole and a star base with wheels under the desk.
-        .child(div().absolute().left(ctr - petW * 0.4 - kk(2)).top(-kk(12)).w(petW * 0.8 + kk(4)).h(PET * 0.9 + kk(2)).rounded_t(11).bg("#1c1e2c"))
-        .child(div().absolute().left(ctr - kk(15)).top(-kk(17)).w(kk(30)).h(kk(11)).rounded_t(6).bg("#1c1e2c"))
-        .child(div().absolute().left(ctr - kk(13)).top(-kk(15)).w(kk(26)).h(kk(9)).rounded_t(5).bg("#4d5273"))
-        .child(div().absolute().left(ctr - petW * 0.4).top(-kk(10)).w(petW * 0.8).h(PET * 0.9).rounded_t(9).bg("#3c4054"))
-        .child(div().absolute().left(ctr - petW * 0.4 + kk(5)).top(-kk(1)).w(petW * 0.8 - kk(10)).h(PET * 0.9 - kk(12)).rounded_t(6).bg("#474c66"))
-        .child(div().absolute().left(ctr - kk(1)).top(kk(0)).w(kk(2)).h(PET * 0.9 - kk(13)).bg("#363a4f"))
-        .child(div().absolute().left(ctr - petW * 0.4 + kk(7)).top(-kk(8)).w(petW * 0.8 - kk(14)).h(kk(3)).bg("#60668a"))
-        .child(div().absolute().left(ctr - petW * 0.4 - kk(9)).top(PET * 0.34).w(kk(11)).h(kk(19)).bg("#1c1e2c"))
-        .child(div().absolute().left(ctr - petW * 0.4 - kk(7)).top(PET * 0.34 + kk(2)).w(kk(8)).h(kk(16)).bg("#32364b"))
-        .child(div().absolute().left(ctr - petW * 0.4 - kk(6)).top(PET * 0.34 + kk(3)).w(kk(6)).h(kk(3)).bg("#585e82"))
-        .child(div().absolute().left(ctr + petW * 0.4 - kk(2)).top(PET * 0.34).w(kk(11)).h(kk(19)).bg("#1c1e2c"))
-        .child(div().absolute().left(ctr + petW * 0.4 - kk(1)).top(PET * 0.34 + kk(2)).w(kk(8)).h(kk(16)).bg("#32364b"))
-        .child(div().absolute().left(ctr + petW * 0.4).top(PET * 0.34 + kk(3)).w(kk(6)).h(kk(3)).bg("#585e82"))
-        .child(div().absolute().left(ctr - kk(2)).top(PET * 0.84 + kk(8)).w(kk(4)).h(kk(10)).bg("#2b2f45"))
-        .child(div().absolute().left(ctr - kk(15)).top(PET * 0.84 + kk(18)).w(kk(30)).h(kk(4)).bg("#2b2f45"))
-        .child(div().absolute().left(ctr - kk(17)).top(PET * 0.84 + kk(22)).w(kk(5)).h(kk(4)).bg("#14172a"))
-        .child(div().absolute().left(ctr + kk(12)).top(PET * 0.84 + kk(22)).w(kk(5)).h(kk(4)).bg("#14172a"))
+        // The agent's chair, drawn from behind: back shell, cushion, arms and castors in its picked design.
+        .children(chairEls(chair, ctr, petW, PET, kk))
         // Cubicle panels on both sides of the desk, on a contact shadow that lifts the desk off the floor.
         .child(div().absolute().left(-kk(11)).top(PET * 0.84 + kk(22)).w(petW + kk(22)).h(kk(6)).bg(F.shadow))
         .children(panels)
@@ -1806,7 +1878,7 @@ export default class Agents extends View {
           .left(away ? dx : 0).top(away ? dy : 0)
           // Glide out and back, but not while it is being dragged, so it follows the pointer exactly.
           .when(this.drag?.addr !== a.address, (el) => el.transition("left", 800).transition("top", 800))
-          .child(figureFor(a.space_name, isNudged ? "done" : a.status, PET, unseen, speciesOf(progOf(a)), pace)))
+          .child(figureFor(a.space_name, isNudged ? "done" : a.status, PET, unseen, speciesOf(progOf(a)), pace, kit.prop)))
         // Shipped: pixel confetti rains over the desk until someone looks at it.
         .when(a.status === "done", (el) => el.children([["#f9e2af", 0.10, 900], ["#f38ba8", 0.22, 1300], ["#a6e3a1", 0.34, 1000], ["#89b4fa", 0.46, 1500], ["#cba6f7", 0.58, 1100], ["#fab387", 0.70, 1400], ["#94e2d5", 0.82, 950]]
           .map(([c, fx0, p], j) => div().absolute().left(petW * fx0).top(-20).w(4).h(4).bg(c).loop("top", { from: -22 - (j % 3) * 6, to: PET * 0.55, period: p, easing: "linear" }))))
@@ -1819,34 +1891,12 @@ export default class Agents extends View {
           const rackTop = PET * 0.3, rackH = PET * 0.66, fit = Math.max(1, Math.floor((rackH - kk(4)) / kk(5)));
           const leds = Array.from({ length: Math.min(act.jobs, fit) }, (_, i) => div().absolute().left(kk(2)).top(kk(3) + i * kk(5)).w(kk(5)).h(Math.max(2, kk(3)))
             .bg(i < act.long ? "#f9b84a" : "#a6e3a1").loop("opacity", { from: 0.3, to: 1, period: 360 + ((i * 137) % 420), easing: "linear" }));
-          return el.child(div().absolute().left(petW + kk(2)).top(rackTop).w(kk(9)).h(rackH).bg("#161827").border_1().border_color("#2e3250")
+          const rack = div().absolute().left(petW + kk(2)).top(rackTop).w(kk(9)).h(rackH).bg("#161827").border_1().border_color("#2e3250")
             .child(div().absolute().left(kk(2)).top(rackH - kk(4)).w(kk(5)).h(kk(1)).bg("#2e3250"))
-            .children(leds));
-        })
-        // Runners: a little helper bot per running shell job (three at most, then "+N"), pacing the floor between the desk and
-        // the rack with a parcel, hopping as it goes; amber once its job has run over a minute. All motion is native loops.
-        .when(act.jobs > 0, (el) => {
-          // Sized like an intern (13 units tall), on the floor below the desk, clear of the interns at its front.
-          const u = Math.max(1.4, (PET * 0.4) / 13), ru = (v) => Math.round(v * u);
-          const rh = ru(13), floor = PET * 0.84 + kk(22) - rh + kk(13), shown = Math.min(act.jobs, 3), extra = act.jobs - shown;
-          const x0 = ctr - ru(4), x1 = petW + kk(4);
-          const bot = (i) => {
-            const c = i < act.long ? "#f9b84a" : "#a6e3a1", leg = 150 + i * 30;
-            // Paced by an offset from x0, not absolute positions: Herdr doesn't scale loop values by the zoom.
-            return div().absolute().left(x0).top(floor + (i % 2) * ru(2)).w(x1 - x0 + ru(9)).h(rh)
-              .child(div().absolute().top(0).left(0).w(ru(9)).h(rh).loop("left", { from: i % 2 ? x1 - x0 : 0, to: i % 2 ? 0 : x1 - x0, period: 1700 + i * 600, easing: "ease-in-out" })
-              .child(div().absolute().left(0).top(0).w(ru(9)).h(rh).loop("top", { from: 0, to: -ru(2), period: 320 + i * 40, easing: "ease-out" })
-                .child(div().absolute().left(ru(1)).top(0).w(ru(7)).h(ru(6)).bg(c))
-                .child(div().absolute().left(ru(2)).top(ru(2)).w(ru(5)).h(ru(2)).bg("#1e2030")
-                  .child(div().absolute().left(ru(1)).top(0).w(ru(1)).h(ru(2)).bg(c).loop("left", { from: 0, to: ru(3), period: 900, easing: "linear" })))
-                .child(div().absolute().left(ru(2)).top(ru(6)).w(ru(5)).h(ru(4)).bg("#585e82"))
-                .child(div().absolute().left(ru(4)).top(ru(5)).w(ru(5)).h(ru(4)).bg("#e9d8b4").border_1().border_color("#a8946a"))
-                .child(div().absolute().left(ru(2)).top(ru(10)).w(ru(2)).bg("#2b2f45").loop("height", { from: ru(1), to: ru(3), period: leg, easing: "linear" }))
-                .child(div().absolute().left(ru(5)).top(ru(10)).w(ru(2)).bg("#2b2f45").loop("height", { from: ru(3), to: ru(1), period: leg, easing: "linear" }))));
-          };
-          return el.children(Array.from({ length: shown }, (_, i) => bot(i)))
-            .when(extra > 0, (e2) => e2.child(div().absolute().left(x1 + ru(4)).top(floor + ru(3)).px(2)
-              .bg("#0f111acc").text_size(Math.max(8, kk(9))).text_color("#cdd6f4").child(`+${extra}`)));
+            .children(leds);
+          const extra = act.jobs - 3;
+          return el.children([rack, ...(extra > 0 ? [div().absolute().left(petW + kk(2)).top(rackTop - kk(11)).px(2)
+            .bg("#0f111acc").text_size(Math.max(8, kk(9))).text_color("#cdd6f4").child(`+${extra}`)] : [])]);
         })
         // Interns in front of the desk, one tiny pet per running sub-agent (three at most, then "+N").
         .when(act.interns.length > 0, (el) => {
@@ -1929,6 +1979,31 @@ export default class Agents extends View {
           // The ellipsis must sit on the element that holds the text; on the plate it never shows.
           .child(div().min_w(0).truncate().child(this.hint?.addr === a.address ? this.hint.text : cl ? clText : `${text}${when && cellW >= 90 ? (isUrge ? ` · idle ${duration(waited)} ⏰` : isSnooze ? ` · zzz ${duration(waited)}` : ` · ${duration(waited)}`) : ""}`)));
     });
+    // Errand runners: one small animal per shell job (three at most), walking from its desk to the server rack on the wall
+    // and back with a parcel; the light above it turns amber once a job has run over a minute. All motion is native loops.
+    const wall = sceneLayout(sz.width, sz.height);
+    const errandLayer = errands.flatMap(({ jobs, long, left: podX, top: podY, address }) => {
+      // Sized like an intern (13 units tall). The animal is picked from the desk's address, so it keeps it across renders.
+      const ru = (v) => Math.round(v * Math.max(1.4, (PET * 0.4) / 13)), rh = ru(13);
+      const seed = Array.from(String(address)).reduce((n, ch) => (n * 31 + ch.codePointAt(0)) >>> 0, 7);
+      const sx = podX + petW + kk(3), sy = podY + PET * 0.84 + kk(22) + kk(13) - rh;
+      return Array.from({ length: Math.min(jobs, 3) }, (_, i) => {
+        const c = i < long ? "#f9b84a" : "#a6e3a1", name = ANIMAL_NAMES[(seed + i * 19) % ANIMAL_NAMES.length];
+        const [sw, sh] = ANIMALS[name], aw = Math.max(4, Math.round((sw * rh) / sh));
+        const tx = wall.rackX + Math.round(wall.rackCab * (0.28 + 0.22 * i)) - Math.round(aw / 2);
+        const ty = horizon + kk(6) - rh, left = tx < sx;
+        const period = Math.max(2800, Math.min(9000, Math.round(Math.hypot(tx - sx, ty - sy) * 36)));
+        const pw = Math.max(4, ru(4)), ph = Math.max(3, ru(3));
+        // Offset loops, not absolute positions: Herdr doesn't scale loop values by the zoom.
+        return div().absolute().left(sx).top(sy).w(aw).h(rh)
+          .child(div().absolute().left(0).top(0).w(aw).h(rh).loop("left", { from: 0, to: tx - sx, period, easing: "ease-in-out" })
+            .child(div().absolute().left(0).top(0).w(aw).h(rh).loop("top", { from: 0, to: ty - sy, period, easing: "ease-in-out" })
+              .child(div().absolute().left(0).top(0).w(aw).h(rh).loop("top", { from: 0, to: -ru(2), period: 320 + i * 40, easing: "ease-out" })
+                .child(image(`mods/company-agents/assets/i-${name}${left ? "-l" : ""}.png`).absolute().left(0).top(0).w(aw).h(rh))
+                .child(div().absolute().left(left ? aw - pw - Math.round(aw * 0.16) : Math.round(aw * 0.16)).top(Math.round(rh * 0.38)).w(pw).h(ph).bg("#e9d8b4").border_1().border_color("#a8946a"))
+                .child(div().absolute().left(Math.round(aw * (left ? 0.32 : 0.6))).top(-ru(3)).w(Math.max(2, ru(2))).h(Math.max(2, ru(2))).bg(c).loop("opacity", { from: 0.35, to: 1, period: 640 + i * 90, easing: "linear" })))));
+      });
+    });
     // A dotted line of sparks between two desks that are about to clash.
     const links = [];
     for (const [addr, c] of this.clash) {
@@ -1992,6 +2067,7 @@ export default class Agents extends View {
       .when(hidden > 0, (el) => el.child(div().absolute().right(8).top(horizon + 6).px(8).py(3).bg(P.deepBox).border_1().border_color(P.frame).text_size(11).text_color(t.muted).child(`+${hidden} more · narrow the panel to list all`)))
       .children(links)
       .children(this.drag?.moved ? [...pets.filter((_, i) => seated[i].address !== this.drag.addr), ...pets.filter((_, i) => seated[i].address === this.drag.addr)] : pets)
+      .children(errandLayer)
       .when(Boolean(this.notice), (el) => {
         const box = v_flex().id("oc-notice").absolute().left(8).right(8).top(horizon + 6).px(8).py(6).gap(6).bg(P.deepBox).border_1().border_color(P.accent).text_size(11).text_color(t.foreground)
           .on_mouse_down("left", (_e, cx) => cx.stop_propagation());
@@ -2111,17 +2187,3 @@ export default class Agents extends View {
       );
   }
 }
-
-// reloaded
-// r
-// r
-// r
-// r
-// r
-// r
-// r
-// r
-// r
-// r
-// r
-// r
