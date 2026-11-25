@@ -57,11 +57,29 @@ test_case() {
     return
   fi
 
-  # Sleep briefly to ensure async background hc label command completed
-  sleep 0.1
+  # The script reports its labels from a background process, so it returns before the mock hc has written the log.
+  # Wait for the log rather than a fixed delay: on a busy machine the report can take over a second.
+  # A case that expects no report waits the same limit, so a late one is still caught.
+  local waited=0
+  while [ ! -s "$MOCK_LOG" ] && [ "$waited" -lt 100 ]; do
+    sleep 0.05
+    waited=$((waited + 1))
+  done
 
   local labels=""
   [ -f "$MOCK_LOG" ] && labels=$(cat "$MOCK_LOG")
+
+  # NONE: the script must not report for this payload.
+  if [ "$expected_label_regex" = "NONE" ]; then
+    if [ -n "$labels" ]; then
+      echo "FAIL: $name - Unexpected labels"
+      echo "  Expected no labels, got: $labels"
+      FAILURES=$((FAILURES + 1))
+      return
+    fi
+    echo "PASS: $name"
+    return
+  fi
 
   if [ -n "$expected_label_regex" ] && ! echo "$labels" | grep -qE "$expected_label_regex"; then
     echo "FAIL: $name - Label mismatch"
@@ -103,11 +121,19 @@ test_case "Claude Code String Model" "$CLAUDE_STR_MODEL" \
   "opus · 25% context · 90% 5h left" \
   "agent\.context=25.*agent\.model=opus.*agent\.effort=high"
 
-# Test 6: Live Claude Code payload (null used_percentage, space in model name, rate limits)
-CLAUDE_LIVE_JSON='{"session_id":"5a472f2a","cwd":"/home/nhat/uctalent","effort":{"level":"high"},"model":{"id":"claude-opus-5-5","display_name":"Opus 5.5"},"context_window":{"total_input_tokens":0,"total_output_tokens":0,"context_window_size":1000000,"current_usage":null,"used_percentage":null,"remaining_percentage":null},"rate_limits":{"five_hour":{"used_percentage":0,"resets_at":1794909600}}}'
-test_case "Claude Code Live Payload (Opus 5.5 + null context)" "$CLAUDE_LIVE_JSON" \
+# Test 6: Claude Code's all-zero placeholder (no tokens at all). Claude Code sends one after every real payload; reporting
+# it would rewrite agent.context to 0 and drop the desk's vitals, so the status line still shows it but no label is written.
+CLAUDE_ZERO_JSON='{"session_id":"5a472f2a","cwd":"/home/nhat/uctalent","effort":{"level":"high"},"model":{"id":"claude-opus-5-5","display_name":"Opus 5.5"},"context_window":{"total_input_tokens":0,"total_output_tokens":0,"context_window_size":1000000,"current_usage":null,"used_percentage":null,"remaining_percentage":null},"rate_limits":{"five_hour":{"used_percentage":0,"resets_at":1794909600}}}'
+test_case "Claude Code all-zero placeholder (no report)" "$CLAUDE_ZERO_JSON" \
   "Opus 5\.5 · 0% context · 100% 5h left" \
-  "agent\.context=0.*claude\.context=0.*agent\.model=Opus 5\.5.*claude\.model=Opus 5\.5.*agent\.quota=100.*agent\.effort=high"
+  "NONE"
+
+# Test 6b: A real Claude Code payload with the same shape: used_percentage is null and the context comes from the token counts,
+# and the model name has a space in it.
+CLAUDE_LIVE_JSON='{"session_id":"5a472f2a","cwd":"/home/nhat/uctalent","effort":{"level":"high"},"model":{"id":"claude-opus-5-5","display_name":"Opus 5.5"},"context_window":{"total_input_tokens":234000,"total_output_tokens":6000,"context_window_size":1000000,"current_usage":null,"used_percentage":null,"remaining_percentage":null},"rate_limits":{"five_hour":{"used_percentage":25,"resets_at":1794909600}}}'
+test_case "Claude Code Live Payload (null used_percentage, space in model name)" "$CLAUDE_LIVE_JSON" \
+  "Opus 5\.5 · 24% context · 75% 5h left" \
+  "agent\.context=24.*claude\.context=24.*agent\.model=Opus 5\.5.*claude\.model=Opus 5\.5.*agent\.quota=75.*agent\.effort=high"
 
 # Test 7: Live Antigravity payload (Gemini 3.8 Flash (High) with parenthesized effort)
 AGY_LIVE_JSON='{"cwd":"/home/nhat/per","conversation_id":"8542ac38","model":{"id":"Gemini 3.8 Flash (High)","display_name":"Gemini 3.8 Flash (High)","effort":"high"},"context_window":{"total_input_tokens":44922,"total_output_tokens":335298,"context_window_size":1048576,"used_percentage":4.284095764160156},"quota":{"gemini-5h":{"remaining_fraction":0.70575684}}}'
