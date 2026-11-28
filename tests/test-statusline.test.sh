@@ -139,7 +139,7 @@ test_case "Claude Code Live Payload (null used_percentage, space in model name)"
 AGY_LIVE_JSON='{"cwd":"/home/nhat/per","conversation_id":"8542ac38","model":{"id":"Gemini 3.8 Flash (High)","display_name":"Gemini 3.8 Flash (High)","effort":"high"},"context_window":{"total_input_tokens":44922,"total_output_tokens":335298,"context_window_size":1048576,"used_percentage":4.284095764160156},"quota":{"gemini-5h":{"remaining_fraction":0.70575684}}}'
 test_case "Antigravity Live Payload (Gemini 3.8 Flash (High))" "$AGY_LIVE_JSON" \
   "Gemini 3\.8 Flash \(High\) · 4% context · 71% 5h left" \
-  "agent\.context=4.*agy\.context=4.*agent\.model=Gemini 3\.8 Flash \(High\).*agy\.model=Gemini 3\.8 Flash \(High\).*agent\.quota=71.*agent\.effort=high"
+  "agent\.context=4.*agy\.context=4.*agent\.model=Gemini 3\.8 Flash \(High\).*agy\.model=Gemini 3\.8 Flash \(High\).*agy\.status\.context=4 agy\.status\.model=Gemini 3\.8 Flash \(High\).*agent\.quota=71.*agent\.effort=high"
 
 # Clean up
 rm -rf "$MOCK_BIN" "$MOCK_LOG"

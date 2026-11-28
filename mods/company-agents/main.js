@@ -259,8 +259,6 @@ const hpColor = (t, pct) => (pct >= 80 ? t.ansi1 : pct >= 60 ? t.ansi3 : t.ansi2
 const vitalsBars = (t, ctx, id, width) => v_flex().id(id).gap(2)
   .when(ctx.pct != null, (el) => el.child(thinBar(t, ctx.pct, hpColor(t, ctx.pct), width)));
 
-// Reads the Antigravity transcript for a workspace: the last conversation the CLI logged for it, then the last
-// usage line with token counts.
 const progOf = (a) => {
   const fg = a?.foreground;
   const fgArgv = Array.isArray(fg?.argv) ? fg.argv.join(" ") : "";
@@ -357,44 +355,53 @@ if token_ev:
 print(json.dumps({"pct": pct, "model": model or "codex", "quota": quota}))
 `;
 
-const AGY_VITALS_PY = `import json, os, sys
-cwd = sys.argv[1] if len(sys.argv) > 1 else ""
-home = os.environ.get("AGY_HOME") or os.path.expanduser("~/.gemini/antigravity-cli")
-hist = os.path.join(home, "history.jsonl")
-if os.path.exists(hist):
-  cid = None
-  needle = f'"workspace":"{cwd}"'
-  needle_sp = f'"workspace": "{cwd}"'
-  try:
-    for line in open(hist, "r", encoding="utf-8"):
-      if needle in line or needle_sp in line:
-        try:
-          d = json.loads(line)
-          if d.get("conversationId"): cid = d["conversationId"]
-        except Exception: pass
-  except Exception: pass
-  if cid:
-    tp = os.path.join(home, "brain", cid, ".system_generated", "logs", "transcript.jsonl")
-    if os.path.exists(tp):
-      last = None
-      try:
-        for line in open(tp, "r", encoding="utf-8"):
-          if '"input_tokens":' in line:
-            try: last = json.loads(line)
-            except Exception: pass
-        if last:
-          used = int(last.get("input_tokens") or 0) + int(last.get("cache_read_tokens") or 0)
-          pct = max(0, min(100, round(used * 100 / 1000000)))
-          print(json.dumps({"pct": pct, "model": last.get("model") or "agy"}))
-      except Exception: pass
+const AGY_VITALS_PY = String.raw`import json, re, subprocess, sys
+from pathlib import Path
+
+try:
+  result = subprocess.run(["lsof", "-nP", "-a", "-p", sys.argv[1], "-Fn"], capture_output=True, text=True, timeout=2)
+except (OSError, subprocess.TimeoutExpired):
+  sys.exit(0)
+if result.returncode != 0:
+  sys.exit(0)
+
+# 前台进程可能仍打开旧会话的目录，只有 presence 锁用于确认当前会话。
+locks = set()
+for line in result.stdout.splitlines():
+  if not line.startswith("n"):
+    continue
+  path = Path(line[1:])
+  if path.is_absolute() and path.parent.name == "presence" and re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.lock", path.name, re.I):
+    locks.add(path)
+if len(locks) != 1:
+  sys.exit(0)
+
+lock = locks.pop()
+transcript = lock.parent.parent / "brain" / lock.stem / ".system_generated" / "logs" / "transcript.jsonl"
+last = None
+try:
+  with transcript.open(encoding="utf-8") as stream:
+    for line in stream:
+      if '"input_tokens":' in line:
+        try: last = json.loads(line)
+        except ValueError: pass
+  if last:
+    used = int(last.get("input_tokens") or 0) + int(last.get("cache_read_tokens") or 0)
+    pct = max(0, min(100, round(used * 100 / 1000000)))
+    print(json.dumps({"pct": pct, "model": last.get("model") or "agy"}))
+except (OSError, TypeError, ValueError):
+  pass
 `;
 
-const agyTranscriptVitals = async (cwd, machine) => {
-  if (!cwd) return null;
-  // python3 reads the files itself: a transcript outgrows readTextFile's 1 MiB limit within a few turns.
+const agyTranscriptVitals = async (address, machine) => {
+  const info = await hc(["get", address, "--json"])
+    .then((r) => r.code === 0 ? JSON.parse(r.stdout) : null).catch(() => null);
+  const pid = info?.foreground?.pid;
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  // 会话记录可能超过 readTextFile 的 1 MiB 上限。
   const candidates = window()?.platform === "windows" && !machine ? ["python", "python3", "py"] : ["python3", "python"];
   for (const bin of candidates) {
-    const r = await exec(bin, ["-c", AGY_VITALS_PY, cwd], { on: machine ?? undefined, timeout: 6000 }).catch(() => null);
+    const r = await exec(bin, ["-c", AGY_VITALS_PY, String(pid)], { on: machine ?? undefined, timeout: 6000 }).catch(() => null);
     if (!r) continue;
     try {
       const ev = r.code === 0 && r.stdout ? JSON.parse(r.stdout.trim().split("\n").pop()) : null;
@@ -861,7 +868,6 @@ export default class Agents extends View {
     if (this.scanningCodex) return;
     this.scanningCodex = true;
     try {
-      const paneBy = new Map(panes().map((p) => [p.pane, p]));
       const allTerms = terminals();
       const termMap = new Map(allTerms.map((t) => [t.address, t]));
       const codexTargets = new Set();
@@ -916,26 +922,19 @@ export default class Agents extends View {
         try {
           const sp = spaces().find((s) => s.id === a.space || (a.space && s.id.endsWith("/" + a.space)));
           const machine = (typeof a.address === "string" && a.address.includes("/")) ? a.address.split("/")[0] : sp?.machine;
-          const cwd = paneBy.get(a.pane)?.cwd;
           const quota = await this.agyQuota(machine);
-          const vitals = await agyTranscriptVitals(cwd, machine);
-          if (!vitals && quota == null) continue;
-          next.set(a.address, { pct: vitals?.pct ?? null, model: vitals?.model ?? "agy", quota });
-          const targetAddr = cleanAddr(a.address);
-          if (targetAddr !== a.address) {
-            next.set(targetAddr, { pct: vitals?.pct ?? null, model: vitals?.model ?? "agy", quota });
-          }
-          for (const tgt of [a.address, targetAddr]) {
-            if (!tgt) continue;
-            hc(["label", tgt,
-              `agent.context=${vitals?.pct ?? ""}`,
-              `agy.context=${vitals?.pct ?? ""}`,
-              `agent.model=${vitals?.model ?? ""}`,
-              `agy.model=${vitals?.model ?? ""}`,
-              `agent.quota=${quota ?? ""}`,
-              `agy.quota=${quota ?? ""}`,
-            ]).catch(() => null);
-          }
+          const vitals = await agyTranscriptVitals(a.address, machine);
+          next.set(a.address, { pct: vitals?.pct ?? null, model: vitals?.model ?? null, quota });
+          const labels = termMap.get(a.address)?.labels ?? {};
+          const pct = vitals?.pct ?? labels["agy.status.context"] ?? "";
+          const model = vitals?.model ?? labels["agy.status.model"] ?? "";
+          hc(["label", a.address,
+            `agent.context=${pct}`,
+            `agy.context=${pct}`,
+            `agent.model=${model}`,
+            `agy.model=${model}`,
+            ...(vitals || quota != null ? [`agent.quota=${quota ?? ""}`, `agy.quota=${quota ?? ""}`] : []),
+          ]).catch(() => null);
         } catch {
           continue;
         }
@@ -1577,8 +1576,8 @@ export default class Agents extends View {
       const isClaude = /claude/.test(prog);
       const isAgy = /antigravity|agy/.test(prog);
       const isCodex = /codex/.test(prog);
-      const own = isClaude ? labels["claude.context"] ?? labels["agent.context"] : (isAgy ? labels["agy.context"] ?? labels["agent.context"] : (isCodex ? labels["codex.context"] ?? labels["agent.context"] : labels["agent.context"]));
-      const model = isClaude ? (labels["claude.model"] || labels["agent.model"] || null) : (labels["agent.model"] || labels["agy.model"] || labels["codex.model"] || null);
+      const own = isClaude ? labels["claude.context"] ?? labels["agent.context"] : (isAgy ? labels["agy.status.context"] : (isCodex ? labels["codex.context"] ?? labels["agent.context"] : labels["agent.context"]));
+      const model = isClaude ? (labels["claude.model"] || labels["agent.model"] || null) : (isAgy ? labels["agy.status.model"] || null : labels["agent.model"] || labels["agy.model"] || labels["codex.model"] || null);
       const v = Number.parseInt(own, 10);
       const q = Number.parseInt((isClaude ? labels["claude.quota"] ?? labels["agent.quota"] : (isAgy ? labels["agy.quota"] ?? labels["agent.quota"] : (isCodex ? labels["codex.quota"] ?? labels["agent.quota"] : labels["agent.quota"]))), 10);
       if (!Number.isFinite(v) && !Number.isFinite(q) && !model) return [];

@@ -29,8 +29,8 @@ async function runTests() {
       const isClaude = /claude/.test(prog);
       const isAgy = /antigravity|agy/.test(prog);
       const isCodex = /codex/.test(prog);
-      const own = isClaude ? labels["claude.context"] ?? labels["agent.context"] : (isAgy ? labels["agy.context"] ?? labels["agent.context"] : (isCodex ? labels["codex.context"] ?? labels["agent.context"] : labels["agent.context"]));
-      const model = isClaude ? (labels["claude.model"] || labels["agent.model"] || null) : (labels["agent.model"] || labels["agy.model"] || labels["codex.model"] || null);
+      const own = isClaude ? labels["claude.context"] ?? labels["agent.context"] : (isAgy ? labels["agy.status.context"] : (isCodex ? labels["codex.context"] ?? labels["agent.context"] : labels["agent.context"]));
+      const model = isClaude ? (labels["claude.model"] || labels["agent.model"] || null) : (isAgy ? labels["agy.status.model"] || null : labels["agent.model"] || labels["agy.model"] || labels["codex.model"] || null);
       const v = Number.parseInt(own, 10);
       const q = Number.parseInt((isClaude ? labels["claude.quota"] ?? labels["agent.quota"] : (isAgy ? labels["agy.quota"] ?? labels["agent.quota"] : (isCodex ? labels["codex.quota"] ?? labels["agent.quota"] : labels["agent.quota"]))), 10);
       if (!Number.isFinite(v) && !Number.isFinite(q) && !model) return [];
@@ -68,11 +68,17 @@ async function runTests() {
       address: "t_agy",
       status: { app: "antigravity" },
       labels: {
-        "agent.context": "7",
-        "agent.model": "Gemini 3.8 Flash (High)",
+        "agy.context": "51",
+        "agy.status.context": "7",
+        "agy.status.model": "Gemini 3.8 Flash (High)",
         "agent.quota": "96",
         "agent.effort": "high",
       },
+    },
+    {
+      address: "t_agy_stale",
+      status: { app: "antigravity" },
+      labels: { "agy.context": "51", "agent.context": "51", "agy.model": "gemini-stale" },
     },
     {
       address: "buuuu/t_codex",
@@ -100,6 +106,7 @@ async function runTests() {
   assert.strictEqual(parsed.get("t_agy")?.model, "Gemini 3.8 Flash (High)");
   assert.strictEqual(parsed.get("t_agy")?.quota, 96);
   assert.strictEqual(modelOf(parsed.get("t_agy")), "Gemini 3.8 Flash (High) · high");
+  assert.equal(parsed.has("t_agy_stale"), false);
 
   assert.strictEqual(parsed.get("buuuu/t_codex")?.pct, 8);
   assert.strictEqual(parsed.get("buuuu/t_codex")?.model, "gpt-6-luna");
